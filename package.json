@@ -1,6 +1,6 @@
 {
   "name": "ramu-token",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Token Converter and Compressor Proxy with Dashboard",
   "main": "server/index.ts",
   "type": "module",

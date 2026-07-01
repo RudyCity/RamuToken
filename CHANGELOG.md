@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.6] - 2026-07-01
+
+### Fixed
+- **countTokens Reference Error**: Resolved client-side `ReferenceError: countTokens is not defined` bug in the Test Bench tab.
+
+### Changed
+- **Modularized Dashboard**: Refactored `src/App.tsx` by splitting the monolithic file into smaller modular files (`src/types.ts`, `src/utils/token.ts`, `src/components/DashboardTab.tsx`, `src/components/TestBenchTab.tsx`, `src/components/SettingsTab.tsx`) to strictly obey the 1000-line codebase file limit.
+
 ## [1.0.5] - 2026-07-01
 
 ### Changed

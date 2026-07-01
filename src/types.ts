@@ -1,0 +1,57 @@
+export interface CompressorSettings {
+  rtk: {
+    enabled: boolean;
+    logs: boolean;
+    paths: boolean;
+    stacks: boolean;
+  };
+  serena: {
+    enabled: boolean;
+    minLines: number;
+  };
+  headroom: {
+    enabled: boolean;
+    minify: boolean;
+    prune: boolean;
+    ccr: boolean;
+    minCcrLength: number;
+    blacklist: string[];
+  };
+  caveman: {
+    enabled: boolean;
+  };
+  cache: {
+    enabled: boolean;
+  };
+  upstream: {
+    bifrostUrl: string;
+    openaiKey: string;
+    anthropicKey: string;
+    preferBifrost: boolean;
+  };
+}
+
+export interface RequestLog {
+  id: string;
+  timestamp: number;
+  provider: "openai" | "anthropic";
+  model: string;
+  originalTokens: number;
+  compressedTokens: number;
+  savingsPercent: number;
+  cached: boolean;
+  durationMs: number;
+  status: "success" | "error";
+  ccrMappingsCount: number;
+  originalPrompt: string;
+  compressedPrompt: string;
+}
+
+export interface Metrics {
+  totalRequests: number;
+  originalTokensSum: number;
+  compressedTokensSum: number;
+  cacheHits: number;
+  totalSavedTokens: number;
+  totalSavedCost: number;
+}
