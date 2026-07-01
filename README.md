@@ -16,6 +16,106 @@ Built with **Bun**, **Vite**, **React**, and **Tailwind CSS v4**, this proxy int
 
 ---
 
+## 🗺️ Architecture & Process Flow
+
+### Request / Response Flowchart
+
+```mermaid
+graph TD
+    Agent([AI Agent / Client]) -->|1. HTTP Request| Router{API Router}
+
+    Router -->|/v1/chat/completions| OpenAIProxy[OpenAI Proxy Handler]
+    Router -->|/v1/messages| AnthropicProxy[Anthropic Proxy Handler]
+
+    OpenAIProxy & AnthropicProxy -->|2. Count Original Tokens| TokenCalc[js-tiktoken Counter]
+    TokenCalc -->|3. Run Pipelines| Pipelines[Pipeline Orchestrator]
+
+    subgraph Pipelines Stack [Compression Pipelines]
+        direction TB
+        RTK["RTK Pipeline
+        - Collapse repeated logs & stack traces
+        - Normalize absolute paths"]
+        --> Serena["Serena Pipeline
+        - AST & Symbol-Level Pruner
+        - Prune irrelevant functions"]
+        --> Headroom["Headroom Pipeline
+        - Minify JSON blocks
+        - Reversible substitution {{HR_CCR_X}}"]
+        --> Caveman["Caveman Pipeline
+        - Inject System Prompt instruction
+        - Force terse output style"]
+    end
+
+    Pipelines --> PipelinesStack
+    PipelinesStack -->|Compressed Payload| CacheCheck{"4. Cache Enabled & Non-Stream?"}
+
+    CacheCheck -->|"Yes – Cache Hit"| ReturnCache[5. Serve from Cache]
+    ReturnCache -->|Instant response| Agent
+
+    CacheCheck -->|"No / Cache Miss"| RouteDecision{"6. Upstream Route"}
+
+    RouteDecision -->|"preferBifrost = true"| Bifrost["Bifrost Gateway
+    http://localhost:8080"]
+    RouteDecision -->|"preferBifrost = false"| DirectProvider["Direct API Provider
+    OpenAI / Anthropic"]
+
+    Bifrost & DirectProvider -->|7. LLM Response| ResponseHandler{"8. Response Type"}
+
+    ResponseHandler -->|Streaming| StreamDecoder[Stream Chunk Decoder]
+    ResponseHandler -->|Non-Streaming| JSONParser[JSON Response Parser]
+
+    StreamDecoder & JSONParser -->|"9. Restore CCR placeholders"| CCRRestore["CCR Restorer
+    Replace {{HR_CCR_X}} → Original Content"]
+
+    CCRRestore -->|10. Save Cache & Write Log| DB[(Local DB + WebSocket Broadcast)]
+    CCRRestore -->|11. Final Response| Agent
+
+    classDef highlight fill:#4c1d95,stroke:#c084fc,stroke-width:2px,color:#fff;
+    classDef pipeline fill:#1e1b4b,stroke:#8b5cf6,stroke-width:1px,color:#e9d5ff;
+    class PipelinesStack highlight;
+    class RTK,Serena,Headroom,Caveman pipeline;
+```
+
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as AI Agent (Cursor / Cline)
+    participant Proxy as RamuToken Server
+    participant Pipe as Compression Pipelines
+    participant Cache as Local Cache
+    participant Upstream as LLM API (OpenAI / Anthropic / Bifrost)
+    participant DB as Local Database (db.json)
+
+    Client->>Proxy: POST /v1/chat/completions OR /v1/messages
+    Note over Proxy: Count original tokens before compression
+    Proxy->>Pipe: Run RTK → Serena → Headroom → Caveman
+    Pipe-->>Proxy: Compressed payload + CCR mapping
+
+    alt Cache Hit (Non-Streaming)
+        Proxy->>Cache: Lookup compressed payload key
+        Cache-->>Proxy: Return cached response
+        Proxy-->>Client: Instant response (0 upstream tokens!)
+    else Cache Miss or Streaming Request
+        Proxy->>Upstream: Forward compressed request
+        Upstream-->>Proxy: LLM Response (Stream / JSON)
+
+        loop For each chunk / response text
+            Proxy->>Proxy: Scan & restore {{HR_CCR_X}} via restoreCCR()
+        end
+
+        opt Caching Enabled
+            Proxy->>Cache: Store response
+        end
+
+        Proxy->>DB: Write metrics & log entry, broadcast via WebSocket
+        Proxy-->>Client: Final response (fully restored content)
+    end
+```
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites

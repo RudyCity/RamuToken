@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.8] - 2026-07-01
+
+### Added
+- **Architecture Diagrams in README**: Added Mermaid flowchart and sequence diagram to `README.md` documenting the full request/response lifecycle, including compression pipelines, caching, upstream routing, CCR restoration, and WebSocket broadcasting.
+
+---
+
 ## [1.0.7] - 2026-07-01
 
 ### Added
