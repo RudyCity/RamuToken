@@ -253,9 +253,21 @@ export default function DashboardTab({
                 <span className="truncate max-w-[140px]">{settings.upstream.bifrostUrl}</span>
               </div>
             )}
-            <div className="flex justify-between text-xxs font-mono pt-1 border-t border-white/5">
-              <span className="text-slate-400">Agent Base URL:</span>
-              <span className="text-neon-cyan font-bold">http://localhost:{backendPort}/v1</span>
+            <div className="flex flex-col gap-1 pt-1 border-t border-white/5">
+              <div className="flex justify-between text-xxs font-mono">
+                <span className="text-slate-400 flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  OpenAI Base URL:
+                </span>
+                <span className="text-neon-cyan font-bold">http://localhost:{backendPort}/v1</span>
+              </div>
+              <div className="flex justify-between text-xxs font-mono">
+                <span className="text-slate-400 flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                  Anthropic Base URL:
+                </span>
+                <span className="text-orange-300 font-bold">http://localhost:{backendPort}/anthropic/v1</span>
+              </div>
             </div>
           </div>
         </div>
