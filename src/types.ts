@@ -32,6 +32,7 @@ export interface CompressorSettings {
   };
   server: {
     port: number;
+    accessToken: string;
   };
 }
 
