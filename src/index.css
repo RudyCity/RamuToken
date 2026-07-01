@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-bg-dark: #080c14;
+  --color-panel-dark: rgba(13, 20, 35, 0.6);
+  --color-panel-border: rgba(255, 255, 255, 0.05);
+  
+  --color-neon-purple: #a855f7;
+  --color-neon-cyan: #06b6d4;
+  --color-neon-green: #10b981;
+  --color-neon-pink: #ec4899;
+}
+
+/* Glassmorphism panel styling */
+.glass-panel {
+  background: var(--color-panel-dark);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-panel-border);
+}
+
+.glass-panel-glow-purple {
+  box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.15);
+}
+
+.glass-panel-glow-cyan {
+  box-shadow: 0 0 40px -10px rgba(6, 182, 212, 0.15);
+}
+
+.glass-panel-glow-green {
+  box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.15);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(8, 12, 20, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.4);
+}
+
+/* Pulsing neon status dot */
+.status-dot-pulse {
+  box-shadow: 0 0 8px currentColor;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
