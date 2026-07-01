@@ -29,6 +29,40 @@ const server = Bun.serve({
       return new Response(null, { headers: corsHeaders });
     }
 
+    // Auth verification for client endpoints
+    if (path.startsWith("/v1/") || path === "/v1") {
+      const authRequired = settings.server?.accessToken && settings.server.accessToken.trim() !== "";
+      if (authRequired) {
+        const authHeader = req.headers.get("Authorization") || "";
+        const apiKeyHeader = req.headers.get("x-api-key") || "";
+
+        let providedToken = "";
+        if (authHeader.startsWith("Bearer ")) {
+          providedToken = authHeader.substring(7).trim();
+        } else if (authHeader.startsWith("Bearer")) {
+          providedToken = authHeader.substring(6).trim();
+        } else if (authHeader) {
+          providedToken = authHeader.trim();
+        } else if (apiKeyHeader) {
+          providedToken = apiKeyHeader.trim();
+        }
+
+        if (providedToken !== settings.server.accessToken.trim()) {
+          console.warn(`[Auth] Blocked unauthorized request to ${path}`);
+          return new Response(JSON.stringify({
+            error: {
+              message: "Unauthorized: Invalid or missing RamuToken Access Token.",
+              type: "invalid_request_error",
+              code: "unauthorized"
+            }
+          }), {
+            status: 401,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        }
+      }
+    }
+
     // 1. WebSocket endpoint for the Dashboard
     if (path === "/ws") {
       const success = server.upgrade(req);

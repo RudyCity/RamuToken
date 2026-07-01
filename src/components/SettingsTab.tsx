@@ -11,6 +11,7 @@ interface SettingsTabProps {
   handleCavemanLevelChange: (level: "low" | "medium" | "high") => void;
   backendPort: number;
   handleServerPortChange: (val: number) => void;
+  handleServerTokenChange: (val: string) => void;
 }
 
 // ── Toggle Switch ─────────────────────────────────────────────────────────────
@@ -49,9 +50,25 @@ export default function SettingsTab({
   handleCavemanLevelChange,
   backendPort,
   handleServerPortChange,
+  handleServerTokenChange,
 }: SettingsTabProps) {
   const [bifrostStatus, setBifrostStatus] = useState<BifrostStatus>("idle");
   const [bifrostLatency, setBifrostLatency] = useState<number | null>(null);
+  const [copiedEndpoint, setCopiedEndpoint] = useState(false);
+  const [showToken, setShowToken] = useState(false);
+
+  const generateToken = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let token = "rt-";
+    for (let i = 0; i < 24; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    handleServerTokenChange(token);
+    const updated = { ...settings };
+    if (!updated.server) updated.server = { port: 6875, accessToken: "" };
+    updated.server.accessToken = token;
+    handleSaveSettings(updated);
+  };
 
   // Test Bifrost connectivity
   const testBifrost = async () => {
@@ -149,6 +166,83 @@ export default function SettingsTab({
 
   return (
     <div className="space-y-6 animate-in">
+
+      {/* ── RamuToken Access Control & Endpoint ──────────────────── */}
+      <Section>
+        <div>
+          <SectionTitle gradient="from-neon-purple to-neon-cyan">RAMUTOKEN ACCESS & ENDPOINT</SectionTitle>
+          <p className="text-xxs text-slate-500 font-mono">
+            Copy your proxy base URL and secure client connections with an access token.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Endpoint URL Field */}
+          <div className="space-y-2">
+            <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+              Agent Endpoint URL (Base URL)
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="input-endpoint-url"
+                type="text"
+                readOnly
+                value={`http://localhost:${backendPort}/v1`}
+                className="flex-1 bg-slate-950/80 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-400 focus:outline-none"
+              />
+              <button
+                id="btn-copy-endpoint"
+                onClick={() => {
+                  navigator.clipboard.writeText(`http://localhost:${backendPort}/v1`);
+                  setCopiedEndpoint(true);
+                  setTimeout(() => setCopiedEndpoint(false), 2000);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-all cursor-pointer shrink-0"
+              >
+                {copiedEndpoint ? "Copied!" : "Copy"}
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500 font-mono">
+              Configure this as the custom OpenAI-compatible "Base URL" in Cursor or other coding agents.
+            </p>
+          </div>
+
+          {/* Access Token Field */}
+          <div className="space-y-2">
+            <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+              RamuToken Access Token (Authorization Key)
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="input-access-token"
+                type={showToken ? "text" : "password"}
+                value={settings.server?.accessToken || ""}
+                onChange={(e) => handleServerTokenChange(e.target.value)}
+                onBlur={() => handleSaveSettings(settings)}
+                placeholder="No key set (unsecured)"
+                className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-purple transition-colors"
+              />
+              <button
+                id="btn-show-token"
+                onClick={() => setShowToken(!showToken)}
+                className="px-3 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-bold font-mono transition-all cursor-pointer shrink-0"
+              >
+                {showToken ? "Hide" : "Show"}
+              </button>
+              <button
+                id="btn-gen-token"
+                onClick={generateToken}
+                className="px-3 rounded-xl bg-neon-purple/10 border border-neon-purple/20 hover:bg-neon-purple/15 text-neon-purple text-xs font-bold font-mono transition-all cursor-pointer shrink-0"
+              >
+                Gen Key
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500 font-mono">
+              If configured, you must enter this token as the "API Key" in your coding agent to authorize requests.
+            </p>
+          </div>
+        </div>
+      </Section>
 
       {/* ── Upstream Routing ──────────────────────────────────────── */}
       <Section>

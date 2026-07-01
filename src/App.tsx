@@ -10,7 +10,7 @@ import DashboardTab from "./components/DashboardTab";
 import TestBenchTab from "./components/TestBenchTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.1.4";
+const APP_VERSION = "1.1.5";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");
@@ -173,8 +173,15 @@ export default function App() {
 
   const handleServerPortChange = (val: number) => {
     const updated = { ...settings };
-    if (!updated.server) updated.server = { port: 6875 };
+    if (!updated.server) updated.server = { port: 6875, accessToken: "" };
     updated.server.port = val;
+    setSettings(updated);
+  };
+
+  const handleServerTokenChange = (val: string) => {
+    const updated = { ...settings };
+    if (!updated.server) updated.server = { port: 6875, accessToken: "" };
+    updated.server.accessToken = val;
     setSettings(updated);
   };
 
@@ -285,6 +292,7 @@ export default function App() {
             handleCavemanLevelChange={handleCavemanLevelChange}
             backendPort={backendPort}
             handleServerPortChange={handleServerPortChange}
+            handleServerTokenChange={handleServerTokenChange}
           />
         )}
       </main>

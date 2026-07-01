@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.5] - 2026-07-01
+
+### Added
+- **RamuToken Access Token Authentication**: Added support for securing proxy endpoints (`/v1/*`) using a custom authorization key (`settings.server.accessToken`). Included a new card inside the Settings tab featuring endpoint URL copy-paste buttons, visibility toggle, and a cryptographic random key generator ("Gen Key"). Unauthenticated proxy requests receive a 401 Unauthorized response.
+
+---
+
 ## [1.1.4] - 2026-07-01
 
 ### Fixed

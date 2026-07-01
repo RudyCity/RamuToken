@@ -86,6 +86,7 @@ export let settings: CompressorSettings = {
   },
   server: {
     port: 6875,
+    accessToken: "",
   },
 };
 
