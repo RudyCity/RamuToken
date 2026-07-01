@@ -282,91 +282,201 @@ export default function SettingsTab({
         <div>
           <SectionTitle gradient="from-neon-green to-neon-cyan">UPSTREAM ROUTING & GATEWAY</SectionTitle>
           <p className="text-xxs text-slate-500 font-mono">
-            Connect to Bifrost (auto-spawned) or use direct provider API keys as fallback. Direct your AI agents to <code className="text-neon-cyan font-bold bg-white/5 px-1 py-0.5 rounded">http://localhost:{backendPort}/v1</code>.
+            Route requests via <strong className="text-neon-green">Custom Upstream</strong>, <strong className="text-neon-cyan">Bifrost Gateway</strong>, or direct provider APIs. Point your AI agents to <code className="text-neon-cyan font-bold bg-white/5 px-1 py-0.5 rounded">http://localhost:{backendPort}/v1</code>.
           </p>
         </div>
 
-        {/* Prefer Bifrost toggle row */}
-        <div className="flex items-center justify-between p-4 bg-slate-950/50 border border-white/8 rounded-xl">
+        {/* ── Custom Upstream toggle ───────────────────────────── */}
+        <div
+          className="flex items-center justify-between p-4 rounded-xl border transition-all"
+          style={{
+            background: settings.upstream.preferCustom
+              ? "rgba(16,185,129,0.07)"
+              : "rgba(15,23,42,0.5)",
+            borderColor: settings.upstream.preferCustom
+              ? "rgba(16,185,129,0.3)"
+              : "rgba(255,255,255,0.06)",
+          }}
+        >
           <div>
-            <h4 className="text-sm font-bold">Route via Bifrost Gateway</h4>
+            <h4 className="text-sm font-bold flex items-center gap-2">
+              <span
+                className="w-2 h-2 rounded-full inline-block"
+                style={{ background: settings.upstream.preferCustom ? "#10b981" : "#334155", boxShadow: settings.upstream.preferCustom ? "0 0 6px #10b981" : "none" }}
+              />
+              Route via Custom Upstream Endpoint
+            </h4>
             <p className="text-xxs text-slate-500 font-mono mt-0.5">
-              Forward to Bifrost for failover, key rotation & load balancing.
+              Forward to any OpenAI-compatible API (Together AI, OpenRouter, Ollama, LiteLLM, etc.).
             </p>
           </div>
           <Toggle
-            id="toggle-prefer-bifrost"
-            checked={settings.upstream.preferBifrost}
-            onChange={() => toggleSettingsField("upstream", "preferBifrost")}
-            color="#06b6d4"
+            id="toggle-prefer-custom"
+            checked={settings.upstream.preferCustom}
+            onChange={() => toggleSettingsField("upstream", "preferCustom")}
+            color="#10b981"
           />
         </div>
 
-        {/* Bifrost URL + Server Port Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 space-y-2">
-            <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
-              Bifrost Endpoint URL
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="input-bifrost-url"
-                type="text"
-                value={settings.upstream.bifrostUrl}
-                onChange={(e) => handleInputChange("bifrostUrl", e.target.value)}
-                onBlur={() => handleSaveSettings(settings)}
-                placeholder="http://localhost:8080"
-                className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-cyan transition-colors"
-              />
-              <button
-                id="btn-test-bifrost"
-                onClick={testBifrost}
-                disabled={bifrostStatus === "checking"}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-60 shrink-0"
-                style={{
-                  background: bifrostStatus === "online"
-                    ? "rgba(16,185,129,0.12)"
-                    : bifrostStatus === "offline"
-                    ? "rgba(236,72,153,0.12)"
-                    : "rgba(6,182,212,0.1)",
-                  borderColor: bifrostStatus === "online"
-                    ? "rgba(16,185,129,0.3)"
-                    : bifrostStatus === "offline"
-                    ? "rgba(236,72,153,0.3)"
-                    : "rgba(6,182,212,0.25)",
-                  color: bifrostStatus === "online"
-                    ? "#10b981"
-                    : bifrostStatus === "offline"
-                    ? "#ec4899"
-                    : "#06b6d4",
-                }}
-              >
-                {bifrostStatus === "checking" ? (
-                  <Loader className="w-3.5 h-3.5 animate-spin" />
-                ) : bifrostStatus === "online" ? (
-                  <Wifi className="w-3.5 h-3.5" />
-                ) : bifrostStatus === "offline" ? (
-                  <WifiOff className="w-3.5 h-3.5" />
-                ) : (
-                  <Wifi className="w-3.5 h-3.5" />
-                )}
-                {bifrostStatus === "checking"
-                  ? "Checking…"
-                  : bifrostStatus === "online"
-                  ? `Online ${bifrostLatency ? `(${bifrostLatency}ms)` : ""}`
-                  : bifrostStatus === "offline"
-                  ? "Offline"
-                  : "Test"}
-              </button>
+        {/* ── Custom Upstream inputs (visible when custom is enabled) ─ */}
+        {settings.upstream.preferCustom && (
+          <div className="space-y-4 p-4 rounded-xl border border-neon-green/20 bg-neon-green/5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-xxs font-bold uppercase tracking-wider text-emerald-400 font-mono">
+                  Custom Endpoint URL
+                </label>
+                <input
+                  id="input-custom-url"
+                  type="text"
+                  value={settings.upstream.customUrl}
+                  onChange={(e) => handleInputChange("customUrl", e.target.value)}
+                  onBlur={() => handleSaveSettings(settings)}
+                  placeholder="https://api.together.xyz  or  http://localhost:11434"
+                  className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xxs font-bold uppercase tracking-wider text-emerald-400 font-mono">
+                  Auth Header Name
+                </label>
+                <input
+                  id="input-custom-header"
+                  type="text"
+                  value={settings.upstream.customHeader}
+                  onChange={(e) => handleInputChange("customHeader", e.target.value)}
+                  onBlur={() => handleSaveSettings(settings)}
+                  placeholder="Authorization"
+                  className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+                />
+                <p className="text-[10px] text-slate-500 font-mono">
+                  e.g. <code className="text-emerald-400">Authorization</code>, <code className="text-emerald-400">x-api-key</code>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xxs font-bold uppercase tracking-wider text-emerald-400 font-mono">
+                  Custom API Key
+                </label>
+                <input
+                  id="input-custom-key"
+                  type="password"
+                  value={settings.upstream.customKey}
+                  onChange={(e) => handleInputChange("customKey", e.target.value)}
+                  onBlur={() => handleSaveSettings(settings)}
+                  placeholder="sk-... or any token"
+                  className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-400 focus:outline-none focus:border-neon-green transition-colors"
+                />
+                <p className="text-[10px] text-slate-500 font-mono">
+                  For <code className="text-emerald-400">Authorization</code> headers, <code className="text-emerald-400">Bearer</code> is auto-prepended.
+                </p>
+              </div>
             </div>
           </div>
+        )}
 
+        {/* ── Prefer Bifrost toggle (hidden when custom is active) ─── */}
+        {!settings.upstream.preferCustom && (
+          <div className="flex items-center justify-between p-4 bg-slate-950/50 border border-white/8 rounded-xl">
+            <div>
+              <h4 className="text-sm font-bold">Route via Bifrost Gateway</h4>
+              <p className="text-xxs text-slate-500 font-mono mt-0.5">
+                Forward to Bifrost for failover, key rotation & load balancing.
+              </p>
+            </div>
+            <Toggle
+              id="toggle-prefer-bifrost"
+              checked={settings.upstream.preferBifrost}
+              onChange={() => toggleSettingsField("upstream", "preferBifrost")}
+              color="#06b6d4"
+            />
+          </div>
+        )}
+
+        {/* Bifrost URL + Server Port Grid (hidden when custom upstream is active) */}
+        {!settings.upstream.preferCustom && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 space-y-2">
+              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+                Bifrost Endpoint URL
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="input-bifrost-url"
+                  type="text"
+                  value={settings.upstream.bifrostUrl}
+                  onChange={(e) => handleInputChange("bifrostUrl", e.target.value)}
+                  onBlur={() => handleSaveSettings(settings)}
+                  placeholder="http://localhost:8080"
+                  className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-cyan transition-colors"
+                />
+                <button
+                  id="btn-test-bifrost"
+                  onClick={testBifrost}
+                  disabled={bifrostStatus === "checking"}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-60 shrink-0"
+                  style={{
+                    background: bifrostStatus === "online"
+                      ? "rgba(16,185,129,0.12)"
+                      : bifrostStatus === "offline"
+                      ? "rgba(236,72,153,0.12)"
+                      : "rgba(6,182,212,0.1)",
+                    borderColor: bifrostStatus === "online"
+                      ? "rgba(16,185,129,0.3)"
+                      : bifrostStatus === "offline"
+                      ? "rgba(236,72,153,0.3)"
+                      : "rgba(6,182,212,0.25)",
+                    color: bifrostStatus === "online"
+                      ? "#10b981"
+                      : bifrostStatus === "offline"
+                      ? "#ec4899"
+                      : "#06b6d4",
+                  }}
+                >
+                  {bifrostStatus === "checking" ? (
+                    <Loader className="w-3.5 h-3.5 animate-spin" />
+                  ) : bifrostStatus === "online" ? (
+                    <Wifi className="w-3.5 h-3.5" />
+                  ) : bifrostStatus === "offline" ? (
+                    <WifiOff className="w-3.5 h-3.5" />
+                  ) : (
+                    <Wifi className="w-3.5 h-3.5" />
+                  )}
+                  {bifrostStatus === "checking"
+                    ? "Checking…"
+                    : bifrostStatus === "online"
+                    ? `Online ${bifrostLatency ? `(${bifrostLatency}ms)` : ""}`
+                    : bifrostStatus === "offline"
+                    ? "Offline"
+                    : "Test"}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+                RamuToken Proxy Port
+              </label>
+              <input
+                id="input-server-port"
+                type="number"
+                value={settings.server?.port || 6875}
+                onChange={(e) => handleServerPortChange(Number(e.target.value))}
+                onBlur={() => handleSaveSettings(settings)}
+                placeholder="6875"
+                className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-cyan transition-colors"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Proxy Port when custom upstream is active */}
+        {settings.upstream.preferCustom && (
           <div className="space-y-2">
             <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
               RamuToken Proxy Port
             </label>
             <input
-              id="input-server-port"
+              id="input-server-port-custom"
               type="number"
               value={settings.server?.port || 6875}
               onChange={(e) => handleServerPortChange(Number(e.target.value))}
@@ -375,7 +485,7 @@ export default function SettingsTab({
               className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-cyan transition-colors"
             />
           </div>
-        </div>
+        )}
 
         {/* Warning if port configured differs from actual active backend port */}
         {settings.server?.port && settings.server.port !== backendPort && (
@@ -384,43 +494,45 @@ export default function SettingsTab({
           </p>
         )}
 
-        {/* Divider */}
-        <div className="border-t border-white/5 pt-4">
-          <h4 className="text-xxs font-bold uppercase tracking-wider text-slate-400 mb-3 font-mono flex items-center gap-1.5">
-            <Info className="w-3 h-3 text-slate-500" />
-            Direct Fallback Keys (used when Bifrost is off)
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-500 mb-2 font-mono">
-                OpenAI API Key
-              </label>
-              <input
-                id="input-openai-key"
-                type="password"
-                value={settings.upstream.openaiKey}
-                onChange={(e) => handleInputChange("openaiKey", e.target.value)}
-                onBlur={() => handleSaveSettings(settings)}
-                placeholder="sk-..."
-                className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-400 focus:outline-none focus:border-neon-purple transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-500 mb-2 font-mono">
-                Anthropic API Key
-              </label>
-              <input
-                id="input-anthropic-key"
-                type="password"
-                value={settings.upstream.anthropicKey}
-                onChange={(e) => handleInputChange("anthropicKey", e.target.value)}
-                onBlur={() => handleSaveSettings(settings)}
-                placeholder="sk-ant-..."
-                className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-400 focus:outline-none focus:border-neon-purple transition-colors"
-              />
+        {/* Divider — Direct Fallback Keys (hidden when custom upstream is active) */}
+        {!settings.upstream.preferCustom && (
+          <div className="border-t border-white/5 pt-4">
+            <h4 className="text-xxs font-bold uppercase tracking-wider text-slate-400 mb-3 font-mono flex items-center gap-1.5">
+              <Info className="w-3 h-3 text-slate-500" />
+              Direct Fallback Keys (used when Bifrost is off)
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xxs font-bold uppercase tracking-wider text-slate-500 mb-2 font-mono">
+                  OpenAI API Key
+                </label>
+                <input
+                  id="input-openai-key"
+                  type="password"
+                  value={settings.upstream.openaiKey}
+                  onChange={(e) => handleInputChange("openaiKey", e.target.value)}
+                  onBlur={() => handleSaveSettings(settings)}
+                  placeholder="sk-..."
+                  className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-400 focus:outline-none focus:border-neon-purple transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xxs font-bold uppercase tracking-wider text-slate-500 mb-2 font-mono">
+                  Anthropic API Key
+                </label>
+                <input
+                  id="input-anthropic-key"
+                  type="password"
+                  value={settings.upstream.anthropicKey}
+                  onChange={(e) => handleInputChange("anthropicKey", e.target.value)}
+                  onBlur={() => handleSaveSettings(settings)}
+                  placeholder="sk-ant-..."
+                  className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-400 focus:outline-none focus:border-neon-purple transition-colors"
+                />
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </Section>
 
       {/* ── Compression Pipelines ─────────────────────────────────── */}

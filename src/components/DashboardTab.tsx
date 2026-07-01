@@ -224,11 +224,30 @@ export default function DashboardTab({
           <div className="mt-4 pt-4 border-t border-white/5 space-y-1.5">
             <div className="flex justify-between text-xxs font-mono">
               <span className="text-slate-400">Target Router:</span>
-              <span className="font-bold" style={{ color: settings.upstream.preferBifrost ? "#06b6d4" : "#a855f7" }}>
-                {settings.upstream.preferBifrost ? "Bifrost Gateway" : "Direct API"}
+              <span
+                className="font-bold"
+                style={{
+                  color: settings.upstream.preferCustom
+                    ? "#10b981"
+                    : settings.upstream.preferBifrost
+                    ? "#06b6d4"
+                    : "#a855f7",
+                }}
+              >
+                {settings.upstream.preferCustom
+                  ? "Custom Upstream"
+                  : settings.upstream.preferBifrost
+                  ? "Bifrost Gateway"
+                  : "Direct API"}
               </span>
             </div>
-            {settings.upstream.preferBifrost && (
+            {settings.upstream.preferCustom && (
+              <div className="flex justify-between text-xxs font-mono text-slate-500">
+                <span>Custom Endpoint:</span>
+                <span className="truncate max-w-[140px]">{settings.upstream.customUrl || "—"}</span>
+              </div>
+            )}
+            {!settings.upstream.preferCustom && settings.upstream.preferBifrost && (
               <div className="flex justify-between text-xxs font-mono text-slate-500">
                 <span>Bifrost Endpoint:</span>
                 <span className="truncate max-w-[140px]">{settings.upstream.bifrostUrl}</span>

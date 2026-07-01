@@ -32,6 +32,14 @@ export interface CompressorSettings {
     openaiKey: string;
     anthropicKey: string;
     preferBifrost: boolean;
+    preferCustom: boolean;
+    customUrl: string;
+    customKey: string;
+    customHeader: string;
+  };
+  server: {
+    port: number;
+    accessToken: string;
   };
 }
 
@@ -83,6 +91,10 @@ export let settings: CompressorSettings = {
     openaiKey: process.env.OPENAI_API_KEY || "",
     anthropicKey: process.env.ANTHROPIC_API_KEY || "",
     preferBifrost: true,
+    preferCustom: false,
+    customUrl: "",
+    customKey: "",
+    customHeader: "Authorization",
   },
   server: {
     port: 6875,

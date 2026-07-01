@@ -114,7 +114,8 @@ async function fetchUpstream(
   body: any, 
   provider: "openai" | "anthropic"
 ): Promise<Response> {
-  const preferBifrost = settings.upstream.preferBifrost && settings.upstream.bifrostUrl;
+  const preferCustom = settings.upstream.preferCustom && settings.upstream.customUrl;
+  const preferBifrost = !preferCustom && settings.upstream.preferBifrost && settings.upstream.bifrostUrl;
   let targetUrl = "";
   const requestHeaders = new Headers();
 
@@ -125,7 +126,23 @@ async function fetchUpstream(
     }
   });
 
-  if (preferBifrost) {
+  if (preferCustom) {
+    // Route to custom upstream URL
+    // Strip trailing slash if present
+    const baseUrl = settings.upstream.customUrl.replace(/\/$/, "");
+    targetUrl = `${baseUrl}${endpoint}`;
+    
+    const headerName = settings.upstream.customHeader || "Authorization";
+    const headerVal = settings.upstream.customKey || headers.get(headerName) || "";
+    if (headerVal) {
+      if (headerName.toLowerCase() === "authorization" && !headerVal.toLowerCase().startsWith("bearer ")) {
+        requestHeaders.set(headerName, `Bearer ${headerVal}`);
+      } else {
+        requestHeaders.set(headerName, headerVal);
+      }
+    }
+    console.log(`[Proxy] Routing Custom Upstream: ${targetUrl}`);
+  } else if (preferBifrost) {
     // Route to local Bifrost gateway
     // Bifrost maps routes as OpenAI endpoints. OpenAI or Anthropic targets are mapped internally.
     targetUrl = `${settings.upstream.bifrostUrl}${endpoint}`;

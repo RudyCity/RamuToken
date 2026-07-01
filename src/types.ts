@@ -29,6 +29,10 @@ export interface CompressorSettings {
     openaiKey: string;
     anthropicKey: string;
     preferBifrost: boolean;
+    preferCustom: boolean;
+    customUrl: string;
+    customKey: string;
+    customHeader: string;
   };
   server: {
     port: number;

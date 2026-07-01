@@ -31,7 +31,16 @@ export default function App() {
     headroom: { enabled: true, minify: true, prune: true, ccr: true, minCcrLength: 200, blacklist: [] },
     caveman: { enabled: false, level: "medium" },
     cache: { enabled: true },
-    upstream: { bifrostUrl: "http://localhost:8080", openaiKey: "", anthropicKey: "", preferBifrost: true },
+    upstream: {
+      bifrostUrl: "http://localhost:8080",
+      openaiKey: "",
+      anthropicKey: "",
+      preferBifrost: true,
+      preferCustom: false,
+      customUrl: "",
+      customKey: "",
+      customHeader: "Authorization"
+    },
   });
 
   // Test bench state
@@ -146,7 +155,21 @@ export default function App() {
     else if (pipeline === "headroom") (updated.headroom as any)[field] = !(updated.headroom as any)[field];
     else if (pipeline === "caveman") updated.caveman.enabled = !updated.caveman.enabled;
     else if (pipeline === "cache") updated.cache.enabled = !updated.cache.enabled;
-    else if (pipeline === "upstream") (updated.upstream as any)[field] = !(updated.upstream as any)[field];
+    else if (pipeline === "upstream") {
+      if (field === "preferCustom") {
+        updated.upstream.preferCustom = !updated.upstream.preferCustom;
+        if (updated.upstream.preferCustom) {
+          updated.upstream.preferBifrost = false;
+        }
+      } else if (field === "preferBifrost") {
+        updated.upstream.preferBifrost = !updated.upstream.preferBifrost;
+        if (updated.upstream.preferBifrost) {
+          updated.upstream.preferCustom = false;
+        }
+      } else {
+        (updated.upstream as any)[field] = !(updated.upstream as any)[field];
+      }
+    }
     setSettings(updated);
     handleSaveSettings(updated);
   };

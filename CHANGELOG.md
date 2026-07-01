@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-07-01
+
+### Added
+- **Custom Upstream Endpoint**: Added support for routing proxy requests to any custom OpenAI-compatible API endpoint (e.g., Together AI, OpenRouter, Ollama, LiteLLM, or any self-hosted gateway).
+  - New toggle **"Route via Custom Upstream Endpoint"** in Settings → Upstream Routing section.
+  - Configurable **Custom Endpoint URL**, **Auth Header Name** (e.g., `Authorization`, `x-api-key`), and **Custom API Key** fields.
+  - `Bearer` prefix is auto-prepended for `Authorization` headers when not already present.
+  - Custom upstream and Bifrost toggles are **mutually exclusive** — enabling one automatically disables the other.
+  - Dashboard "Target Router" card now shows **Custom Upstream** status (green) alongside Bifrost (cyan) and Direct API (purple), with the active endpoint URL displayed.
+  - Bifrost and Direct Fallback Keys sections are hidden in Settings when Custom Upstream is active, keeping the UI clean and focused.
+
+### Changed
+- **`server/config.ts`**: Extended `CompressorSettings.upstream` interface with `preferCustom`, `customUrl`, `customKey`, and `customHeader` fields with safe defaults.
+- **`server/proxy.ts`**: Updated `fetchUpstream()` routing priority: Custom → Bifrost → Direct API.
+- **`src/types.ts`**: Updated frontend `CompressorSettings.upstream` type to include the four new fields.
+- **`src/App.tsx`**: Added new fields to initial settings state; updated `toggleSettingsField` to enforce mutual exclusion between `preferCustom` and `preferBifrost`.
+
+---
+
 ## [1.2.2] - 2026-07-01
 
 ### Added
