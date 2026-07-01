@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.4] - 2026-07-01
+
+### Fixed
+- **Windows Process Spawning ENOENT**: Replaced `npx` with native `bun x` to spawn Bifrost in `dev.ts`. This resolves `ENOENT` process spawning errors on Windows where calling shell wrappers like `npx` directly without `.cmd` fails.
+
+---
+
 ## [1.1.3] - 2026-07-01
 
 ### Added

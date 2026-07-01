@@ -54,9 +54,9 @@ const alreadyRunning = await isBifrostReady();
 if (alreadyRunning) {
   console.log(`✅ [Bifrost] Already running on port ${BIFROST_PORT} — skipping spawn.`);
 } else {
-  console.log(`⚡ [Bifrost] Not detected — launching via npx @maximhq/bifrost...`);
+  console.log(`⚡ [Bifrost] Not detected — launching via bun x @maximhq/bifrost...`);
 
-  bifrostProcess = Bun.spawn(["npx", "-y", "@maximhq/bifrost"], {
+  bifrostProcess = Bun.spawn(["bun", "x", "@maximhq/bifrost"], {
     stdout: "pipe",
     stderr: "pipe",
     env: {
