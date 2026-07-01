@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Zap,
   Sliders,
@@ -9,6 +10,8 @@ import {
   XCircle,
   ChevronRight,
   TrendingDown,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Metrics, RequestLog, CompressorSettings } from "../types";
 
@@ -76,6 +79,32 @@ function PipelineRow({ icon, name, sub, active, dotColor }: PipelineRowProps) {
         </span>
       </div>
     </div>
+  );
+}
+
+// ── Copy button with transient ✓ feedback ────────────────────────────────────
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      title="Copy to clipboard"
+      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer"
+      style={{
+        background: copied ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.05)",
+        color: copied ? "#10b981" : "#64748b",
+        border: copied ? "1px solid rgba(16,185,129,0.3)" : "1px solid rgba(255,255,255,0.08)",
+      }}
+    >
+      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+      {copied ? "Copied!" : "Copy"}
+    </button>
   );
 }
 
@@ -448,15 +477,15 @@ export default function DashboardTab({
       {/* ── Log Detail Modal ──────────────────────────────────────── */}
       {selectedLog && (
         <div
-          className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in"
+          className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-start justify-center p-4 z-50 animate-in overflow-y-auto"
           onClick={() => setSelectedLog(null)}
         >
           <div
-            className="glass-panel w-full max-w-5xl max-h-[88vh] rounded-3xl flex flex-col overflow-hidden shadow-2xl"
+            className="glass-panel w-full max-w-5xl rounded-3xl flex flex-col shadow-2xl my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal header */}
-            <div className="p-5 border-b border-white/5 flex justify-between items-start shrink-0">
+            {/* Modal header — pinned, never scrolls */}
+            <div className="p-5 border-b border-white/5 flex justify-between items-start sticky top-0 z-10 rounded-t-3xl" style={{ background: "rgba(10,12,20,0.96)", backdropFilter: "blur(12px)" }}>
               <div>
                 <h3 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-cyan">
                   REQUEST #{selectedLog.id}
@@ -471,6 +500,10 @@ export default function DashboardTab({
                     </span>
                   </span>
                   <span>Duration: <span className="text-slate-300">{selectedLog.durationMs}ms</span></span>
+                  <span>CCR Mappings: <span className="text-slate-300">{selectedLog.ccrMappingsCount}</span></span>
+                  {selectedLog.cached && (
+                    <span className="bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan px-1.5 py-0.5 rounded font-bold">CACHED</span>
+                  )}
                 </div>
               </div>
               <button
@@ -481,26 +514,40 @@ export default function DashboardTab({
               </button>
             </div>
 
-            {/* Prompt diff */}
-            <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between mb-2">
+            {/* Prompt diff — no nested scroll; outer overlay scrolls */}
+            <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Original Prompt */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
                   <h4 className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">Original Prompt</h4>
-                  <span className="text-xxs font-mono text-slate-500 bg-white/5 px-2 py-0.5 rounded">{selectedLog.originalTokens.toLocaleString()} tok</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xxs font-mono text-slate-500 bg-white/5 px-2 py-0.5 rounded">
+                      {selectedLog.originalTokens.toLocaleString()} tok
+                    </span>
+                    <CopyButton text={selectedLog.originalPrompt || ""} />
+                  </div>
                 </div>
-                <pre className="flex-1 bg-slate-950/90 border border-white/5 p-4 rounded-2xl text-xxs font-mono overflow-auto min-h-[40vh] text-slate-300 whitespace-pre-wrap">
+                <pre className="bg-slate-950/90 border border-white/5 p-4 rounded-2xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-words">
                   {selectedLog.originalPrompt || "[No original prompt recorded]"}
                 </pre>
               </div>
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between mb-2">
+
+              {/* Compressed Prompt */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
                   <h4 className="text-xxs font-bold uppercase tracking-wider text-neon-cyan font-mono">Compressed Prompt</h4>
-                  <span className="text-xxs font-mono font-bold px-2 py-0.5 rounded" style={{ color: savingsColor(selectedLog.savingsPercent), background: savingsBg(selectedLog.savingsPercent) }}>
-                    {selectedLog.compressedTokens.toLocaleString()} tok
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-xxs font-mono font-bold px-2 py-0.5 rounded"
+                      style={{ color: savingsColor(selectedLog.savingsPercent), background: savingsBg(selectedLog.savingsPercent) }}
+                    >
+                      {selectedLog.compressedTokens.toLocaleString()} tok
+                    </span>
+                    <CopyButton text={selectedLog.compressedPrompt || ""} />
+                  </div>
                 </div>
                 <pre
-                  className="flex-1 bg-slate-950/90 border p-4 rounded-2xl text-xxs font-mono overflow-auto min-h-[40vh] text-slate-300 whitespace-pre-wrap"
+                  className="bg-slate-950/90 border p-4 rounded-2xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-words"
                   style={{ borderColor: savingsColor(selectedLog.savingsPercent) + "30" }}
                 >
                   {selectedLog.compressedPrompt || "[No compressed prompt recorded]"}

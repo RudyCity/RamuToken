@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.6] - 2026-07-01
+
+### Added
+- **Copy buttons on prompt panels**: Each panel (Original Prompt & Compressed Prompt) in the request detail modal now has a "Copy" button. Clicking it copies the full text to clipboard and shows a ✓ "Copied!" confirmation for 2 seconds.
+
+### Fixed
+- **Modal scroll fixed**: Removed `overflow-hidden` + nested `overflow-auto` on `<pre>` elements that caused the whole page to scroll instead of the modal. The overlay itself is now the single scroll container (`overflow-y-auto`), and the modal panel expands naturally to its content. The header is `sticky top-0` so it remains visible while scrolling long prompts.
+- **Modal header extras**: Added CCR Mappings count and CACHED badge to the modal header info row.
+
+---
+
 ## [1.3.5] - 2026-07-01
 
 ### Fixed
