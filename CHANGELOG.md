@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.7] - 2026-07-01
+
+### Added
+- **Proxy Activity Log Pagination**: Added pagination functionality to the main logs table on the Dashboard.
+  - Users can select the page size (5, 10, 15, 25, 50 entries) using a selector dropdown.
+  - Added navigation buttons (First, Previous, Next, Last) and numbered page selectors that handle dynamic ellipses to keep the layout clean when total pages are large.
+  - Integrated header count to show current entries range, e.g. "Live — showing X-Y of Z".
+
+---
+
 ## [1.3.6] - 2026-07-01
 
 ### Added

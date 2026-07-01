@@ -9,6 +9,9 @@ import {
   CheckCircle,
   XCircle,
   ChevronRight,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   TrendingDown,
   Copy,
   Check,
@@ -117,6 +120,16 @@ export default function DashboardTab({
   setSelectedLog,
   backendPort,
 }: DashboardTabProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const totalPages = Math.ceil(logs.length / itemsPerPage);
+  const activePage = Math.min(currentPage, Math.max(1, totalPages));
+
+  const startIndex = (activePage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, logs.length);
+  const paginatedLogs = logs.slice(startIndex, endIndex);
+
   const avgSavingPercent =
     metrics.originalTokensSum > 0
       ? ((metrics.originalTokensSum - metrics.compressedTokensSum) / metrics.originalTokensSum) * 100
@@ -390,7 +403,9 @@ export default function DashboardTab({
       <div className="glass-panel p-6 rounded-2xl">
         <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-slate-300 flex items-center justify-between">
           <span>Proxy Activity Log</span>
-          <span className="text-xxs font-mono text-slate-500 font-normal">Live — last {logs.length} entries</span>
+          <span className="text-xxs font-mono text-slate-500 font-normal">
+            Live — showing {logs.length > 0 ? startIndex + 1 : 0}-{endIndex} of {logs.length}
+          </span>
         </h3>
 
         <div className="overflow-x-auto">
@@ -416,7 +431,7 @@ export default function DashboardTab({
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => (
+                paginatedLogs.map((log) => (
                   <tr
                     key={log.id}
                     className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
@@ -472,6 +487,106 @@ export default function DashboardTab({
             </tbody>
           </table>
         </div>
+
+        {/* ── Pagination Controls ────────────────────────────────────── */}
+        {logs.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-white/5 text-xxs font-mono text-slate-400">
+            {/* Left: showing stats */}
+            <div>
+              Showing <span className="text-slate-200">{logs.length > 0 ? startIndex + 1 : 0}</span> to{" "}
+              <span className="text-slate-200">{endIndex}</span> of{" "}
+              <span className="text-slate-200">{logs.length}</span> entries
+            </div>
+
+            {/* Center: page buttons */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={activePage === 1}
+                className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                title="First Page"
+              >
+                <ChevronsLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setCurrentPage(activePage - 1)}
+                disabled={activePage === 1}
+                className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Page numbers */}
+              {Array.from({ length: totalPages }).map((_, i) => {
+                const pageNum = i + 1;
+                const isFirstOrLast = pageNum === 1 || pageNum === totalPages;
+                const isNearActive = Math.abs(pageNum - activePage) <= 1;
+
+                if (!isFirstOrLast && !isNearActive) {
+                  if (pageNum === 2 && activePage > 3) {
+                    return <span key="ellipsis-start" className="px-1 text-slate-600 select-none">...</span>;
+                  }
+                  if (pageNum === totalPages - 1 && activePage < totalPages - 2) {
+                    return <span key="ellipsis-end" className="px-1 text-slate-600 select-none">...</span>;
+                  }
+                  return null;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`min-w-[24px] h-6 rounded-md border flex items-center justify-center font-bold transition-all cursor-pointer ${
+                      activePage === pageNum
+                        ? "border-neon-purple/30 bg-neon-purple/10 text-neon-purple shadow-[0_0_8px_rgba(168,85,247,0.15)]"
+                        : "border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => setCurrentPage(activePage + 1)}
+                disabled={activePage === totalPages}
+                className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                title="Next Page"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={activePage === totalPages}
+                className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                title="Last Page"
+              >
+                <ChevronsRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Right: Items per page */}
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500">Show</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-slate-950 border border-white/10 text-slate-300 rounded-lg px-2 py-0.5 focus:outline-none focus:border-neon-purple/40 font-bold transition-all cursor-pointer text-xxs"
+              >
+                {[5, 10, 15, 25, 50].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              <span className="text-slate-500">entries</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Log Detail Modal ──────────────────────────────────────── */}
