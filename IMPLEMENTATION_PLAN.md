@@ -10,7 +10,7 @@ The gateway sits between your coding agents (e.g., Cursor, Claude Code) and the 
 
 ```mermaid
 graph TD
-    Client[Coding Agent / Client] -->|OpenAI or Anthropic request| Proxy[Bun.serve Proxy Server - Port 3000]
+    Client[Coding Agent / Client] -->|OpenAI or Anthropic request| Proxy[Bun.serve Proxy Server - Port 6875]
     
     subgraph Proxy Pipeline
         Proxy --> CacheCheck{Cache Enabled & Hit?}
@@ -36,7 +36,7 @@ graph TD
 
 ## 🔄 Request Lifecycle
 
-1. **Incoming Request**: The client sends a request to `http://localhost:3000/v1/chat/completions` (OpenAI format) or `http://localhost:3000/v1/messages` (Anthropic format).
+1. **Incoming Request**: The client sends a request to `http://localhost:6875/v1/chat/completions` (OpenAI format) or `http://localhost:6875/v1/messages` (Anthropic format).
 2. **Local Token Count**: The proxy calculates the original token size of system messages and message contents using `js-tiktoken`.
 3. **Caching Check**: If local caching is active, the proxy hashes the request payload. If a match exists in memory and is within TTL, it returns the cached response immediately (saving 100% tokens).
 4. **Compression Pipeline**:

@@ -28,13 +28,13 @@ bun install
 ```
 
 ### 2. Run in Development Mode
-Starts both the backend proxy (`http://localhost:3000`) and Vite dev server (`http://localhost:5173`) concurrently with hot-reloading:
+Starts both the backend proxy (`http://localhost:6875`) and Vite dev server (`http://localhost:5173`) concurrently with hot-reloading:
 ```bash
 bun run dev
 ```
 
 ### 3. Run in Production Mode
-Builds the React frontend bundle and runs the unified Bun server which serves both the proxy endpoints and the static dashboard UI on port `3000`:
+Builds the React frontend bundle and runs the unified Bun server which serves both the proxy endpoints and the static dashboard UI on port `6875`:
 ```bash
 bun run build
 bun start
@@ -55,13 +55,13 @@ Point your AI assistant or agent to the local proxy. It exposes standard OpenAI 
 ### Cursor / Cline / VS Code Extensions
 Change the base URL of your model provider to:
 ```text
-http://localhost:3000/v1
+http://localhost:6875/v1
 ```
 Ensure you choose the corresponding OpenAI or Anthropic model.
 
 ### Curl Example (OpenAI Format)
 ```bash
-curl http://localhost:3000/v1/chat/completions \
+curl http://localhost:6875/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4o",
@@ -78,7 +78,7 @@ curl http://localhost:3000/v1/chat/completions \
 
 ## 📊 Dashboard UI Features
 
-Access the dashboard at `http://localhost:3000` (or `http://localhost:5173` in development mode):
+Access the dashboard at `http://localhost:6875` (or `http://localhost:5173` in development mode):
 - **Live Metrics Dashboard**: Visualizes saved tokens, compression ratios, cost savings, and cache hit rates in real-time via WebSockets.
 - **Sparkline Charts**: Dynamic SVG representation of recent compression performance.
 - **Pipeline Configurator**: Toggle pipelines (RTK, Serena, Headroom, Caveman, Cache) and adjust thresholds (e.g., min lines for AST pruning, min length for CCR substitution).

@@ -1,13 +1,13 @@
 /**
  * Bun HTTP & WebSocket Server Entrypoint
- * Listens on port 3000, routes API requests, handles WebSockets,
+ * Listens on port 6875, routes API requests, handles WebSockets,
  * and serves the Vite client app.
  */
 import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countTokens } from "./proxy";
 import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
 import { join } from "path";
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 6875;
 const DIST_DIR = join(import.meta.dirname, "../dist");
 
 console.log(`[Server] Initializing Bun server on port ${PORT}...`);
@@ -177,7 +177,7 @@ const server = Bun.serve({
         </head>
         <body>
           <h1>⚡ RamuToken Proxy & Compressor</h1>
-          <p>The backend proxy is running successfully. Direct your AI agents (Cursor, Claude Code, etc.) to <code>http://localhost:3000/v1</code>.</p>
+          <p>The backend proxy is running successfully. Direct your AI agents (Cursor, Claude Code, etc.) to <code>http://localhost:6875/v1</code>.</p>
           <p>To view the dashboard, run the client dev server with <code>bun run dev</code> and open <code>http://localhost:5173</code>.</p>
           <span class="badge">Proxy Active (Port ${PORT})</span>
         </body>

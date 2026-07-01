@@ -15,8 +15,8 @@ export default defineConfig({
     port: 5173,
     // Proxy api calls to Bun backend during development
     proxy: {
-      "/api": "http://localhost:3000",
-      "/v1": "http://localhost:3000",
+      "/api": "http://localhost:6875",
+      "/v1": "http://localhost:6875",
     },
   },
 });

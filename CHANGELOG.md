@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-07-01
+
+### Changed
+- **Default Backend Port**: Changed the default proxy backend server port from `3000` to `6875` to resolve port conflicts. Updated all configurations, dashboard connection fallbacks, and documentation.
+
 ## [1.0.3] - 2026-07-01
 
 ### Added
