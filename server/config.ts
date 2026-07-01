@@ -11,7 +11,6 @@ export interface CompressorSettings {
   serena: {
     enabled: boolean;
     minLines: number;
-    usePythonSymbols: boolean;
   };
   headroom: {
     enabled: boolean;
@@ -20,7 +19,6 @@ export interface CompressorSettings {
     ccr: boolean;
     minCcrLength: number;
     blacklist: string[];
-    usePython: boolean;
   };
   caveman: {
     enabled: boolean;
@@ -72,7 +70,6 @@ export let settings: CompressorSettings = {
   serena: {
     enabled: true,
     minLines: 8,
-    usePythonSymbols: false,
   },
   headroom: {
     enabled: true,
@@ -81,7 +78,6 @@ export let settings: CompressorSettings = {
     ccr: true,
     minCcrLength: 200,
     blacklist: ["metadata", "id_token", "hash"],
-    usePython: false,
   },
   caveman: {
     enabled: false, // Turned off by default, opt-in

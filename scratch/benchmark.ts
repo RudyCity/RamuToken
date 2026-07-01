@@ -1,7 +1,11 @@
+import { spawnSync } from "child_process";
+import { writeFileSync, unlinkSync, existsSync, mkdirSync } from "fs";
+import { join } from "path";
 import { compressSerena } from "../server/pipelines/serena";
 import { compressHeadroom } from "../server/pipelines/headroom";
+import { compressRTK } from "../server/pipelines/rtk";
+import { pythonDaemon } from "../server/pipelines/python_daemon";
 
-// Sample TS code block for Serena
 const tsCode = `
 \`\`\`typescript
 export function computeSum(a: number, b: number): number {
@@ -27,87 +31,143 @@ export function main() {
 \`\`\`
 `;
 
-// Sample JSON and long text for Headroom
 const headroomText = `
-Here is some JSON configuration:
-\`\`\`json
-{
-  "name": "Production Server Configuration",
-  "version": "4.2.1",
-  "metadata": {
-    "ip_address": "192.168.1.100",
-    "id_token": "abc123xyz_token_secret",
-    "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-  },
-  "tags": ["prod", "web", "primary"],
-  "endpoints": [
-    { "path": "/api/v1", "active": true, "timeout": null },
-    { "path": "/api/v2", "active": false, "timeout": 30 }
-  ],
-  "empty_object": {},
-  "empty_array": []
-}
-\`\`\`
-
-Here is a very long text block that should trigger Client Context Retrieval (CCR) substitution because it exceeds the minimum character threshold:
+Here is a very long text block that should trigger headroom-ai context compression because it is lengthy:
 \`\`\`text
-The quick brown fox jumps over the lazy dog. This is a very long context block designed to exceed the typical minimum character count requirement for the Headroom CCR placeholder replacement. It will be substituted with a short, unique token like {{HR_CCR_X}} and then restored automatically on the return response path from the LLM, saving significant input context tokens in flight.
+The quick brown fox jumps over the lazy dog. This is a very long context block designed to exceed the typical minimum character count requirement for the Headroom context compression. It will be compressed by the official headroom library, saving significant input context tokens in flight.
 \`\`\`
 `;
 
 console.log("====================================================");
-console.log("⚡ RAMUTOKEN PIPELINE OPTIMIZATION BENCHMARK ⚡");
+console.log("⚡ RAMUTOKEN OFFICIAL PIPELINES DAEMON BENCHMARK ⚡");
 console.log("====================================================\n");
 
-function benchmarkSerena() {
-  console.log("--- Running Serena Pipeline Benchmark ---");
-  const query = "Explain how computeSum and main work.";
-  
-  // 1. With Python Symbols (using subprocess)
-  const startPy = typeof performance !== "undefined" ? performance.now() : Date.now();
-  const resPy = compressSerena(tsCode, query, { minLines: 3, usePythonSymbols: true });
-  const endPy = typeof performance !== "undefined" ? performance.now() : Date.now();
-  const timePy = endPy - startPy;
+// Unoptimized Serena: spawns python get_symbols.py synchronously
+function unoptimizedSerena(tempFile: string, tempDir: string): any {
+  const scriptPath = join(import.meta.dirname, "../server/pipelines/get_symbols.py");
+  const proc = spawnSync("python", [scriptPath, tempDir, tempFile], {
+    encoding: "utf-8",
+    timeout: 15000
+  });
+  if (proc.status === 0 && proc.stdout) {
+    return JSON.parse(proc.stdout.trim());
+  }
+  throw new Error("Unoptimized Serena process failed: " + proc.stderr);
+}
 
-  // 2. Without Python Symbols (Fast Local TS AST)
-  const startTs = typeof performance !== "undefined" ? performance.now() : Date.now();
-  const resTs = compressSerena(tsCode, query, { minLines: 3, usePythonSymbols: false });
-  const endTs = typeof performance !== "undefined" ? performance.now() : Date.now();
-  const timeTs = endTs - startTs;
+// Unoptimized Headroom: spawns python -c directly
+function unoptimizedHeadroom(text: string): string {
+  const pythonScript = [
+    "import sys, json",
+    "from headroom import compress",
+    "inp = sys.stdin.read()",
+    "msgs = [{'role': 'user', 'content': inp}]",
+    "result = compress(msgs)",
+    "print(result.messages[0]['content'] if result and hasattr(result, 'messages') and result.messages else inp)"
+  ].join("; ");
 
-  console.log(`[Python Symbols Enabled]  Time: ${timePy.toFixed(2)}ms | Result length: ${resPy.length} chars`);
-  console.log(`[Local TS Mode (Default)] Time: ${timeTs.toFixed(2)}ms | Result length: ${resTs.length} chars`);
-  console.log(`🚀 Serena Speedup Factor: ${(timePy / timeTs).toFixed(1)}x faster!\n`);
-  
-  console.log("Compressed Code (Local TS):");
-  console.log(resTs.trim());
+  const proc = spawnSync("python", ["-c", pythonScript], {
+    input: text,
+    encoding: "utf-8",
+    timeout: 15000
+  });
+  if (proc.status === 0 && proc.stdout) {
+    return proc.stdout.trimEnd();
+  }
+  throw new Error("Unoptimized Headroom process failed: " + proc.stderr);
+}
+
+async function runBenchmark() {
+  // --- SERENA BENCHMARK ---
+  console.log("--- Running Serena (LSP Symbols) ---");
+  const query = "Explain how computeSum works.";
+  const tempDir = join(import.meta.dirname, "../data");
+  const tempFile = join(tempDir, "temp_serena_bench.ts");
+
+  if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true });
+  writeFileSync(tempFile, tsCode, "utf8");
+
+  // 1. Unoptimized (Sync Spawn)
+  const startUnoptSerena = performance.now();
+  const unoptSerenaRes = unoptimizedSerena(tempFile, tempDir);
+  const endUnoptSerena = performance.now();
+  const timeUnoptSerena = endUnoptSerena - startUnoptSerena;
+
+  // 2. Optimized (Daemon Request - Cold Run)
+  const startOptSerenaCold = performance.now();
+  const optSerenaResCold = await compressSerena(tsCode, query, { minLines: 3 });
+  const endOptSerenaCold = performance.now();
+  const timeOptSerenaCold = endOptSerenaCold - startOptSerenaCold;
+
+  // 3. Optimized (Daemon Request - Hot Runs)
+  const hotTimesSerena: number[] = [];
+  let optSerenaRes = "";
+  for (let i = 0; i < 3; i++) {
+    const start = performance.now();
+    optSerenaRes = await compressSerena(tsCode, query, { minLines: 3 });
+    hotTimesSerena.push(performance.now() - start);
+  }
+  const avgHotTimeSerena = hotTimesSerena.reduce((a, b) => a + b, 0) / hotTimesSerena.length;
+
+  try { if (existsSync(tempFile)) unlinkSync(tempFile); } catch {}
+
+  console.log(`[Unoptimized Sync Spawn]       Time: ${timeUnoptSerena.toFixed(2)}ms`);
+  console.log(`[Daemon Cold Run (LSP Boot)]   Time: ${timeOptSerenaCold.toFixed(2)}ms`);
+  console.log(`[Daemon Hot Run (Subsequent)]  Time: ${avgHotTimeSerena.toFixed(2)}ms`);
+  console.log(`🚀 Serena Speedup (Hot Run):   ${(timeUnoptSerena / avgHotTimeSerena).toFixed(1)}x faster!\n`);
+
+  console.log("Compressed Code Output:");
+  console.log(optSerenaRes.trim());
   console.log("\n-----------------------------------------\n");
-}
 
-function benchmarkHeadroom() {
-  console.log("--- Running Headroom Pipeline Benchmark ---");
-  
-  // 1. With Python Headroom (using subprocess)
-  const startPy = typeof performance !== "undefined" ? performance.now() : Date.now();
-  const resPy = compressHeadroom(headroomText, { minCcrLength: 150, usePython: true });
-  const endPy = typeof performance !== "undefined" ? performance.now() : Date.now();
-  const timePy = endPy - startPy;
+  // --- HEADROOM BENCHMARK ---
+  console.log("--- Running Headroom (compress) ---");
 
-  // 2. Without Python Headroom (Fast Local TS)
-  const startTs = typeof performance !== "undefined" ? performance.now() : Date.now();
-  const resTs = compressHeadroom(headroomText, { minCcrLength: 150, usePython: false });
-  const endTs = typeof performance !== "undefined" ? performance.now() : Date.now();
-  const timeTs = endTs - startTs;
+  // 1. Unoptimized (Sync Spawn)
+  const startUnoptHr = performance.now();
+  const unoptHrRes = unoptimizedHeadroom(headroomText);
+  const endUnoptHr = performance.now();
+  const timeUnoptHr = endUnoptHr - startUnoptHr;
 
-  console.log(`[Python Headroom Enabled] Time: ${timePy.toFixed(2)}ms | Result length: ${resPy.text.length} chars`);
-  console.log(`[Local TS Mode (Default)] Time: ${timeTs.toFixed(2)}ms | Result length: ${resTs.text.length} chars`);
-  console.log(`🚀 Headroom Speedup Factor: ${(timePy / timeTs).toFixed(1)}x faster!\n`);
+  // 2. Optimized (Daemon Request - Cold Run)
+  const startOptHrCold = performance.now();
+  const optHrResCold = await compressHeadroom(headroomText);
+  const endOptHrCold = performance.now();
+  const timeOptHrCold = endOptHrCold - startOptHrCold;
 
-  console.log("Compressed Text (Local TS):");
-  console.log(resTs.text.trim());
-  console.log("\nCCR Mappings generated:", Object.keys(resTs.mapping));
+  // 3. Optimized (Daemon Request - Hot Runs)
+  const hotTimesHr: number[] = [];
+  let optHrRes: any = null;
+  for (let i = 0; i < 3; i++) {
+    const start = performance.now();
+    optHrRes = await compressHeadroom(headroomText);
+    hotTimesHr.push(performance.now() - start);
+  }
+  const avgHotTimeHr = hotTimesHr.reduce((a, b) => a + b, 0) / hotTimesHr.length;
+
+  console.log(`[Unoptimized Sync Spawn]       Time: ${timeUnoptHr.toFixed(2)}ms`);
+  console.log(`[Daemon Cold Run (LSP Boot)]   Time: ${timeOptHrCold.toFixed(2)}ms`);
+  console.log(`[Daemon Hot Run (Subsequent)]  Time: ${avgHotTimeHr.toFixed(2)}ms`);
+  console.log(`🚀 Headroom Speedup (Hot Run): ${(timeUnoptHr / avgHotTimeHr).toFixed(1)}x faster!\n`);
+
+  console.log("Compressed Text Output:");
+  console.log(optHrRes.text.trim());
+  console.log("\n-----------------------------------------\n");
+
+  // --- RTK BENCHMARK ---
+  console.log("--- Running RTK (CLI Log/Read) ---");
+  const logInput = "INFO: app processing\nINFO: app processing\nINFO: app processing\nError at C:\\Users\\User\\src\\index.ts";
+  const startRtk = performance.now();
+  const rtkRes = await compressRTK(logInput);
+  const endRtk = performance.now();
+  const timeRtk = endRtk - startRtk;
+
+  console.log(`[RTK CLI Execution] Time: ${timeRtk.toFixed(2)}ms`);
+  console.log("RTK Output:");
+  console.log(rtkRes);
   console.log("====================================================");
+
+  pythonDaemon.shutdown();
 }
 
-benchmarkSerena();
-benchmarkHeadroom();
+runBenchmark().catch(console.error);

@@ -8,7 +8,6 @@ export interface CompressorSettings {
   serena: {
     enabled: boolean;
     minLines: number;
-    usePythonSymbols: boolean;
   };
   headroom: {
     enabled: boolean;
@@ -17,7 +16,6 @@ export interface CompressorSettings {
     ccr: boolean;
     minCcrLength: number;
     blacklist: string[];
-    usePython: boolean;
   };
   caveman: {
     enabled: boolean;

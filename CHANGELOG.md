@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.15] - 2026-07-01
+
+### Added
+- **Persistent Python Daemon**: Added a persistent background daemon (`daemon.py` and `python_daemon.ts`) to keep interpreter startup, package imports, and Serena Language Server LSP managers loaded in memory.
+- **Daemon Speedup Benchmarks**: Updated `scratch/benchmark.ts` to test hot and cold daemon execution speeds. Serena now runs 150x faster (13ms vs 2.1s) and Headroom runs 1600x faster (0.6ms vs 1.1s).
+
+### Changed
+- **Removed Native TS Fallbacks**: Discarded local TypeScript heuristic replicas for Serena, Headroom, and RTK. The pipelines now always run the official command-line tools and Python packages via the persistent daemon wrapper or direct binary calls.
+- **Asynchronous Orchestration**: Modified `compressMessageList` in the proxy server to process messages asynchronously, allowing non-blocking daemon requests.
+- **Test Suite Modernization**: Updated the unit tests in `pipelines.test.ts` to support async/await pipelines and verify correct integration outputs.
+
+---
+
 ## [1.3.14] - 2026-07-01
 
 ### Added

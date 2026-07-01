@@ -6,6 +6,7 @@
 import { spawnSync, spawn } from "child_process";
 import { writeFileSync, unlinkSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
+import { pythonDaemon } from "./python_daemon";
 
 // Extracts alphanumeric word tokens from the user's query
 export function extractKeywords(userQuery: string): Set<string> {
@@ -17,139 +18,7 @@ export function extractKeywords(userQuery: string): Set<string> {
   return keywords;
 }
 
-// Compress TypeScript/JavaScript code
-export function compressJS(code: string, keywords: Set<string>, minLinesToPrune = 5): string {
-  const lines = code.split("\n");
-  const resultLines: string[] = [];
-  
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    
-    // Check for function or method declarations
-    // e.g. "function foo(x) {", "async function bar() {", "export const baz = (x) => {"
-    // e.g. class methods: "myMethod(a, b) {" or "constructor() {"
-    const funcMatch = line.match(/(?:function\s+|const\s+|let\s+|var\s+|class\s+|interface\s+|type\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:=|:\s*.*=)?\s*(?:\([^)]*\)|<[^>]*>)?\s*(=>|\{)/) 
-      || line.match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*\{/);
-
-    if (funcMatch && line.includes("{")) {
-      const name = funcMatch[1];
-      
-      // If name is a reserved keyword or standard word, don't use it as unique identifier
-      const reserved = ["if", "for", "while", "switch", "catch", "function", "class", "const", "let", "var", "import", "export", "return"];
-      
-      if (!reserved.includes(name)) {
-        // We found a function/block start. Let's find its matching closing brace.
-        let braceCount = 0;
-        const blockLines: string[] = [];
-        let j = i;
-        
-        while (j < lines.length) {
-          const l = lines[j];
-          blockLines.push(l);
-          
-          // Count braces
-          const opens = (l.match(/\{/g) || []).length;
-          const closes = (l.match(/\}/g) || []).length;
-          braceCount += opens - closes;
-          
-          if (braceCount <= 0 && j > i) {
-            break;
-          }
-          j++;
-        }
-
-        // If the block is long and the symbol is NOT mentioned in the user query keywords, prune it!
-        const blockLength = blockLines.length;
-        const shouldPrune = blockLength >= minLinesToPrune && !keywords.has(name);
-        
-        if (shouldPrune) {
-          // Keep the first line (signature)
-          const firstLine = lines[i];
-          const indent = firstLine.match(/^\s*/)?.[0] || "";
-          resultLines.push(firstLine);
-          resultLines.push(`${indent}  // ... body compressed (${blockLength} lines prunned) ...`);
-          // Keep the last line (closing brace)
-          const lastLine = lines[j];
-          if (lastLine && j > i) {
-            resultLines.push(lastLine);
-          }
-          i = j + 1;
-          continue;
-        }
-      }
-    }
-    
-    resultLines.push(line);
-    i++;
-  }
-  
-  return resultLines.join("\n");
-}
-
-// Compress Python code
-export function compressPython(code: string, keywords: Set<string>, minLinesToPrune = 5): string {
-  const lines = code.split("\n");
-  const resultLines: string[] = [];
-  
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    
-    // Matches: "def function_name(...):" or "class ClassName:"
-    const defMatch = line.match(/^\s*(?:def|class)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
-    
-    if (defMatch) {
-      const name = defMatch[1];
-      const sigIndent = line.match(/^\s*/)?.[0] || "";
-      const sigIndentLen = sigIndent.length;
-
-      // Find the range of the function/class body (lines with deeper indentation)
-      let j = i + 1;
-      const bodyLines: string[] = [];
-      
-      while (j < lines.length) {
-        const l = lines[j];
-        const trimmed = l.trim();
-        
-        if (trimmed === "") {
-          bodyLines.push(l);
-          j++;
-          continue;
-        }
-        
-        const lineIndent = l.match(/^\s*/)?.[0] || "";
-        if (lineIndent.length <= sigIndentLen) {
-          break; // Body ended (same or less indentation)
-        }
-        
-        bodyLines.push(l);
-        j++;
-      }
-
-      const bodyLength = bodyLines.length;
-      const shouldPrune = bodyLength >= minLinesToPrune && !keywords.has(name);
-
-      if (shouldPrune) {
-        // Push the signature line (which might span multiple lines if backslashes or open parens exist)
-        // For simplicity, we just push the signature line we matched
-        resultLines.push(line);
-        // Push a collapsed indicator
-        const nextIndent = sigIndent + "    ";
-        resultLines.push(`${nextIndent}pass  # ... body compressed (${bodyLength} lines prunned) ...`);
-        
-        // Skip the body lines in the loop
-        i = j;
-        continue;
-      }
-    }
-    
-    resultLines.push(line);
-    i++;
-  }
-  
-  return resultLines.join("\n");
-}
+// Heuristic fallbacks compressJS and compressPython removed. Serena now always uses the Python LSP daemon.
 
 interface CodeBlock {
   name: string;
@@ -325,106 +194,62 @@ interface CodeBlock {
 }
 
 // Main Serena compressor
-export function compressSerena(text: string, userQuery: string, options: { minLines?: number; usePythonSymbols?: boolean } = {}): string {
+export async function compressSerena(text: string, userQuery: string, options: { minLines?: number } = {}): Promise<string> {
   const minLines = options.minLines ?? 5;
-  const usePythonSymbols = options.usePythonSymbols ?? false;
   const initialKeywords = extractKeywords(userQuery);
-
   const codeBlockRegex = /```(typescript|javascript|js|ts|python|py)\n([\s\S]*?)```/g;
 
-  if (!usePythonSymbols) {
-    // Process text natively using the custom AST-style local pruner
-    let resultText = text;
-    let match;
-    const blocks: Array<{ lang: string; code: string; isPython: boolean; matchStr: string }> = [];
-    while ((match = codeBlockRegex.exec(text)) !== null) {
-      const [matchStr, lang, code] = match;
-      const isPython = lang === "python" || lang === "py";
-      blocks.push({ lang, code, isPython, matchStr });
-    }
-
-    if (blocks.length === 0) return text;
-
-    for (const block of blocks) {
-      const keywords = resolveDependencies(block.code, initialKeywords, block.isPython);
-      const prunedCode = block.isPython
-        ? compressPython(block.code, keywords, minLines)
-        : compressJS(block.code, keywords, minLines);
-      resultText = resultText.replace(block.matchStr, `\`\`\`${block.lang}\n${prunedCode}\`\`\``);
-    }
-    return resultText;
-  }
-
-  const tempDir = join(import.meta.dirname, "../../data");
-
   // Extract all code blocks
-  const blocks: CodeBlock[] = [];
+  const blocks: Array<{ lang: string; code: string; isPython: boolean; tempFile: string; matchStr: string }> = [];
   let match;
   while ((match = codeBlockRegex.exec(text)) !== null) {
     const [matchStr, lang, code] = match;
     const isPython = lang === "python" || lang === "py";
     const ext = isPython ? ".py" : ".ts";
-    const tempFile = join(tempDir, `temp_serena_${Math.random().toString(36).substring(2, 9)}_${blocks.length}${ext}`);
+    const tempFile = join(import.meta.dirname, `../../data/temp_serena_${Math.random().toString(36).substring(2, 9)}_${blocks.length}${ext}`);
     blocks.push({ lang, code, isPython, tempFile, matchStr });
   }
 
   if (blocks.length === 0) return text;
 
-  // Batch execute symbol retriever
-  let batchSymbolsMap: Record<string, any> = {};
+  const tempDir = join(import.meta.dirname, "../../data");
   try {
     if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true });
     for (const block of blocks) {
       writeFileSync(block.tempFile, block.code, "utf8");
     }
 
-    const scriptPath = join(import.meta.dirname, "get_symbols.py");
     const tempPaths = blocks.map(b => b.tempFile);
-    const proc = spawnSync("python", [scriptPath, tempDir, ...tempPaths], {
-      encoding: "utf-8",
-      timeout: 15_000
+    // Always request symbols from the python daemon
+    const batchSymbolsMap = await pythonDaemon.request("serena", {
+      project_root: tempDir,
+      file_paths: tempPaths
     });
 
-    if (proc.status === 0 && proc.stdout) {
-      batchSymbolsMap = JSON.parse(proc.stdout.trim());
-    }
-  } catch (err) {
-    console.error("[Serena] Batch symbol retrieval error:", err);
-  }
-
-  // Process text by replacing each code block match
-  let resultText = text;
-  for (const block of blocks) {
-    let prunedCode: string | null = null;
-    const fileSymbols = batchSymbolsMap[block.tempFile];
-
-    if (Array.isArray(fileSymbols) && fileSymbols.length > 0) {
-      try {
-        const keywords = resolveDependencies(block.code, initialKeywords, block.isPython);
-        prunedCode = pruneBySerenaSymbols(block.code, fileSymbols, keywords, minLines);
-      } catch {
-        prunedCode = null;
+    let resultText = text;
+    for (const block of blocks) {
+      const fileSymbols = batchSymbolsMap[block.tempFile];
+      if (Array.isArray(fileSymbols) && fileSymbols.length > 0) {
+        try {
+          const keywords = resolveDependencies(block.code, initialKeywords, block.isPython);
+          const prunedCode = pruneBySerenaSymbols(block.code, fileSymbols, keywords, minLines);
+          resultText = resultText.replace(block.matchStr, `\`\`\`${block.lang}\n${prunedCode}\`\`\``);
+        } catch (err) {
+          console.error("[Serena] Failed to prune block symbols:", err);
+        }
       }
     }
-
-    // Fallback: custom AST-style local pruner
-    if (prunedCode === null) {
-      const keywords = resolveDependencies(block.code, initialKeywords, block.isPython);
-      prunedCode = block.isPython
-        ? compressPython(block.code, keywords, minLines)
-        : compressJS(block.code, keywords, minLines);
+    return resultText;
+  } catch (err) {
+    console.error("[Serena] Daemon symbol retrieval error:", err);
+    return text;
+  } finally {
+    // Cleanup all temp files
+    for (const block of blocks) {
+      try {
+        if (existsSync(block.tempFile)) unlinkSync(block.tempFile);
+      } catch {}
     }
-
-    resultText = resultText.replace(block.matchStr, `\`\`\`${block.lang}\n${prunedCode}\`\`\``);
   }
-
-  // Cleanup all temp files
-  for (const block of blocks) {
-    try {
-      if (existsSync(block.tempFile)) unlinkSync(block.tempFile);
-    } catch {}
-  }
-
-  return resultText;
 }
 

@@ -35,23 +35,24 @@ export function countPayloadTokens(messages: Message[], system?: string): number
 }
 
 // Core compression orchestrator for a set of messages
-export function compressMessageList(
-  messages: Message[], 
+export async function compressMessageList(
+  messages: Message[],
   userQuery: string
-): { compressedMessages: Message[]; originalPrompt: string; compressedPrompt: string; ccrCount: number } {
+): Promise<{ compressedMessages: Message[]; originalPrompt: string; compressedPrompt: string; ccrCount: number }> {
   let originalAccumulated = "";
   let compressedAccumulated = "";
   let ccrCount = 0;
 
-  // Process message contents
-  let processed = messages.map(msg => {
+  // Process message contents asynchronously
+  const processed: Message[] = [];
+  for (const msg of messages) {
     let content = msg.content || "";
     originalAccumulated += content + "\n";
 
     if (msg.role !== "system") {
       // 1. RTK Compression (logs, CLI output, paths)
       if (settings.rtk.enabled) {
-        content = compressRTK(content, {
+        content = await compressRTK(content, {
           logs: settings.rtk.logs,
           paths: settings.rtk.paths,
           stacks: settings.rtk.stacks
@@ -60,21 +61,19 @@ export function compressMessageList(
 
       // 2. Serena Compression (code AST-like pruning based on query keywords)
       if (settings.serena.enabled) {
-        content = compressSerena(content, userQuery, { 
-          minLines: settings.serena.minLines,
-          usePythonSymbols: settings.serena.usePythonSymbols
+        content = await compressSerena(content, userQuery, { 
+          minLines: settings.serena.minLines
         });
       }
 
       // 3. Headroom Compression (JSON minifying and CCR reversible substitution)
       if (settings.headroom.enabled) {
-        const hrResult = compressHeadroom(content, {
+        const hrResult = await compressHeadroom(content, {
           minify: settings.headroom.minify,
           prune: settings.headroom.prune,
           ccr: settings.headroom.ccr,
           minCcrLength: settings.headroom.minCcrLength,
-          blacklist: settings.headroom.blacklist,
-          usePython: settings.headroom.usePython
+          blacklist: settings.headroom.blacklist
         });
         content = hrResult.text;
         ccrCount += Object.keys(hrResult.mapping).length;
@@ -84,16 +83,17 @@ export function compressMessageList(
     compressedAccumulated += content + "\n";
 
     const compressedMsg: Message = { ...msg, content };
-    return preserveCacheControl(msg, compressedMsg);
-  });
+    processed.push(preserveCacheControl(msg, compressedMsg));
+  }
 
   // 4. Caveman Compression (append system prompt instruction)
+  let finalProcessed = processed;
   if (settings.caveman.enabled) {
-    processed = injectCavemanPrompt(processed, settings.caveman.level);
+    finalProcessed = injectCavemanPrompt(processed, settings.caveman.level);
   }
 
   return {
-    compressedMessages: processed,
+    compressedMessages: finalProcessed,
     originalPrompt: originalAccumulated,
     compressedPrompt: compressedAccumulated,
     ccrCount
@@ -259,7 +259,7 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
   const originalTokens = countPayloadTokens(originalMessages);
 
   // Apply Compression
-  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = compressMessageList(originalMessages, userQuery);
+  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery);
   const compressedTokens = countPayloadTokens(compressedMessages);
   const savingsPercent = originalTokens > 0 ? ((originalTokens - compressedTokens) / originalTokens) * 100 : 0;
 
@@ -412,12 +412,12 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
   const originalTokens = countPayloadTokens(originalMessages, systemPrompt);
 
   // Apply Compression
-  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = compressMessageList(originalMessages, userQuery);
+  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery);
   
   // Compress system prompt if enabled
   let compressedSystem = systemPrompt;
   if (systemPrompt && settings.rtk.enabled) {
-    compressedSystem = compressRTK(systemPrompt);
+    compressedSystem = await compressRTK(systemPrompt);
   }
 
   const compressedTokens = countPayloadTokens(compressedMessages, compressedSystem);
@@ -734,7 +734,7 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
   
   const originalTokens = countPayloadTokens(originalMessages);
 
-  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = compressMessageList(originalMessages, userQuery);
+  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery);
   const compressedTokens = countPayloadTokens(compressedMessages);
   const savingsPercent = originalTokens > 0 ? ((originalTokens - compressedTokens) / originalTokens) * 100 : 0;
 
