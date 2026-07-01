@@ -10,7 +10,7 @@ import DashboardTab from "./components/DashboardTab";
 import TestBenchTab from "./components/TestBenchTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.1.2";
+const APP_VERSION = "1.1.3";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");
@@ -171,6 +171,13 @@ export default function App() {
     handleSaveSettings(updated);
   };
 
+  const handleServerPortChange = (val: number) => {
+    const updated = { ...settings };
+    if (!updated.server) updated.server = { port: 6875 };
+    updated.server.port = val;
+    setSettings(updated);
+  };
+
   // Run test compression
   const runTestCompression = async () => {
     if (!testText.trim()) return;
@@ -277,6 +284,7 @@ export default function App() {
             handleSaveSettings={handleSaveSettings}
             handleCavemanLevelChange={handleCavemanLevelChange}
             backendPort={backendPort}
+            handleServerPortChange={handleServerPortChange}
           />
         )}
       </main>

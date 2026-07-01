@@ -84,6 +84,9 @@ export let settings: CompressorSettings = {
     anthropicKey: process.env.ANTHROPIC_API_KEY || "",
     preferBifrost: true,
   },
+  server: {
+    port: 6875,
+  },
 };
 
 // In-memory logs history (keep last 200 logs)
@@ -110,6 +113,7 @@ export function updateSettings(newSettings: Partial<CompressorSettings>) {
     caveman: { ...settings.caveman, ...newSettings.caveman },
     cache: { ...settings.cache, ...newSettings.cache },
     upstream: { ...settings.upstream, ...newSettings.upstream },
+    server: { ...settings.server, ...newSettings.server },
   };
   saveToDisk();
   return settings;

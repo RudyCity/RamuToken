@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.3] - 2026-07-01
+
+### Added
+- **Configurable Server Port via UI**: Added a new "RamuToken Proxy Port" number input field in `SettingsTab.tsx` next to the Bifrost Endpoint URL. The server now checks `process.env.PORT` first, then falls back to `settings.server.port` loaded from `db.json`, before defaulting to `6875`. If the configured port differs from the running port, a warning badge is displayed indicating that a server restart is required.
+
+---
+
 ## [1.1.2] - 2026-07-01
 
 ### Added

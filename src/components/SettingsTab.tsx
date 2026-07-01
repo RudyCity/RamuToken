@@ -10,6 +10,7 @@ interface SettingsTabProps {
   handleSaveSettings: (updatedSettings: CompressorSettings) => void;
   handleCavemanLevelChange: (level: "low" | "medium" | "high") => void;
   backendPort: number;
+  handleServerPortChange: (val: number) => void;
 }
 
 // ── Toggle Switch ─────────────────────────────────────────────────────────────
@@ -47,6 +48,7 @@ export default function SettingsTab({
   handleSaveSettings,
   handleCavemanLevelChange,
   backendPort,
+  handleServerPortChange,
 }: SettingsTabProps) {
   const [bifrostStatus, setBifrostStatus] = useState<BifrostStatus>("idle");
   const [bifrostLatency, setBifrostLatency] = useState<number | null>(null);
@@ -173,63 +175,87 @@ export default function SettingsTab({
           />
         </div>
 
-        {/* Bifrost URL + Test connection */}
-        <div className="space-y-2">
-          <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
-            Bifrost Endpoint URL
-          </label>
-          <div className="flex gap-2">
+        {/* Bifrost URL + Server Port Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2 space-y-2">
+            <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+              Bifrost Endpoint URL
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="input-bifrost-url"
+                type="text"
+                value={settings.upstream.bifrostUrl}
+                onChange={(e) => handleInputChange("bifrostUrl", e.target.value)}
+                onBlur={() => handleSaveSettings(settings)}
+                placeholder="http://localhost:8080"
+                className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-cyan transition-colors"
+              />
+              <button
+                id="btn-test-bifrost"
+                onClick={testBifrost}
+                disabled={bifrostStatus === "checking"}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-60 shrink-0"
+                style={{
+                  background: bifrostStatus === "online"
+                    ? "rgba(16,185,129,0.12)"
+                    : bifrostStatus === "offline"
+                    ? "rgba(236,72,153,0.12)"
+                    : "rgba(6,182,212,0.1)",
+                  borderColor: bifrostStatus === "online"
+                    ? "rgba(16,185,129,0.3)"
+                    : bifrostStatus === "offline"
+                    ? "rgba(236,72,153,0.3)"
+                    : "rgba(6,182,212,0.25)",
+                  color: bifrostStatus === "online"
+                    ? "#10b981"
+                    : bifrostStatus === "offline"
+                    ? "#ec4899"
+                    : "#06b6d4",
+                }}
+              >
+                {bifrostStatus === "checking" ? (
+                  <Loader className="w-3.5 h-3.5 animate-spin" />
+                ) : bifrostStatus === "online" ? (
+                  <Wifi className="w-3.5 h-3.5" />
+                ) : bifrostStatus === "offline" ? (
+                  <WifiOff className="w-3.5 h-3.5" />
+                ) : (
+                  <Wifi className="w-3.5 h-3.5" />
+                )}
+                {bifrostStatus === "checking"
+                  ? "Checking…"
+                  : bifrostStatus === "online"
+                  ? `Online ${bifrostLatency ? `(${bifrostLatency}ms)` : ""}`
+                  : bifrostStatus === "offline"
+                  ? "Offline"
+                  : "Test"}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+              RamuToken Proxy Port
+            </label>
             <input
-              id="input-bifrost-url"
-              type="text"
-              value={settings.upstream.bifrostUrl}
-              onChange={(e) => handleInputChange("bifrostUrl", e.target.value)}
+              id="input-server-port"
+              type="number"
+              value={settings.server?.port || 6875}
+              onChange={(e) => handleServerPortChange(Number(e.target.value))}
               onBlur={() => handleSaveSettings(settings)}
-              placeholder="http://localhost:8080"
-              className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-cyan transition-colors"
+              placeholder="6875"
+              className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-cyan transition-colors"
             />
-            <button
-              id="btn-test-bifrost"
-              onClick={testBifrost}
-              disabled={bifrostStatus === "checking"}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-60 shrink-0"
-              style={{
-                background: bifrostStatus === "online"
-                  ? "rgba(16,185,129,0.12)"
-                  : bifrostStatus === "offline"
-                  ? "rgba(236,72,153,0.12)"
-                  : "rgba(6,182,212,0.1)",
-                borderColor: bifrostStatus === "online"
-                  ? "rgba(16,185,129,0.3)"
-                  : bifrostStatus === "offline"
-                  ? "rgba(236,72,153,0.3)"
-                  : "rgba(6,182,212,0.25)",
-                color: bifrostStatus === "online"
-                  ? "#10b981"
-                  : bifrostStatus === "offline"
-                  ? "#ec4899"
-                  : "#06b6d4",
-              }}
-            >
-              {bifrostStatus === "checking" ? (
-                <Loader className="w-3.5 h-3.5 animate-spin" />
-              ) : bifrostStatus === "online" ? (
-                <Wifi className="w-3.5 h-3.5" />
-              ) : bifrostStatus === "offline" ? (
-                <WifiOff className="w-3.5 h-3.5" />
-              ) : (
-                <Wifi className="w-3.5 h-3.5" />
-              )}
-              {bifrostStatus === "checking"
-                ? "Checking…"
-                : bifrostStatus === "online"
-                ? `Online ${bifrostLatency ? `(${bifrostLatency}ms)` : ""}`
-                : bifrostStatus === "offline"
-                ? "Offline"
-                : "Test"}
-            </button>
           </div>
         </div>
+
+        {/* Warning if port configured differs from actual active backend port */}
+        {settings.server?.port && settings.server.port !== backendPort && (
+          <p className="text-[10px] text-neon-amber font-mono bg-neon-amber/8 border border-neon-amber/20 p-3 rounded-xl animate-pulse">
+            ⚠️ <strong>Restart Required:</strong> You configured port {settings.server.port}, but the server is currently running on port {backendPort}. Please restart the proxy server for the change to take effect.
+          </p>
+        )}
 
         {/* Divider */}
         <div className="border-t border-white/5 pt-4">

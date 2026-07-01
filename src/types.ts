@@ -30,6 +30,9 @@ export interface CompressorSettings {
     anthropicKey: string;
     preferBifrost: boolean;
   };
+  server: {
+    port: number;
+  };
 }
 
 export interface RequestLog {

@@ -7,7 +7,7 @@ import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countToke
 import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
 import { join } from "path";
 
-const PORT = process.env.PORT || 6875;
+const PORT = process.env.PORT || settings.server?.port || 6875;
 const DIST_DIR = join(import.meta.dirname, "../dist");
 
 console.log(`[Server] Initializing Bun server on port ${PORT}...`);
