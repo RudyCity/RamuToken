@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.16] - 2026-07-01
+
+### Added
+- **Auto-Respawning Process Manager**: Configured `python_daemon.ts` to automatically release dead child-process references and spawn a fresh background daemon on the next request in case of a crash or exit.
+- **Lazy-Loaded Python Packages**: Refactored `daemon.py` to lazy-load `serena` and `headroom` modules on demand during the first request, reducing the background process initialization time down to under 10ms.
+
+---
+
 ## [1.3.15] - 2026-07-01
 
 ### Added

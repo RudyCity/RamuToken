@@ -50,6 +50,7 @@ class PythonDaemonManager {
     this.proc.on("error", (err) => {
       console.error("[Daemon] Process error:", err);
       this.cleanupPending(err);
+      this.proc = null;
     });
 
     this.proc.on("exit", (code) => {
@@ -57,6 +58,7 @@ class PythonDaemonManager {
         console.warn(`[Daemon] Process exited with code ${code}`);
       }
       this.cleanupPending(new Error(`Daemon process exited with code ${code}`));
+      this.proc = null;
     });
 
     return this.proc;

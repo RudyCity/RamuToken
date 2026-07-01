@@ -3,24 +3,21 @@ import json
 import os
 import traceback
 
-try:
-    from serena.config.serena_config import SerenaConfig
-    from serena.symbol import LanguageServerSymbolRetriever
-except ImportError:
-    SerenaConfig = None
-    LanguageServerSymbolRetriever = None
-
-try:
-    from headroom import compress as headroom_compress
-except ImportError:
-    headroom_compress = None
+SerenaConfig = None
+LanguageServerSymbolRetriever = None
+headroom_compress = None
 
 # Cache for project root -> (project, retriever)
 serena_projects = {}
 
 def get_serena_project(project_root):
+    global SerenaConfig, LanguageServerSymbolRetriever
     if SerenaConfig is None or LanguageServerSymbolRetriever is None:
-        raise Exception("Serena package is not installed or available in Python")
+        try:
+            from serena.config.serena_config import SerenaConfig
+            from serena.symbol import LanguageServerSymbolRetriever
+        except ImportError:
+            raise Exception("Serena package is not installed or available in Python")
     
     if project_root in serena_projects:
         return serena_projects[project_root]
@@ -71,8 +68,12 @@ def handle_serena(payload):
     return results
 
 def handle_headroom(payload):
+    global headroom_compress
     if headroom_compress is None:
-        raise Exception("headroom-ai package is not installed or available in Python")
+        try:
+            from headroom import compress as headroom_compress
+        except ImportError:
+            raise Exception("headroom-ai package is not installed or available in Python")
     
     text = payload["text"]
     msgs = [{"role": "user", "content": text}]
