@@ -159,6 +159,7 @@ export function registerSocket(ws: any) {
       settings,
       metrics,
       logs: logsHistory,
+      port: Number(process.env.PORT || 6875)
     }
   }));
 }

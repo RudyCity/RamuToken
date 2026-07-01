@@ -18,6 +18,7 @@ interface DashboardTabProps {
   settings: CompressorSettings;
   selectedLog: RequestLog | null;
   setSelectedLog: (log: RequestLog | null) => void;
+  backendPort: number;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -85,6 +86,7 @@ export default function DashboardTab({
   settings,
   selectedLog,
   setSelectedLog,
+  backendPort,
 }: DashboardTabProps) {
   const avgSavingPercent =
     metrics.originalTokensSum > 0
@@ -228,10 +230,14 @@ export default function DashboardTab({
             </div>
             {settings.upstream.preferBifrost && (
               <div className="flex justify-between text-xxs font-mono text-slate-500">
-                <span>Endpoint:</span>
+                <span>Bifrost Endpoint:</span>
                 <span className="truncate max-w-[140px]">{settings.upstream.bifrostUrl}</span>
               </div>
             )}
+            <div className="flex justify-between text-xxs font-mono pt-1 border-t border-white/5">
+              <span className="text-slate-400">Agent Base URL:</span>
+              <span className="text-neon-cyan font-bold">http://localhost:{backendPort}/v1</span>
+            </div>
           </div>
         </div>
 

@@ -9,6 +9,7 @@ interface SettingsTabProps {
   handleInputChange: (field: string, val: string) => void;
   handleSaveSettings: (updatedSettings: CompressorSettings) => void;
   handleCavemanLevelChange: (level: "low" | "medium" | "high") => void;
+  backendPort: number;
 }
 
 // ── Toggle Switch ─────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ export default function SettingsTab({
   handleInputChange,
   handleSaveSettings,
   handleCavemanLevelChange,
+  backendPort,
 }: SettingsTabProps) {
   const [bifrostStatus, setBifrostStatus] = useState<BifrostStatus>("idle");
   const [bifrostLatency, setBifrostLatency] = useState<number | null>(null);
@@ -151,7 +153,7 @@ export default function SettingsTab({
         <div>
           <SectionTitle gradient="from-neon-green to-neon-cyan">UPSTREAM ROUTING & GATEWAY</SectionTitle>
           <p className="text-xxs text-slate-500 font-mono">
-            Connect to Bifrost (auto-spawned) or use direct provider API keys as fallback.
+            Connect to Bifrost (auto-spawned) or use direct provider API keys as fallback. Direct your AI agents to <code className="text-neon-cyan font-bold bg-white/5 px-1 py-0.5 rounded">http://localhost:{backendPort}/v1</code>.
           </p>
         </div>
 

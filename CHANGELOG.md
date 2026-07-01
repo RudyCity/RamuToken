@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.2] - 2026-07-01
+
+### Added
+- **Dynamic Custom Port Info**: Exposed the active backend server port (via environment variables or default `6875`) through the WebSocket handshake. Added `backendPort` state to `App.tsx`, and updated both `DashboardTab` and `SettingsTab` to dynamically display the correct AI Client endpoint base URL (e.g. `http://localhost:<PORT>/v1`) based on the active backend port.
+
+---
+
 ## [1.1.1] - 2026-07-01
 
 ### Fixed

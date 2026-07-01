@@ -10,7 +10,7 @@ import DashboardTab from "./components/DashboardTab";
 import TestBenchTab from "./components/TestBenchTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.1.1";
+const APP_VERSION = "1.1.2";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");
@@ -24,6 +24,7 @@ export default function App() {
     totalSavedCost: 0,
   });
   const [logs, setLogs] = useState<RequestLog[]>([]);
+  const [backendPort, setBackendPort] = useState<number>(6875);
   const [settings, setSettings] = useState<CompressorSettings>({
     rtk: { enabled: true, logs: true, paths: true, stacks: true },
     serena: { enabled: true, minLines: 8 },
@@ -89,6 +90,9 @@ export default function App() {
             setMetrics(payload.data.metrics);
             setLogs(payload.data.logs);
             setSettings(payload.data.settings);
+            if (payload.data.port) {
+              setBackendPort(payload.data.port);
+            }
           } else if (payload.type === "update") {
             setMetrics(payload.data.metrics);
             if (payload.data.latestLog) {
@@ -250,6 +254,7 @@ export default function App() {
             settings={settings}
             selectedLog={selectedLog}
             setSelectedLog={setSelectedLog}
+            backendPort={backendPort}
           />
         )}
         {activeTab === "testbench" && (
@@ -271,6 +276,7 @@ export default function App() {
             handleInputChange={handleInputChange}
             handleSaveSettings={handleSaveSettings}
             handleCavemanLevelChange={handleCavemanLevelChange}
+            backendPort={backendPort}
           />
         )}
       </main>
