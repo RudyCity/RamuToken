@@ -15,7 +15,7 @@ console.log(`[Server] Initializing Bun server on port ${PORT}...`);
 
 const server = Bun.serve({
   port: PORT,
-  fetch(req, server) {
+  async fetch(req, server) {
     const url = new URL(req.url);
     const path = url.pathname;
 
