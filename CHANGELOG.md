@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-07-01
+
+### Changed
+- **Full UI Overhaul**: Complete visual redesign across all components.
+  - `index.css`: Added Google Fonts import (Outfit + JetBrains Mono), `text-xxs` utility, CSS-only toggle switch, pipeline-dot blink animation, body radial gradient, glassmorphism strengthened with `saturate(180%)`, scan-line code-area overlay, and `glass-panel-glow-pink`.
+  - `App.tsx`: Refactored header to a true 3-column layout (logo | nav center | status badge right), improved WebSocket auto-reconnect, navigation tabs have unique `id` attributes, version constant `APP_VERSION` centrally defined.
+  - `DashboardTab.tsx`: Metric cards now have mini progress bars; pipeline status panel shows animated blink dots; bar chart bars use dynamic savings colour gradient; log table savings column dynamically coloured (green→amber→pink); entire log row is clickable; detail modal shows savings colour on compressed token count and coloured border on compressed prompt pane.
+  - `SettingsTab.tsx`: All boolean toggles replaced with animated `Toggle` switch component; new **Bifrost Test Connection** button pings the configured endpoint and reports online/offline + latency; pipeline sections have colour-tinted background when active; checkboxes replaced with custom styled component; all inputs have unique `id` attributes.
+  - `TestBenchTab.tsx`: Output panel border and label colour dynamically reflect compression ratio (HSL red→green); SVG arc gauge displays compression percentage; copy button shows "Copied!" feedback; loading spinner shown in output pane during compression.
+
+---
+
 ## [1.0.9] - 2026-07-01
 
 ### Added

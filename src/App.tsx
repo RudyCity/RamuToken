@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { 
-  Settings as SettingsIcon, 
-  Activity, 
-  Terminal, 
-  Zap 
+import {
+  Settings as SettingsIcon,
+  Activity,
+  Terminal,
+  Zap,
 } from "lucide-react";
 import { CompressorSettings, RequestLog, Metrics } from "./types";
 import DashboardTab from "./components/DashboardTab";
 import TestBenchTab from "./components/TestBenchTab";
 import SettingsTab from "./components/SettingsTab";
+
+const APP_VERSION = "1.0.9";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");
@@ -19,7 +21,7 @@ export default function App() {
     compressedTokensSum: 0,
     cacheHits: 0,
     totalSavedTokens: 0,
-    totalSavedCost: 0
+    totalSavedCost: 0,
   });
   const [logs, setLogs] = useState<RequestLog[]>([]);
   const [settings, setSettings] = useState<CompressorSettings>({
@@ -28,7 +30,7 @@ export default function App() {
     headroom: { enabled: true, minify: true, prune: true, ccr: true, minCcrLength: 200, blacklist: [] },
     caveman: { enabled: false, level: "medium" },
     cache: { enabled: true },
-    upstream: { bifrostUrl: "http://localhost:8080", openaiKey: "", anthropicKey: "", preferBifrost: true }
+    upstream: { bifrostUrl: "http://localhost:8080", openaiKey: "", anthropicKey: "", preferBifrost: true },
   });
 
   // Test bench state
@@ -68,64 +70,61 @@ export default function App() {
   // Selected log detail state
   const [selectedLog, setSelectedLog] = useState<RequestLog | null>(null);
 
-  // Setup WebSocket connection
+  // Setup WebSocket connection with auto-reconnect
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host || "localhost:6875";
-    const wsUrl = `${protocol}//${host}/ws`;
+    let ws: WebSocket;
+    let retryTimeout: ReturnType<typeof setTimeout>;
 
-    console.log(`[Dashboard] Connecting to WebSocket: ${wsUrl}`);
-    let ws = new WebSocket(wsUrl);
+    const connect = () => {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = window.location.host || "localhost:6875";
+      ws = new WebSocket(`${protocol}//${host}/ws`);
 
-    ws.onopen = () => {
-      setWsConnected(true);
-    };
+      ws.onopen = () => setWsConnected(true);
 
-    ws.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        if (payload.type === "init") {
-          setMetrics(payload.data.metrics);
-          setLogs(payload.data.logs);
-          setSettings(payload.data.settings);
-        } else if (payload.type === "update") {
-          setMetrics(payload.data.metrics);
-          if (payload.data.latestLog) {
-            setLogs(prev => [payload.data.latestLog, ...prev.slice(0, 199)]);
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === "init") {
+            setMetrics(payload.data.metrics);
+            setLogs(payload.data.logs);
+            setSettings(payload.data.settings);
+          } else if (payload.type === "update") {
+            setMetrics(payload.data.metrics);
+            if (payload.data.latestLog) {
+              setLogs((prev) => [payload.data.latestLog, ...prev.slice(0, 199)]);
+            }
+          } else if (payload.type === "settings") {
+            setSettings(payload.data);
           }
-        } else if (payload.type === "settings") {
-          setSettings(payload.data);
+        } catch (err) {
+          console.error("Failed to parse WebSocket message", err);
         }
-      } catch (err) {
-        console.error("Failed to parse WebSocket message", err);
-      }
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+        retryTimeout = setTimeout(connect, 3000);
+      };
     };
 
-    ws.onclose = () => {
-      setWsConnected(false);
-      // Reconnect after 3 seconds
-      setTimeout(() => {
-        if (!wsConnected) {
-          setWsConnected(c => c);
-        }
-      }, 3000);
-    };
-
+    connect();
     return () => {
-      ws.close();
+      ws?.close();
+      clearTimeout(retryTimeout);
     };
   }, []);
 
   // Save modified settings to the backend
   const handleSaveSettings = async (updatedSettings: CompressorSettings) => {
     try {
-      const response = await fetch("/api/settings", {
+      const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedSettings)
+        body: JSON.stringify(updatedSettings),
       });
-      if (response.ok) {
-        const resJson = await response.json();
+      if (res.ok) {
+        const resJson = await res.json();
         setSettings(resJson.settings);
       }
     } catch (err) {
@@ -133,45 +132,31 @@ export default function App() {
     }
   };
 
-  const toggleSettingsField = (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream", field: string) => {
+  const toggleSettingsField = (
+    pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream",
+    field: string
+  ) => {
     const updated = { ...settings };
-    if (pipeline === "rtk") {
-      const p = updated.rtk as any;
-      p[field] = !p[field];
-    } else if (pipeline === "serena") {
-      const p = updated.serena as any;
-      p[field] = !p[field];
-    } else if (pipeline === "headroom") {
-      const p = updated.headroom as any;
-      p[field] = !p[field];
-    } else if (pipeline === "caveman") {
-      updated.caveman.enabled = !updated.caveman.enabled;
-    } else if (pipeline === "cache") {
-      updated.cache.enabled = !updated.cache.enabled;
-    } else if (pipeline === "upstream") {
-      const p = updated.upstream as any;
-      p[field] = !p[field];
-    }
+    if (pipeline === "rtk") (updated.rtk as any)[field] = !(updated.rtk as any)[field];
+    else if (pipeline === "serena") (updated.serena as any)[field] = !(updated.serena as any)[field];
+    else if (pipeline === "headroom") (updated.headroom as any)[field] = !(updated.headroom as any)[field];
+    else if (pipeline === "caveman") updated.caveman.enabled = !updated.caveman.enabled;
+    else if (pipeline === "cache") updated.cache.enabled = !updated.cache.enabled;
+    else if (pipeline === "upstream") (updated.upstream as any)[field] = !(updated.upstream as any)[field];
     setSettings(updated);
     handleSaveSettings(updated);
   };
 
   const handleSliderChange = (pipeline: "serena" | "headroom", field: string, val: number) => {
     const updated = { ...settings };
-    if (pipeline === "serena") {
-      const p = updated.serena as any;
-      p[field] = val;
-    } else if (pipeline === "headroom") {
-      const p = updated.headroom as any;
-      p[field] = val;
-    }
+    if (pipeline === "serena") (updated.serena as any)[field] = val;
+    else if (pipeline === "headroom") (updated.headroom as any)[field] = val;
     setSettings(updated);
   };
 
   const handleInputChange = (field: string, val: string) => {
     const updated = { ...settings };
-    const p = updated.upstream as any;
-    p[field] = val;
+    (updated.upstream as any)[field] = val;
     setSettings(updated);
   };
 
@@ -187,18 +172,12 @@ export default function App() {
     if (!testText.trim()) return;
     setTesting(true);
     try {
-      const response = await fetch("/api/compress-test", {
+      const res = await fetch("/api/compress-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: testText,
-          query: testQuery
-        })
+        body: JSON.stringify({ text: testText, query: testQuery }),
       });
-      if (response.ok) {
-        const data = await response.json();
-        setTestResult(data);
-      }
+      if (res.ok) setTestResult(await res.json());
     } catch (err) {
       console.error("Test compression failed", err);
     } finally {
@@ -206,70 +185,64 @@ export default function App() {
     }
   };
 
+  const navItems = [
+    { id: "dashboard" as const, label: "Dashboard", icon: Activity, activeColor: "bg-neon-purple text-white shadow-[0_0_18px_rgba(168,85,247,0.35)]" },
+    { id: "testbench" as const, label: "Test Bench", icon: Terminal, activeColor: "bg-neon-cyan text-slate-950 shadow-[0_0_18px_rgba(6,182,212,0.35)] font-extrabold" },
+    { id: "settings" as const, label: "Settings",   icon: SettingsIcon, activeColor: "bg-neon-green text-slate-950 shadow-[0_0_18px_rgba(16,185,129,0.35)] font-extrabold" },
+  ] as const;
+
   return (
     <div className="min-h-screen bg-bg-dark text-slate-100 flex flex-col font-sans">
-      {/* Top Header */}
-      <header className="glass-panel border-b border-white/5 py-4 px-6 md:px-8 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="bg-neon-purple/10 border border-neon-purple/30 p-2 rounded-xl text-neon-purple shadow-[0_0_20px_rgba(168,85,247,0.2)]">
-            <Zap className="w-6 h-6 animate-pulse" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neon-purple via-neon-cyan to-neon-green">
-              RAMUTOKEN
-            </h1>
-            <p className="text-xs text-slate-400 font-mono">Dynamic AI Context Gate v1.0</p>
-          </div>
-        </div>
-        
-        {/* Navigation Tabs */}
-        <nav className="flex items-center bg-slate-950/60 border border-white/5 p-1 rounded-xl">
-          <button 
-            onClick={() => setActiveTab("dashboard")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-350 cursor-pointer ${
-              activeTab === "dashboard" 
-                ? "bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]" 
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            Dashboard
-          </button>
-          <button 
-            onClick={() => setActiveTab("testbench")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-350 cursor-pointer ${
-              activeTab === "testbench" 
-                ? "bg-neon-cyan text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.3)] font-bold" 
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Terminal className="w-4 h-4" />
-            Test Bench
-          </button>
-          <button 
-            onClick={() => setActiveTab("settings")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-350 cursor-pointer ${
-              activeTab === "settings" 
-                ? "bg-neon-green text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)] font-bold" 
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <SettingsIcon className="w-4 h-4" />
-            Settings
-          </button>
-        </nav>
+      {/* ── Top Header ─────────────────────────────────────────────── */}
+      <header className="glass-panel border-b border-white/5 py-3 px-6 md:px-8 shrink-0">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
 
-        {/* Connection status badge */}
-        <div className="flex items-center gap-2">
-          <span className={`w-2.5 h-2.5 rounded-full status-dot-pulse ${wsConnected ? "text-neon-green bg-neon-green" : "text-neon-pink bg-neon-pink"}`}></span>
-          <span className="text-xs font-bold font-mono text-slate-400 tracking-wider">
-            {wsConnected ? "PROXY ONLINE" : "PROXY OFFLINE"}
-          </span>
+          {/* Logo */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="bg-neon-purple/10 border border-neon-purple/25 p-2 rounded-xl text-neon-purple shadow-[0_0_24px_rgba(168,85,247,0.2)] shrink-0">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg md:text-xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-neon-purple via-neon-cyan to-neon-green leading-none">
+                RAMUTOKEN
+              </h1>
+              <p className="text-xxs text-slate-500 font-mono mt-0.5">AI Context Gate v{APP_VERSION}</p>
+            </div>
+          </div>
+
+          {/* Nav Tabs — center */}
+          <nav className="flex items-center bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-0.5">
+            {navItems.map(({ id, label, icon: Icon, activeColor }) => (
+              <button
+                key={id}
+                id={`tab-${id}`}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all duration-300 cursor-pointer ${
+                  activeTab === id ? activeColor : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </nav>
+
+          {/* Status badge — right */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span
+              className={`w-2 h-2 rounded-full status-dot-pulse ${
+                wsConnected ? "bg-neon-green text-neon-green" : "bg-neon-pink text-neon-pink"
+              }`}
+            />
+            <span className="text-xxs font-black font-mono text-slate-400 tracking-wider hidden sm:inline">
+              {wsConnected ? "ONLINE" : "OFFLINE"}
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto">
+      {/* ── Main Content ──────────────────────────────────────────── */}
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto">
         {activeTab === "dashboard" && (
           <DashboardTab
             metrics={metrics}
@@ -279,7 +252,6 @@ export default function App() {
             setSelectedLog={setSelectedLog}
           />
         )}
-
         {activeTab === "testbench" && (
           <TestBenchTab
             testText={testText}
@@ -291,7 +263,6 @@ export default function App() {
             runTestCompression={runTestCompression}
           />
         )}
-
         {activeTab === "settings" && (
           <SettingsTab
             settings={settings}
@@ -304,9 +275,9 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="py-4 border-t border-white/5 text-center text-slate-500 text-xxs font-mono shrink-0">
-        RamuToken Proxy © 2026. Made with Bun, React, and Tailwind CSS v4.
+      {/* ── Footer ───────────────────────────────────────────────── */}
+      <footer className="py-3 border-t border-white/5 text-center text-xxs text-slate-600 font-mono shrink-0">
+        RamuToken Proxy v{APP_VERSION} · Built with Bun, React &amp; Tailwind CSS v4
       </footer>
     </div>
   );
