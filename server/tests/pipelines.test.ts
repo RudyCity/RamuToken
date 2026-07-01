@@ -28,10 +28,10 @@ describe("RTK Pipeline (Log & CLI Compressor)", () => {
   });
 
   test("should shorten absolute system file paths", () => {
-    const log = "Error occurred at /Users/username/projects/token-compressor/server/index.ts:45:12";
+    const log = "Error occurred at /Users/username/projects/ramu-token/server/index.ts:45:12";
     const compressed = compressRTK(log);
-    expect(compressed).toContain("./token-compressor/server/index.ts");
-    expect(compressed).not.toContain("/Users/username/projects/token-compressor/server/index.ts");
+    expect(compressed).toContain("./ramu-token/server/index.ts");
+    expect(compressed).not.toContain("/Users/username/projects/ramu-token/server/index.ts");
   });
 });
 

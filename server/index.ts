@@ -167,7 +167,7 @@ const server = Bun.serve({
     return new Response(
       `<html>
         <head>
-          <title>Token Compressor Service</title>
+          <title>RamuToken Service</title>
           <style>
             body { font-family: system-ui; background: #0b0f19; color: #f3f4f6; text-align: center; padding-top: 100px; }
             h1 { color: #8b5cf6; }
@@ -176,7 +176,7 @@ const server = Bun.serve({
           </style>
         </head>
         <body>
-          <h1>⚡ Token Converter & Compressor Proxy</h1>
+          <h1>⚡ RamuToken Proxy & Compressor</h1>
           <p>The backend proxy is running successfully. Direct your AI agents (Cursor, Claude Code, etc.) to <code>http://localhost:3000/v1</code>.</p>
           <p>To view the dashboard, run the client dev server with <code>bun run dev</code> and open <code>http://localhost:5173</code>.</p>
           <span class="badge">Proxy Active (Port ${PORT})</span>

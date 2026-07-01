@@ -1,6 +1,6 @@
 # Workspace Agent Rules
 
-This document outlines the strict guidelines and constraints that all AI coding assistants (agents) must follow when working on the **Token Compressor** project.
+This document outlines the strict guidelines and constraints that all AI coding assistants (agents) must follow when working on the **RamuToken** project.
 
 ---
 

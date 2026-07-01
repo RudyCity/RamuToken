@@ -102,15 +102,15 @@ export default function App() {
   const [testText, setTestText] = useState(
     `[2026-07-01 08:35:42] INFO: Processing request #342\n` +
     `[2026-07-01 08:35:42] DEBUG: Database response: {"status": "ok", "metadata": {"session_id": "9a7f3e82b1d044f7ba9c", "id_token": "token12345", "user_agent": "Mozilla/5.0"}, "data": []}\n` +
-    `[2026-07-01 08:35:43] ERROR: Unhandled exception in C:\\Users\\USER\\projects\\token-compressor\\server\\index.ts:\n` +
-    `  at processRequest (C:\\Users\\USER\\projects\\token-compressor\\server\\index.ts:45:12)\n` +
-    `  at handleRoute (C:\\Users\\USER\\projects\\token-compressor\\server\\index.ts:102:8)\n` +
-    `  at dispatch (C:\\Users\\USER\\projects\\token-compressor\\node_modules\\express\\lib\\router\\index.js:284:7)\n` +
-    `  at next (C:\\Users\\USER\\projects\\token-compressor\\node_modules\\express\\lib\\router\\index.js:230:5)\n` +
-    `  at checkAuth (C:\\Users\\USER\\projects\\token-compressor\\server\\auth.ts:12:3)\n` +
+    `[2026-07-01 08:35:43] ERROR: Unhandled exception in C:\\Users\\USER\\projects\\ramu-token\\server\\index.ts:\n` +
+    `  at processRequest (C:\\Users\\USER\\projects\\ramu-token\\server\\index.ts:45:12)\n` +
+    `  at handleRoute (C:\\Users\\USER\\projects\\ramu-token\\server\\index.ts:102:8)\n` +
+    `  at dispatch (C:\\Users\\USER\\projects\\ramu-token\\node_modules\\express\\lib\\router\\index.js:284:7)\n` +
+    `  at next (C:\\Users\\USER\\projects\\ramu-token\\node_modules\\express\\lib\\router\\index.js:230:5)\n` +
+    `  at checkAuth (C:\\Users\\USER\\projects\\ramu-token\\server\\auth.ts:12:3)\n` +
     `  at runMicrotasks (<anonymous>)\n` +
     `  at processTicksAndRejections (node:internal/process/task_queues:95:5)\n` +
-    `  at runNext (C:\\Users\\USER\\projects\\token-compressor\\server\\index.ts:22:2)\n\n` +
+    `  at runNext (C:\\Users\\USER\\projects\\ramu-token\\server\\index.ts:22:2)\n\n` +
     `Here is the source code file:\n` +
     `\`\`\`typescript\n` +
     `import { getEncoding } from "js-tiktoken";\n` +
@@ -282,7 +282,7 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neon-purple via-neon-cyan to-neon-green">
-              TOKEN COMPRESSOR
+              RAMUTOKEN
             </h1>
             <p className="text-xs text-slate-400 font-mono">Dynamic AI Context Gate v1.0</p>
           </div>
@@ -1150,7 +1150,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="py-4 border-t border-white/5 text-center text-slate-500 text-xxs font-mono shrink-0">
-        Token Compressor Proxy © 2026. Made with Bun, React, and Tailwind CSS v4.
+        RamuToken Proxy © 2026. Made with Bun, React, and Tailwind CSS v4.
       </footer>
     </div>
   );

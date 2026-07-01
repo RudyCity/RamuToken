@@ -1,6 +1,6 @@
 import { spawn } from "bun";
 
-console.log("🚀 Starting Token Compressor Services...");
+console.log("🚀 Starting RamuToken Services...");
 
 const server = Bun.spawn(["bun", "run", "--hot", "server/index.ts"], {
   stdout: "inherit",
