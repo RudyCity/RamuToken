@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.9] - 2026-07-01
+
+### Added
+- **Bifrost Auto-Spawn in Dev Mode**: `dev.ts` now automatically detects if Bifrost is already running on port 8080. If not, it spawns Bifrost via `npx -y @maximhq/bifrost` before starting the proxy server and Vite client. Bifrost stdout/stderr is prefixed and piped to the console. Includes a 30-second readiness timeout with a graceful warning if Bifrost does not become ready in time. Bifrost is killed on process exit alongside the other services.
+
+---
+
 ## [1.0.8] - 2026-07-01
 
 ### Added
