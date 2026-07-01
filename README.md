@@ -240,3 +240,17 @@ Access the dashboard at `http://localhost:6875` (or `http://localhost:5173` in d
 - **Test Bench**: Interactive playground to paste raw logs/code, type search queries, and inspect side-by-side original vs. compressed diff outputs with token metrics.
 - **Logs Explorer**: Click any past request to view the full original and compressed payloads side-by-side.
 - **Access Card**: Securely copy endpoint routes, view and toggle access token values, or generate random cryptographic keys.
+
+---
+
+## 👥 Author / Creator
+
+**Rudy H.**
+- **GitHub**: [RudyCity](https://github.com/RudyCity)
+- **Repository**: [RamuToken](https://github.com/RudyCity/RamuToken)
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).

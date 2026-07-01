@@ -10,7 +10,7 @@ import DashboardTab from "./components/DashboardTab";
 import TestBenchTab from "./components/TestBenchTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.2.2";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");
@@ -299,7 +299,7 @@ export default function App() {
 
       {/* ── Footer ───────────────────────────────────────────────── */}
       <footer className="py-3 border-t border-white/5 text-center text-xxs text-slate-600 font-mono shrink-0">
-        RamuToken Proxy v{APP_VERSION} · Built with Bun, React &amp; Tailwind CSS v4
+        RamuToken Proxy v{APP_VERSION} · Created by Rudy H. (Github: RudyCity &lt;https://github.com/RudyCity/RamuToken&gt;) · Built with Bun, React &amp; Tailwind CSS v4
       </footer>
     </div>
   );
