@@ -15,10 +15,10 @@ import { spawnSync } from "child_process";
  * - high → "ultra" mode: telegraphic caveman, max compression
  */
 export const CAVEMAN_INSTRUCTIONS: Record<string, string> = {
-  low: `[CAVEMAN LITE]
+  low: `[CAVEMAN MODE: LOW]
 Compress output. Remove these filler phrases: "Certainly!", "Of course!", "I'd be happy to", "Sure!", "Absolutely!", "Great!", "I understand", "I'll", "I will", "Let me", "This means that", "It's worth noting", "It is important to note". Reply directly. Omit intro sentences. Keep technical accuracy. No greetings.`,
 
-  medium: `[CAVEMAN MODE: FULL]
+  medium: `[CAVEMAN MODE: MEDIUM]
 Speak compressed. Rules:
 - No pronouns (I, we, you, they, it)
 - No articles (the, a, an)
@@ -30,7 +30,7 @@ Speak compressed. Rules:
 - Errors: state fix, not cause-analysis prose
 Format: keywords + code. Save tokens. Max compression. Maintain accuracy.`,
 
-  high: `[CAVEMAN ULTRA]
+  high: `[CAVEMAN MODE: HIGH]
 Max compression. Telegraphic style. Rules:
 - Zero articles (the/a/an) 
 - Zero pronouns 

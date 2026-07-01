@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.10] - 2026-07-01
+
+### Fixed
+- **CLI Performance / Test Timeouts** (`server/pipelines/rtk.ts`): Replaced `npx -y` with `npx --no-install` to prevent network blocking during test execution. Implemented static execution status flags (`isRtkAvailable`, etc.) to cache failures, reducing subsequent lookup time to 0ms.
+- **Caveman Test Alignments** (`server/pipelines/caveman.ts`): Adjusted the headers in `CAVEMAN_INSTRUCTIONS` to match expectations in the test suite (`CAVEMAN MODE: HIGH` and `CAVEMAN MODE: MEDIUM`).
+
+---
+
 ## [1.3.9] - 2026-07-01
 
 ### Changed
