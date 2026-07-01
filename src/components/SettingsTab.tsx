@@ -26,7 +26,7 @@ function Toggle({ checked, onChange, color = "#10b981", id }: ToggleProps) {
       role="switch"
       aria-checked={checked}
       onClick={onChange}
-      className="toggle-track"
+      className={`toggle-track ${checked ? "on" : "off"}`}
       style={checked ? { background: color, boxShadow: `0 0 12px ${color}88` } : {}}
     >
       <span className="toggle-thumb" />

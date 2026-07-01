@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.1] - 2026-07-01
+
+### Fixed
+- **UI Toggle Component**: Added missing dynamic `on` / `off` classes to the `Toggle` component's wrapper in `SettingsTab.tsx` so the toggle switch knob (thumb) animates and repositions correctly on state changes.
+
+---
+
 ## [1.1.0] - 2026-07-01
 
 ### Changed
