@@ -14,8 +14,8 @@ export function shortenPaths(text: string): string {
   // Matches typical Windows/Unix absolute paths in code/logs
   // e.g., C:\Users\USER\projects\app\src\index.ts -> .\src\index.ts
   // e.g., /Users/user/projects/app/src/index.ts -> ./src/index.ts
-  const winPathRegex = /[A-Z]:\\[^\s)]+\\[^\s)]+/g;
-  const unixPathRegex = /\/[a-zA-Z0-9_-]+\/[^\s)]+\/[^\s)]+/g;
+  const winPathRegex = /[A-Z]:\\[^\s)]+/g;
+  const unixPathRegex = /\/[a-zA-Z0-9_-]+\/[^\s)]+/g;
 
   let result = text;
 
