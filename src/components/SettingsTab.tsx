@@ -639,20 +639,29 @@ export default function SettingsTab({
           color="#06b6d4"
           activeGradient="from-neon-cyan to-neon-green"
         >
-          <div className="max-w-lg">
-            <div className="flex justify-between text-xxs font-mono text-slate-400 mb-2">
-              <span>Min lines to trigger signature collapse:</span>
-              <span className="text-neon-cyan font-bold">{settings.serena.minLines} lines</span>
-            </div>
-            <input
-              id="slider-serena-minlines"
-              type="range" min={3} max={30}
-              value={settings.serena.minLines}
-              onChange={(e) => handleSliderChange("serena", "minLines", parseInt(e.target.value))}
-              onMouseUp={() => handleSaveSettings(settings)}
-              onTouchEnd={() => handleSaveSettings(settings)}
-              className="w-full accent-cyan-400"
+          <div className="space-y-4">
+            <CheckOption 
+              label="Use Python LSP Parser" 
+              sub="Spawns Python to parse symbols via LSP manager (adds latency)" 
+              checked={settings.serena.usePythonSymbols} 
+              onChange={() => toggleSettingsField("serena", "usePythonSymbols")} 
+              color="#06b6d4" 
             />
+            <div className="max-w-lg">
+              <div className="flex justify-between text-xxs font-mono text-slate-400 mb-2">
+                <span>Min lines to trigger signature collapse:</span>
+                <span className="text-neon-cyan font-bold">{settings.serena.minLines} lines</span>
+              </div>
+              <input
+                id="slider-serena-minlines"
+                type="range" min={3} max={30}
+                value={settings.serena.minLines}
+                onChange={(e) => handleSliderChange("serena", "minLines", parseInt(e.target.value))}
+                onMouseUp={() => handleSaveSettings(settings)}
+                onTouchEnd={() => handleSaveSettings(settings)}
+                className="w-full accent-cyan-400"
+              />
+            </div>
           </div>
         </PipelineSection>
 
@@ -667,10 +676,11 @@ export default function SettingsTab({
           activeGradient="from-neon-green to-neon-cyan"
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <CheckOption label="JSON Minify" sub="Removes whitespace" checked={settings.headroom.minify} onChange={() => toggleSettingsField("headroom", "minify")} color="#10b981" />
               <CheckOption label="Prune Metadata" sub="Strips empty arrays & nulls" checked={settings.headroom.prune} onChange={() => toggleSettingsField("headroom", "prune")} color="#10b981" />
               <CheckOption label="Reversible CCR" sub="Context shorthand substitution" checked={settings.headroom.ccr} onChange={() => toggleSettingsField("headroom", "ccr")} color="#10b981" />
+              <CheckOption label="Use Python Headroom" sub="Spawns Python to run official headroom library (adds latency)" checked={settings.headroom.usePython} onChange={() => toggleSettingsField("headroom", "usePython")} color="#10b981" />
             </div>
             {settings.headroom.ccr && (
               <div className="max-w-lg">

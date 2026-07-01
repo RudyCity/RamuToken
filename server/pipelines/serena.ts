@@ -325,12 +325,37 @@ interface CodeBlock {
 }
 
 // Main Serena compressor
-export function compressSerena(text: string, userQuery: string, options: { minLines?: number } = {}): string {
+export function compressSerena(text: string, userQuery: string, options: { minLines?: number; usePythonSymbols?: boolean } = {}): string {
   const minLines = options.minLines ?? 5;
+  const usePythonSymbols = options.usePythonSymbols ?? false;
   const initialKeywords = extractKeywords(userQuery);
 
-  const tempDir = join(import.meta.dirname, "../../data");
   const codeBlockRegex = /```(typescript|javascript|js|ts|python|py)\n([\s\S]*?)```/g;
+
+  if (!usePythonSymbols) {
+    // Process text natively using the custom AST-style local pruner
+    let resultText = text;
+    let match;
+    const blocks: Array<{ lang: string; code: string; isPython: boolean; matchStr: string }> = [];
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+      const [matchStr, lang, code] = match;
+      const isPython = lang === "python" || lang === "py";
+      blocks.push({ lang, code, isPython, matchStr });
+    }
+
+    if (blocks.length === 0) return text;
+
+    for (const block of blocks) {
+      const keywords = resolveDependencies(block.code, initialKeywords, block.isPython);
+      const prunedCode = block.isPython
+        ? compressPython(block.code, keywords, minLines)
+        : compressJS(block.code, keywords, minLines);
+      resultText = resultText.replace(block.matchStr, `\`\`\`${block.lang}\n${prunedCode}\`\`\``);
+    }
+    return resultText;
+  }
+
+  const tempDir = join(import.meta.dirname, "../../data");
 
   // Extract all code blocks
   const blocks: CodeBlock[] = [];

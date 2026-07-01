@@ -208,24 +208,27 @@ function headroomViaPython(text: string): string | null {
 // Main Headroom compressor
 export function compressHeadroom(
   text: string, 
-  options: { minify?: boolean; prune?: boolean; ccr?: boolean; blacklist?: string[]; minCcrLength?: number } = {}
+  options: { minify?: boolean; prune?: boolean; ccr?: boolean; blacklist?: string[]; minCcrLength?: number; usePython?: boolean } = {}
 ): { text: string; mapping: Record<string, string> } {
-  // Deep integration approach 1: Python headroom-ai library (synchronous)
-  const pythonResult = headroomViaPython(text);
-  if (pythonResult !== null) {
-    return { text: pythonResult, mapping: {} };
+  const opts = { minify: true, prune: true, ccr: true, blacklist: ["metadata", "id_token"], minCcrLength: 300, usePython: false, ...options };
+
+  if (opts.usePython) {
+    // Deep integration approach 1: Python headroom-ai library (synchronous)
+    const pythonResult = headroomViaPython(text);
+    if (pythonResult !== null) {
+      return { text: pythonResult, mapping: {} };
+    }
+
+    // Deep integration approach 2: headroom proxy HTTP (if already running on port 8787)
+    // Note: proxy call is async; we handle it as a best-effort and fall back immediately if unavailable
+    headroomViaProxy(text).then(result => {
+      // fire-and-forget: proxy result can't be awaited in sync context;
+      // real async integration is handled when this module is called in async proxy handlers
+      if (result) console.log("[Headroom] proxy compression available on next request");
+    }).catch(() => {});
   }
 
-  // Deep integration approach 2: headroom proxy HTTP (if already running on port 8787)
-  // Note: proxy call is async; we handle it as a best-effort and fall back immediately if unavailable
-  headroomViaProxy(text).then(result => {
-    // fire-and-forget: proxy result can't be awaited in sync context;
-    // real async integration is handled when this module is called in async proxy handlers
-    if (result) console.log("[Headroom] proxy compression available on next request");
-  }).catch(() => {});
-
   // Fallback: local TS compression pipeline
-  const opts = { minify: true, prune: true, ccr: true, blacklist: ["metadata", "id_token"], minCcrLength: 300, ...options };
   let result = text;
 
   if (opts.prune) {

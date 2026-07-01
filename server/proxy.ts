@@ -60,7 +60,10 @@ export function compressMessageList(
 
       // 2. Serena Compression (code AST-like pruning based on query keywords)
       if (settings.serena.enabled) {
-        content = compressSerena(content, userQuery, { minLines: settings.serena.minLines });
+        content = compressSerena(content, userQuery, { 
+          minLines: settings.serena.minLines,
+          usePythonSymbols: settings.serena.usePythonSymbols
+        });
       }
 
       // 3. Headroom Compression (JSON minifying and CCR reversible substitution)
@@ -70,7 +73,8 @@ export function compressMessageList(
           prune: settings.headroom.prune,
           ccr: settings.headroom.ccr,
           minCcrLength: settings.headroom.minCcrLength,
-          blacklist: settings.headroom.blacklist
+          blacklist: settings.headroom.blacklist,
+          usePython: settings.headroom.usePython
         });
         content = hrResult.text;
         ccrCount += Object.keys(hrResult.mapping).length;

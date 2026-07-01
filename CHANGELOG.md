@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.14] - 2026-07-01
+
+### Added
+- **Performance Toggles & Benchmark Script**: Added configuration settings (`usePythonSymbols` for Serena and `usePython` for Headroom) to allow users to toggle python-based subprocess execution. Added `"benchmark"` script in `package.json` to measure token compression execution time.
+
+### Changed
+- **Pipeline Performance Optimization**: Disabled Python-based symbol retrieving and headroom library execution by default. The proxy now falls back to native, high-performance TypeScript logic, which runs in sub-milliseconds rather than seconds (reducing request overhead from ~5 seconds to ~5ms).
+- **Settings UI Controls**: Added checkboxes for enabling Python LSP and Python Headroom integrations in the Settings Tab of the dashboard.
+
+---
+
 ## [1.3.13] - 2026-07-01
 
 ### Fixed
