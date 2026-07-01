@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-07-01
+
+### Changed
+- **Documentation Port References**: Updated historical and legacy references to port `3000` to `6875` in all documentation files.
+
 ## [1.0.4] - 2026-07-01
 
 ### Changed
@@ -30,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-07-01
 
 ### Added
-- **Integrated Proxy Server**: Added `Bun.serve` server running on port `3000` supporting both OpenAI (`/v1/chat/completions`) and Anthropic (`/v1/messages`) compatible request/response structures.
+- **Integrated Proxy Server**: Added `Bun.serve` server running on port `6875` supporting both OpenAI (`/v1/chat/completions`) and Anthropic (`/v1/messages`) compatible request/response structures.
 - **WebSocket Streaming**: Created live WebSocket communication for feeding metrics, configuration settings, and logs history to the frontend dashboard.
 - **Upstream Router**: Implemented flexible routing targeting **Bifrost by Maxim AI** (`http://localhost:8080`) or direct provider fallback keys (OpenAI & Anthropic).
 - **RTK Compression Engine**: Implemented ANSI control code stripping, log line collapsing (grouping timestamp/number/hex matches), relative path normalization, and stack trace pruner (retaining top 3 and bottom 2 frames).
