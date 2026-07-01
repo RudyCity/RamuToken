@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-07-01
+
+### Fixed
+- **Dynamic Backend Port Mismatch**: Fixed `ECONNREFUSED` Vite proxy error that occurred when `settings.server.port` was changed from the default `6875`. `dev.ts` now reads the saved port from `data/db.json` at startup and passes it as `BACKEND_PORT` env var to the Vite child process. `vite.config.ts` reads this env var to set the correct proxy target — meaning the UI will always connect to the actual backend port, even after a port change and restart.
+- **WebSocket proxy**: Added `/ws` WebSocket proxy entry in `vite.config.ts` so the dashboard's real-time WebSocket connection is also correctly proxied in dev mode.
+- **Bonus**: Added `/openai` and `/anthropic` path prefixes to the Vite proxy (they were only routed on the server but missing from the dev proxy).
+
+---
+
 ## [1.3.1] - 2026-07-01
 
 ### Added

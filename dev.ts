@@ -8,6 +8,28 @@ const BIFROST_PORT = 8080;
 const BIFROST_CHECK_INTERVAL_MS = 500;
 const BIFROST_READY_TIMEOUT_MS = 30_000;
 
+// ---------------------------------------------------------------------------
+// Determine backend port from saved settings (fallback to 6875)
+// ---------------------------------------------------------------------------
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+
+function resolveBackendPort(): number {
+  try {
+    const dbPath = join(import.meta.dirname, "data/db.json");
+    if (existsSync(dbPath)) {
+      const db = JSON.parse(readFileSync(dbPath, "utf8"));
+      const saved = db?.settings?.server?.port;
+      if (typeof saved === "number" && saved > 0) return saved;
+    }
+  } catch {
+    // ignore — fall through to default
+  }
+  return 6875;
+}
+
+const BACKEND_PORT = resolveBackendPort();
+
 console.log("🚀 Starting RamuToken Services...\n");
 
 // ---------------------------------------------------------------------------
@@ -106,7 +128,7 @@ const server = Bun.spawn(["bun", "run", "--hot", "server/index.ts"], {
   stdout: "inherit",
   stderr: "inherit",
 });
-console.log("✅ [Server] Proxy server starting on http://localhost:6875");
+console.log(`✅ [Server] Proxy server starting on http://localhost:${BACKEND_PORT}`);
 
 // ---------------------------------------------------------------------------
 // Step 3: Start the Vite client dev server
@@ -114,6 +136,10 @@ console.log("✅ [Server] Proxy server starting on http://localhost:6875");
 const client = Bun.spawn(["bun", "x", "vite"], {
   stdout: "inherit",
   stderr: "inherit",
+  env: {
+    ...process.env,
+    BACKEND_PORT: String(BACKEND_PORT),
+  },
 });
 console.log("✅ [Client] Vite dev server starting on http://localhost:5173\n");
 
