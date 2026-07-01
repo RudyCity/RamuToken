@@ -127,6 +127,10 @@ if (alreadyRunning) {
 const server = Bun.spawn(["bun", "run", "--hot", "server/index.ts"], {
   stdout: "inherit",
   stderr: "inherit",
+  env: {
+    ...process.env,
+    PORT: String(BACKEND_PORT),
+  },
 });
 console.log(`✅ [Server] Proxy server starting on http://localhost:${BACKEND_PORT}`);
 

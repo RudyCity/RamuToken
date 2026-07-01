@@ -219,6 +219,7 @@ export function broadcastSettingsUpdate() {
 }
 
 const DB_PATH = join(import.meta.dirname, "../data/db.json");
+console.log(`[Persistence] DB path: ${DB_PATH}`);
 
 // Helper to save data to disk
 export function saveToDisk() {
@@ -255,6 +256,9 @@ export function loadFromDisk() {
         logsHistory.push(...db.logsHistory);
       }
       console.log(`[Persistence] Loaded settings, metrics, and ${logsHistory.length} logs from disk.`);
+      if (db.settings?.server?.port) {
+        console.log(`[Persistence] Restored server port: ${db.settings.server.port}`);
+      }
     }
   } catch (err) {
     console.error("[Persistence] Error loading database from disk:", err);
