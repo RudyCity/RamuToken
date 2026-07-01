@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-07-01
+
+### Added
+- **Workspace Agent Rules**: Created `.agents/AGENTS.md` containing strict guidelines for commits, automatic SemVer bumping, changelog entries, modular scalability best practices, and a 1000-line limit per file.
+
 ## [1.0.0] - 2026-07-01
 
 ### Added
