@@ -4,6 +4,8 @@
  */
 
 import { spawnSync } from "child_process";
+import { writeFileSync, unlinkSync, existsSync, mkdirSync } from "fs";
+import { join } from "path";
 
 // Strip ANSI escape codes (colors, styling, cursor movements)
 export function stripAnsi(text: string): string {
@@ -144,22 +146,42 @@ function processStackTrace(trace: string[], target: string[]) {
 
 // Main compression function
 export function compressRTK(text: string, options: { logs?: boolean; paths?: boolean; stacks?: boolean } = {}): string {
-  // Try to use the official rtk CLI tool first (Option A)
+  const tempDir = join(import.meta.dirname, "../../data");
+  const tempFile = join(tempDir, `temp_rtk_${Math.random().toString(36).substring(2, 9)}.txt`);
+
+  // Escalating RTK CLI strategies (deep integration via official binaries)
+  const rtkCommands: Array<[string, string[]]> = [
+    ["rtk",  ["cat", tempFile]],                       // Globally installed rtk binary
+    ["npx",  ["-y", "rtk", "cat", tempFile]],          // npx rtk (most common package name)
+    ["npx",  ["-y", "@rtk-ai/rtk", "cat", tempFile]],  // npx with org-scoped package
+  ];
+
   try {
-    const proc = spawnSync("rtk", ["pipe", "--command", "cat"], {
-      input: text,
-      encoding: "utf-8"
-    });
-    if (proc.status === 0 && proc.stdout) {
-      return proc.stdout;
+    if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true });
+    writeFileSync(tempFile, text, "utf8");
+
+    for (const [cmd, args] of rtkCommands) {
+      try {
+        const proc = spawnSync(cmd, args, {
+          encoding: "utf-8",
+          shell: true,
+          timeout: 15_000
+        });
+        if (proc.status === 0 && proc.stdout) {
+          return proc.stdout;
+        }
+      } catch { /* try next RTK variant */ }
     }
-  } catch (err) {
-    // Fallback silently if rtk is not installed
+  } catch {
+    // Could not write temp file — skip to local pipeline
+  } finally {
+    try { if (existsSync(tempFile)) unlinkSync(tempFile); } catch {}
   }
 
+  // Fallback: local TS compression pipeline
   const opts = { logs: true, paths: true, stacks: true, ...options };
   let result = stripAnsi(text);
-  
+
   if (opts.stacks) {
     result = pruneStackTraces(result);
   }
@@ -169,6 +191,7 @@ export function compressRTK(text: string, options: { logs?: boolean; paths?: boo
   if (opts.paths) {
     result = shortenPaths(result);
   }
-  
+
   return result;
 }
+

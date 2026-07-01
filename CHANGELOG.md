@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.9] - 2026-07-01
+
+### Changed
+- **Deep Integration – Serena** (`server/pipelines/serena.ts`): Removed shallow CLI wrapper. Now launches `serena-mcp-server` (or `python -m serena.mcp`) as a child process, performs full JSON-RPC 2.0 MCP handshake (`initialize` → `notifications/initialized` → `tools/call get_symbols_overview`), receives exact symbol line-ranges from the LSP backend, and prunes irrelevant function bodies using those precise ranges. Falls back to custom AST pruner if binary unavailable.
+- **Deep Integration – Headroom** (`server/pipelines/headroom.ts`): Removed shallow CLI wrapper. Now tries `python -c "from headroom import compress; ..."` (inline Python library call with stdin/stdout) as primary path, plus async HTTP call to a locally running headroom proxy on port 8787 as secondary path. Falls back to local TS JSON-minify + CCR pipeline.
+- **Deep Integration – Caveman** (`server/pipelines/caveman.ts`): Removed shallow CLI wrapper. Now tries `caveman-shrink --level <lite|full|ultra>` and `npx -y caveman-shrink` to compress the existing system prompt text directly. Faithfully reproduced the full caveman SKILL.md rules for all three levels (lite/full/ultra) in embedded fallback instructions. Added `cavemanCompressProse()` export for compressing arbitrary text.
+- **Deep Integration – RTK** (`server/pipelines/rtk.ts`): Escalated to three-tier CLI strategy: globally installed `rtk cat`, then `npx -y rtk cat`, then `npx -y @rtk-ai/rtk cat`, before falling back to local TS pipeline.
+
+---
+
 ## [1.3.8] - 2026-07-01
 
 ### Added

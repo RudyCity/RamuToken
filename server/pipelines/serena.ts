@@ -3,7 +3,9 @@
  * Parses TS/JS and Python files to extract signatures and collapse function/method bodies.
  */
 
-import { spawnSync } from "child_process";
+import { spawnSync, spawn } from "child_process";
+import { writeFileSync, unlinkSync, existsSync, mkdirSync } from "fs";
+import { join } from "path";
 
 // Extracts alphanumeric word tokens from the user's query
 export function extractKeywords(userQuery: string): Set<string> {
@@ -261,39 +263,137 @@ export function resolveDependencies(code: string, keywords: Set<string>, isPytho
   return activeKeywords;
 }
 
+/**
+ * Calls the serena-mcp-server via JSON-RPC 2.0 over stdio.
+ * Performs: initialize → initialized → tools/call get_symbols_overview
+ * Returns an array of symbol objects { name, start_line, end_line, kind } or null on failure.
+ */
+function serenaGetSymbols(filePath: string, projectDir: string): Array<{ name: string; start_line: number; end_line: number; kind: string }> | null {
+  try {
+    // Build the MCP messages sequence (newline-delimited JSON-RPC 2.0)
+    const initRequest = JSON.stringify({
+      jsonrpc: "2.0", id: 1, method: "initialize",
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "ramutoken-proxy", version: "1.0.0" }
+      }
+    });
+    const initializedNotif = JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} });
+    const toolCall = JSON.stringify({
+      jsonrpc: "2.0", id: 2, method: "tools/call",
+      params: {
+        name: "get_symbols_overview",
+        arguments: { relative_file_path: filePath }
+      }
+    });
+    const input = [initRequest, initializedNotif, toolCall, ""].join("\n");
+
+    // Try serena-mcp-server first, then python -m serena.mcp as fallback
+    const commands = [
+      { cmd: "serena-mcp-server", args: ["--project-dir", projectDir] },
+      { cmd: "python", args: ["-m", "serena.mcp", "--project-dir", projectDir] },
+    ];
+
+    for (const { cmd, args } of commands) {
+      const proc = spawnSync(cmd, args, {
+        input,
+        encoding: "utf-8",
+        timeout: 10_000
+      });
+      if (proc.status === 0 && proc.stdout) {
+        // Parse newline-delimited JSON responses
+        const lines = proc.stdout.split("\n").filter(l => l.trim());
+        for (const line of lines) {
+          try {
+            const msg = JSON.parse(line);
+            // Find the response to our tool call (id: 2)
+            if (msg.id === 2 && msg.result) {
+              const content = msg.result.content?.[0]?.text ?? "";
+              return JSON.parse(content);
+            }
+          } catch { /* skip non-JSON lines */ }
+        }
+      }
+    }
+  } catch { /* serena not installed — return null */ }
+  return null;
+}
+
+/**
+ * Prune code lines using Serena symbol map:
+ * Remove bodies of symbols NOT referenced by keyword set, keep only signature + closing brace.
+ */
+function pruneBySerenaSymbols(
+  code: string,
+  symbols: Array<{ name: string; start_line: number; end_line: number; kind: string }>,
+  keywords: Set<string>,
+  minLines: number
+): string {
+  const lines = code.split("\n");
+
+  // Build a sorted set of line ranges to prune (0-indexed)
+  const pruneRanges: Array<{ from: number; to: number; name: string }> = [];
+  for (const sym of symbols) {
+    const bodyLen = sym.end_line - sym.start_line;
+    if (bodyLen >= minLines && !keywords.has(sym.name)) {
+      // Keep first line (signature) and last line (closing brace), prune the body in between
+      if (sym.start_line + 1 < sym.end_line - 1) {
+        pruneRanges.push({ from: sym.start_line, to: sym.end_line - 1, name: sym.name });
+      }
+    }
+  }
+  // Sort descending so we can splice without invalidating indices
+  pruneRanges.sort((a, b) => b.from - a.from);
+
+  const result = [...lines];
+  for (const range of pruneRanges) {
+    const prunedCount = range.to - range.from - 1;
+    if (prunedCount > 0) {
+      result.splice(range.from + 1, prunedCount,
+        `  // ... body compressed by Serena (${prunedCount} lines) ...`
+      );
+    }
+  }
+  return result.join("\n");
+}
+
 // Main Serena compressor
 export function compressSerena(text: string, userQuery: string, options: { minLines?: number } = {}): string {
-  // Try to use the official serena CLI tool first (Option A)
-  try {
-    const proc = spawnSync("serena", ["prune", "--query", userQuery], {
-      input: text,
-      encoding: "utf-8"
-    });
-    if (proc.status === 0 && proc.stdout) {
-      return proc.stdout;
-    }
-  } catch (err) {
-    // Fallback silently if serena is not installed
-  }
-
   const minLines = options.minLines ?? 5;
   const initialKeywords = extractKeywords(userQuery);
-  
-  // Find markdown code blocks
-  // e.g. ```typescript ... ```
+
+  // Deep integration: write each code block to a temp file, ask serena-mcp-server for symbol overview,
+  // prune irrelevant functions by their exact line spans reported by the LSP backend.
+  const tempDir = join(import.meta.dirname, "../../data");
   const codeBlockRegex = /```(typescript|javascript|js|ts|python|py)\n([\s\S]*?)```/g;
-  
+
   return text.replace(codeBlockRegex, (match, lang, code) => {
     const isPython = lang === "python" || lang === "py";
-    const keywords = resolveDependencies(code, initialKeywords, isPython);
-    let compressedCode = code;
-    
-    if (isPython) {
-      compressedCode = compressPython(code, keywords, minLines);
-    } else {
-      compressedCode = compressJS(code, keywords, minLines);
+    const ext = isPython ? ".py" : ".ts";
+    const tempFile = join(tempDir, `temp_serena_${Math.random().toString(36).substring(2, 9)}${ext}`);
+
+    try {
+      if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true });
+      writeFileSync(tempFile, code, "utf8");
+
+      // Ask Serena MCP server for symbol map of the temp file
+      const symbols = serenaGetSymbols(tempFile, tempDir);
+      if (symbols && symbols.length > 0) {
+        const keywords = resolveDependencies(code, initialKeywords, isPython);
+        const pruned = pruneBySerenaSymbols(code, symbols, keywords, minLines);
+        return `\`\`\`${lang}\n${pruned}\`\`\``;
+      }
+    } catch { /* fall through to local pruner */ } finally {
+      try { if (existsSync(tempFile)) unlinkSync(tempFile); } catch {}
     }
-    
+
+    // Fallback: custom AST-style local pruner
+    const keywords = resolveDependencies(code, initialKeywords, isPython);
+    const compressedCode = isPython
+      ? compressPython(code, keywords, minLines)
+      : compressJS(code, keywords, minLines);
     return `\`\`\`${lang}\n${compressedCode}\`\`\``;
   });
 }
+
