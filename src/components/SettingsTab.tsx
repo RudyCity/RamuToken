@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw } from "lucide-react";
 import { CompressorSettings } from "../types";
 
 interface SettingsTabProps {
@@ -59,6 +59,47 @@ export default function SettingsTab({
   const [copiedOpenAI, setCopiedOpenAI] = useState(false);
   const [copiedAnthropic, setCopiedAnthropic] = useState(false);
   const [showToken, setShowToken] = useState(false);
+
+  // Background Python Daemon monitoring state
+  const [daemonStatus, setDaemonStatus] = useState<{
+    isActive: boolean;
+    pid: number | null;
+    projects: string[];
+    platform: string | null;
+    python_version: string | null;
+  } | null>(null);
+  const [restartingDaemon, setRestartingDaemon] = useState(false);
+
+  const fetchDaemonStatus = async () => {
+    try {
+      const res = await fetch("/api/daemon-status");
+      if (res.ok) {
+        setDaemonStatus(await res.json());
+      }
+    } catch (err) {
+      console.error("Failed to query daemon status:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDaemonStatus();
+    const interval = setInterval(fetchDaemonStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleRestartDaemon = async () => {
+    setRestartingDaemon(true);
+    try {
+      await fetch("/api/daemon-restart", { method: "POST" });
+      // Short delay for daemon shutdown and restart process
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      await fetchDaemonStatus();
+    } catch (err) {
+      console.error("Failed to restart daemon:", err);
+    } finally {
+      setRestartingDaemon(false);
+    }
+  };
 
   const generateToken = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -300,6 +341,80 @@ export default function SettingsTab({
             </p>
           </div>
         </div>
+      </Section>
+
+      {/* ── Python Background Daemon Monitor ────────────────────── */}
+      <Section>
+        <div className="flex justify-between items-start gap-4">
+          <div>
+            <SectionTitle gradient="from-neon-cyan to-neon-purple">PYTHON BACKGROUND DAEMON STATUS</SectionTitle>
+            <p className="text-xxs text-slate-500 font-mono">
+              Monitors the persistent Python process cache holding headroom and serena LSP imports.
+            </p>
+          </div>
+          <button
+            onClick={handleRestartDaemon}
+            disabled={restartingDaemon}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/5 bg-neon-pink/10 hover:bg-neon-pink/20 text-neon-pink text-xs font-mono font-bold transition-all cursor-pointer disabled:opacity-50"
+          >
+            {restartingDaemon ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            RESTART DAEMON
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
+          {/* Status Panel */}
+          <div className="p-4 rounded-xl bg-slate-950/60 border border-white/5 flex items-center gap-3">
+            <div className={`p-2 rounded-lg shrink-0 ${daemonStatus?.isActive ? "bg-neon-green/10 text-neon-green" : "bg-neon-pink/10 text-neon-pink"}`}>
+              {daemonStatus?.isActive ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+            </div>
+            <div>
+              <span className="text-xxs text-slate-500 block">DAEMON LIFE</span>
+              <span className="text-xs font-black">{daemonStatus?.isActive ? "RUNNING (HOT)" : "OFFLINE / IDLE"}</span>
+            </div>
+          </div>
+
+          {/* Process ID */}
+          <div className="p-4 rounded-xl bg-slate-950/60 border border-white/5 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-neon-cyan/10 text-neon-cyan shrink-0">
+              <Cpu className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xxs text-slate-500 block">SYSTEM PROCESS PID</span>
+              <span className="text-xs font-black">{daemonStatus?.isActive && daemonStatus.pid ? daemonStatus.pid : "NONE"}</span>
+            </div>
+          </div>
+
+          {/* Projects Cached */}
+          <div className="p-4 rounded-xl bg-slate-950/60 border border-white/5 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-neon-purple/10 text-neon-purple shrink-0">
+              <FileCode className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xxs text-slate-500 block">LSP CACHED PROJECTS</span>
+              <span className="text-xs font-black">{daemonStatus?.isActive ? `${daemonStatus.projects.length} Workspace(s)` : "0 Workspaces"}</span>
+            </div>
+          </div>
+        </div>
+
+        {daemonStatus?.isActive && (
+          <div className="pt-2 text-xxs text-slate-500 font-mono space-y-1">
+            {daemonStatus.projects.length > 0 && (
+              <div>
+                <span className="text-slate-400 font-bold">Active LSP Workspaces:</span>
+                <ul className="list-disc pl-5 mt-1 text-slate-400">
+                  {daemonStatus.projects.map((p, idx) => (
+                    <li key={idx} className="truncate">{p}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="flex gap-4 pt-1">
+              <span><span className="text-slate-400">OS Platform:</span> {daemonStatus.platform}</span>
+              <span className="truncate"><span className="text-slate-400">Python:</span> {daemonStatus.python_version}</span>
+            </div>
+          </div>
+        )}
       </Section>
 
       {/* ── Upstream Routing ──────────────────────────────────────── */}

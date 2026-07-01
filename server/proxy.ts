@@ -4,7 +4,7 @@
  * relays requests to Bifrost or direct providers, and tracks token usage.
  */
 import { getEncoding } from "js-tiktoken";
-import { settings, addLog, RequestLog } from "./config";
+import { settings, addLog, RequestLog, CompressorSettings } from "./config";
 import { compressRTK } from "./pipelines/rtk";
 import { compressSerena } from "./pipelines/serena";
 import { compressHeadroom, restoreCCR } from "./pipelines/headroom";
@@ -37,8 +37,10 @@ export function countPayloadTokens(messages: Message[], system?: string): number
 // Core compression orchestrator for a set of messages
 export async function compressMessageList(
   messages: Message[],
-  userQuery: string
+  userQuery: string,
+  overrideSettings?: CompressorSettings
 ): Promise<{ compressedMessages: Message[]; originalPrompt: string; compressedPrompt: string; ccrCount: number }> {
+  const activeSettings = overrideSettings || settings;
   let originalAccumulated = "";
   let compressedAccumulated = "";
   let ccrCount = 0;
@@ -51,29 +53,29 @@ export async function compressMessageList(
 
     if (msg.role !== "system") {
       // 1. RTK Compression (logs, CLI output, paths)
-      if (settings.rtk.enabled) {
+      if (activeSettings.rtk.enabled) {
         content = await compressRTK(content, {
-          logs: settings.rtk.logs,
-          paths: settings.rtk.paths,
-          stacks: settings.rtk.stacks
+          logs: activeSettings.rtk.logs,
+          paths: activeSettings.rtk.paths,
+          stacks: activeSettings.rtk.stacks
         });
       }
 
       // 2. Serena Compression (code AST-like pruning based on query keywords)
-      if (settings.serena.enabled) {
+      if (activeSettings.serena.enabled) {
         content = await compressSerena(content, userQuery, { 
-          minLines: settings.serena.minLines
+          minLines: activeSettings.serena.minLines
         });
       }
 
       // 3. Headroom Compression (JSON minifying and CCR reversible substitution)
-      if (settings.headroom.enabled) {
+      if (activeSettings.headroom.enabled) {
         const hrResult = await compressHeadroom(content, {
-          minify: settings.headroom.minify,
-          prune: settings.headroom.prune,
-          ccr: settings.headroom.ccr,
-          minCcrLength: settings.headroom.minCcrLength,
-          blacklist: settings.headroom.blacklist
+          minify: activeSettings.headroom.minify,
+          prune: activeSettings.headroom.prune,
+          ccr: activeSettings.headroom.ccr,
+          minCcrLength: activeSettings.headroom.minCcrLength,
+          blacklist: activeSettings.headroom.blacklist
         });
         content = hrResult.text;
         ccrCount += Object.keys(hrResult.mapping).length;
@@ -88,8 +90,8 @@ export async function compressMessageList(
 
   // 4. Caveman Compression (append system prompt instruction)
   let finalProcessed = processed;
-  if (settings.caveman.enabled) {
-    finalProcessed = injectCavemanPrompt(processed, settings.caveman.level);
+  if (activeSettings.caveman.enabled) {
+    finalProcessed = injectCavemanPrompt(processed, activeSettings.caveman.level);
   }
 
   return {

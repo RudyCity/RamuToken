@@ -6,6 +6,7 @@
 import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countTokens, handleAnthropicTranspiledProxy, handleModelsProxy } from "./proxy";
 import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
 import { join } from "path";
+import { pythonDaemon } from "./pipelines/python_daemon";
 
 const PORT = process.env.PORT || settings.server?.port || 6875;
 const DIST_DIR = join(import.meta.dirname, "../dist");
@@ -157,16 +158,46 @@ const server = Bun.serve({
       });
     }
 
+    // Live Daemon Status & Restart endpoints
+    if (path === "/api/daemon-status" && req.method === "GET") {
+      const isActive = pythonDaemon.isActive();
+      let daemonDetails = null;
+      if (isActive) {
+        try {
+          daemonDetails = await pythonDaemon.request("status", {});
+        } catch (err) {
+          console.error("[Daemon] Failed to fetch status:", err);
+        }
+      }
+      return new Response(JSON.stringify({
+        isActive,
+        pid: daemonDetails?.pid || null,
+        projects: daemonDetails?.projects || [],
+        platform: daemonDetails?.platform || null,
+        python_version: daemonDetails?.python_version || null
+      }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
+
+    if (path === "/api/daemon-restart" && req.method === "POST") {
+      pythonDaemon.shutdown();
+      return new Response(JSON.stringify({ success: true, message: "Daemon restarted successfully" }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
+
     // Test bench compressor playground
     if (path === "/api/compress-test" && req.method === "POST") {
       return req.json()
-        .then(body => {
+        .then(async body => {
           const text = body.text || "";
           const userQuery = body.query || "";
+          const playgroundSettings = body.settings || undefined;
           const dummyMessages = [{ role: "user", content: text }];
           
           const start = Date.now();
-          const { compressedMessages } = compressMessageList(dummyMessages, userQuery);
+          const { compressedMessages } = await compressMessageList(dummyMessages, userQuery, playgroundSettings);
           const elapsed = Date.now() - start;
 
           const originalTokens = countTokens(text);

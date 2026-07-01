@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { CompressorSettings, RequestLog, Metrics } from "./types";
 import DashboardTab from "./components/DashboardTab";
-import TestBenchTab from "./components/TestBenchTab";
+import PlaygroundTab from "./components/PlaygroundTab";
 import SettingsTab from "./components/SettingsTab";
 
 const APP_VERSION = "1.3.7";
@@ -74,8 +74,7 @@ export default function App() {
     `\`\`\``
   );
   const [testQuery, setTestQuery] = useState("calculateTokens");
-  const [testResult, setTestResult] = useState<any>(null);
-  const [testing, setTesting] = useState(false);
+
 
   // Selected log detail state
   const [selectedLog, setSelectedLog] = useState<RequestLog | null>(null);
@@ -208,27 +207,9 @@ export default function App() {
     setSettings(updated);
   };
 
-  // Run test compression
-  const runTestCompression = async () => {
-    if (!testText.trim()) return;
-    setTesting(true);
-    try {
-      const res = await fetch("/api/compress-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: testText, query: testQuery }),
-      });
-      if (res.ok) setTestResult(await res.json());
-    } catch (err) {
-      console.error("Test compression failed", err);
-    } finally {
-      setTesting(false);
-    }
-  };
-
   const navItems = [
     { id: "dashboard" as const, label: "Dashboard", icon: Activity, activeColor: "bg-neon-purple text-white shadow-[0_0_18px_rgba(168,85,247,0.35)]" },
-    { id: "testbench" as const, label: "Test Bench", icon: Terminal, activeColor: "bg-neon-cyan text-slate-950 shadow-[0_0_18px_rgba(6,182,212,0.35)] font-extrabold" },
+    { id: "testbench" as const, label: "Playground", icon: Terminal, activeColor: "bg-neon-cyan text-slate-950 shadow-[0_0_18px_rgba(6,182,212,0.35)] font-extrabold" },
     { id: "settings" as const, label: "Settings",   icon: SettingsIcon, activeColor: "bg-neon-green text-slate-950 shadow-[0_0_18px_rgba(16,185,129,0.35)] font-extrabold" },
   ] as const;
 
@@ -295,14 +276,12 @@ export default function App() {
           />
         )}
         {activeTab === "testbench" && (
-          <TestBenchTab
+          <PlaygroundTab
+            globalSettings={settings}
             testText={testText}
             setTestText={setTestText}
             testQuery={testQuery}
             setTestQuery={setTestQuery}
-            testResult={testResult}
-            testing={testing}
-            runTestCompression={runTestCompression}
           />
         )}
         {activeTab === "settings" && (

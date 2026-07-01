@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.17] - 2026-07-01
+
+### Added
+- **Interactive Compression Playground**: Replaced the static Test Bench with an interactive Playground tab. Users can now toggle pipelines (RTK, Serena, Headroom, Caveman) and customize parameters (e.g. minLines, caveman levels) on-the-fly, previewing side-by-side token savings and compression results without altering the server's global runtime configuration.
+- **Live Daemon Monitor & Controller**: Added a dedicated system status panel in the Settings tab. It polls background daemon stats every 5 seconds, displaying Process ID, status (active/idle), loaded workspace LSPs, platform/Python versions, and provides a **Restart Daemon** button to refresh the environment.
+
+---
+
 ## [1.3.16] - 2026-07-01
 
 ### Added

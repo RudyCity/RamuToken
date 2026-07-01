@@ -82,6 +82,10 @@ class PythonDaemonManager {
     });
   }
 
+  public isActive(): boolean {
+    return this.proc !== null && this.proc.exitCode === null;
+  }
+
   public shutdown() {
     if (this.proc && this.proc.exitCode === null) {
       try {

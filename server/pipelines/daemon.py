@@ -108,6 +108,17 @@ def main():
                     print(json.dumps({"id": req_id, "status": "success", "result": res}))
                 except:
                     pass
+            elif action == "status":
+                try:
+                    projects = list(serena_projects.keys())
+                    print(json.dumps({"id": req_id, "status": "success", "result": {
+                        "pid": os.getpid(),
+                        "projects": projects,
+                        "platform": sys.platform,
+                        "python_version": sys.version
+                    }}))
+                except:
+                    pass
             elif action == "shutdown":
                 for project, _ in serena_projects.values():
                     try:
