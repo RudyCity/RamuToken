@@ -5,6 +5,7 @@
     "": {
       "name": "token-compressor",
       "dependencies": {
+        "caveman-shrink": "^0.1.0",
         "js-tiktoken": "^1.0.17",
         "lucide-react": "^0.475.0",
         "react": "^19.0.0",
@@ -227,6 +228,8 @@
     "browserslist": ["browserslist@4.28.4", "", { "dependencies": { "baseline-browser-mapping": "^2.10.38", "caniuse-lite": "^1.0.30001799", "electron-to-chromium": "^1.5.376", "node-releases": "^2.0.48", "update-browserslist-db": "^1.2.3" }, "bin": { "browserslist": "cli.js" } }, "sha512-MTc8i/x9jBQd1iMw2CFGS+rwMa07eYjLR0CCTLDACl9xhxy+nIs3KeML/biicXtk9JrZ6dnnTatmc7ErPXIxqw=="],
 
     "caniuse-lite": ["caniuse-lite@1.0.30001800", "", {}, "sha512-MMHtuAz9Ys840zAY5F4k6fV5GaivZ9sPk+nz0mY+GYVzRBnYkN0mpqkSR92oWRQ19yQWo4HvBV/FnC16AJX8MA=="],
+
+    "caveman-shrink": ["caveman-shrink@0.1.0", "", { "bin": { "caveman-shrink": "index.js" } }, "sha512-AH81oXnhBTRrqbolhq3vTMrJxP+Zgk5cTxMYatMVNGNALqqdviY+3sTkSxynCfZQfxNXUwAwi5mWSlrXxM4TkA=="],
 
     "convert-source-map": ["convert-source-map@2.0.0", "", {}, "sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg=="],
 

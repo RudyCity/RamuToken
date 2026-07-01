@@ -1,12 +1,5 @@
-/**
- * Caveman - Response Style Prompt Injector
- * Deep integration with JuliusBrussee/caveman:
- *  1. Try `npx caveman-shrink --level <level>` (caveman-shrink MCP proxy) to compress system prompts directly.
- *  2. Try `npx -y caveman --level <level>` for the full caveman skill runner.
- *  3. Fallback to embedded SKILL.md faithful reproductions of the real caveman instructions.
- */
-
-import { spawnSync } from "child_process";
+// @ts-ignore
+import { compress } from "caveman-shrink/compress";
 
 /**
  * Faithfully reproduced from the JuliusBrussee/caveman SKILL.md files:
@@ -41,7 +34,7 @@ Max compression. Telegraphic style. Rules:
 - Code: no surrounding prose
 - Errors: line number + fix only
 - Lists: single words/phrases per bullet
-Token budget: critical. Every word must earn its place.`
+- Token budget: critical. Every word must earn its place.`
 };
 
 export interface Message {
@@ -52,42 +45,18 @@ export interface Message {
 }
 
 /**
- * Maps our level names to caveman-shrink CLI level names.
- * caveman-shrink uses: lite | full | ultra
- */
-const LEVEL_MAP: Record<string, string> = {
-  low: "lite",
-  medium: "full",
-  high: "ultra"
-};
-
-/**
  * Attempts to invoke caveman-shrink (the MCP proxy from JuliusBrussee/caveman)
  * to compress a single system prompt text.
- * caveman-shrink accepts text via stdin and outputs compressed text on stdout.
  */
 function cavemanShrink(text: string, level: string): string | null {
-  const shrinkLevel = LEVEL_MAP[level] ?? "full";
-  const commands = [
-    ["caveman-shrink", ["--level", shrinkLevel]],
-    ["npx", ["-y", "caveman-shrink", "--level", shrinkLevel]],
-  ] as const;
-
-  for (const [cmd, args] of commands) {
-    try {
-      const proc = spawnSync(cmd, args, {
-        input: text,
-        encoding: "utf-8",
-        timeout: 15_000,
-        shell: true
-      });
-      if (proc.status === 0 && proc.stdout) {
-        return proc.stdout.trimEnd();
-      }
-    } catch { /* try next */ }
+  try {
+    const result = compress(text);
+    return result.compressed;
+  } catch {
+    return null;
   }
-  return null;
 }
+
 
 // Injects the caveman instruction into the request messages
 export function injectCavemanPrompt(messages: Message[], level: "low" | "medium" | "high" = "medium"): Message[] {
