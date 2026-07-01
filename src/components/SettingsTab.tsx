@@ -54,6 +54,8 @@ export default function SettingsTab({
 }: SettingsTabProps) {
   const [bifrostStatus, setBifrostStatus] = useState<BifrostStatus>("idle");
   const [bifrostLatency, setBifrostLatency] = useState<number | null>(null);
+  const [customStatus, setCustomStatus] = useState<BifrostStatus>("idle");
+  const [customLatency, setCustomLatency] = useState<number | null>(null);
   const [copiedOpenAI, setCopiedOpenAI] = useState(false);
   const [copiedAnthropic, setCopiedAnthropic] = useState(false);
   const [showToken, setShowToken] = useState(false);
@@ -88,6 +90,29 @@ export default function SettingsTab({
         setBifrostStatus("online");
       } catch {
         setBifrostStatus("offline");
+      }
+    }
+  };
+
+  // Test Custom Upstream connectivity
+  const testCustomUpstream = async () => {
+    const rawUrl = settings.upstream.customUrl.replace(/\/$/, "");
+    if (!rawUrl) return;
+    setCustomStatus("checking");
+    setCustomLatency(null);
+    const start = Date.now();
+    try {
+      // Try /health first, then root
+      await fetch(`${rawUrl}/health`, { signal: AbortSignal.timeout(5000), mode: "no-cors" });
+      setCustomLatency(Date.now() - start);
+      setCustomStatus("online");
+    } catch {
+      try {
+        await fetch(rawUrl, { signal: AbortSignal.timeout(5000), mode: "no-cors" });
+        setCustomLatency(Date.now() - start);
+        setCustomStatus("online");
+      } catch {
+        setCustomStatus("offline");
       }
     }
   };
@@ -326,15 +351,60 @@ export default function SettingsTab({
                 <label className="block text-xxs font-bold uppercase tracking-wider text-emerald-400 font-mono">
                   Custom Endpoint URL
                 </label>
-                <input
-                  id="input-custom-url"
-                  type="text"
-                  value={settings.upstream.customUrl}
-                  onChange={(e) => handleInputChange("customUrl", e.target.value)}
-                  onBlur={() => handleSaveSettings(settings)}
-                  placeholder="https://api.together.xyz  or  http://localhost:11434"
-                  className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
-                />
+                <div className="flex gap-2">
+                  <input
+                    id="input-custom-url"
+                    type="text"
+                    value={settings.upstream.customUrl}
+                    onChange={(e) => {
+                      handleInputChange("customUrl", e.target.value);
+                      setCustomStatus("idle");
+                    }}
+                    onBlur={() => handleSaveSettings(settings)}
+                    placeholder="https://api.together.xyz  or  http://localhost:11434"
+                    className="flex-1 bg-slate-950 border border-neon-green/25 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+                  />
+                  <button
+                    id="btn-test-custom"
+                    onClick={testCustomUpstream}
+                    disabled={customStatus === "checking" || !settings.upstream.customUrl}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-40 shrink-0"
+                    style={{
+                      background: customStatus === "online"
+                        ? "rgba(16,185,129,0.12)"
+                        : customStatus === "offline"
+                        ? "rgba(236,72,153,0.12)"
+                        : "rgba(16,185,129,0.08)",
+                      borderColor: customStatus === "online"
+                        ? "rgba(16,185,129,0.4)"
+                        : customStatus === "offline"
+                        ? "rgba(236,72,153,0.35)"
+                        : "rgba(16,185,129,0.25)",
+                      color: customStatus === "online"
+                        ? "#10b981"
+                        : customStatus === "offline"
+                        ? "#ec4899"
+                        : "#34d399",
+                    }}
+                  >
+                    {customStatus === "checking" ? (
+                      <Loader className="w-3.5 h-3.5 animate-spin" />
+                    ) : customStatus === "online" ? (
+                      <Wifi className="w-3.5 h-3.5" />
+                    ) : customStatus === "offline" ? (
+                      <WifiOff className="w-3.5 h-3.5" />
+                    ) : (
+                      <Wifi className="w-3.5 h-3.5" />
+                    )}
+                    {customStatus === "checking"
+                      ? "Checking…"
+                      : customStatus === "online"
+                      ? `Online${customLatency ? ` (${customLatency}ms)` : ""}`
+                      : customStatus === "offline"
+                      ? "Offline"
+                      : "Test"}
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="block text-xxs font-bold uppercase tracking-wider text-emerald-400 font-mono">

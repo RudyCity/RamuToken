@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-07-01
+
+### Added
+- **Custom Upstream Test Button**: Added connectivity test button next to the Custom Endpoint URL field, matching the Bifrost "Test" button style.
+  - Shows **Online** (green + latency in ms), **Offline** (pink), or **Checking…** (spinner) states.
+  - Status auto-resets to idle whenever the URL field is edited.
+  - Button is disabled when the URL field is empty or a check is already in progress.
+  - Tries `<url>/health` first, then falls back to root URL ping (same strategy as Bifrost).
+
+---
+
 ## [1.3.0] - 2026-07-01
 
 ### Added
