@@ -3,6 +3,8 @@
  * Compresses terminal outputs, build logs, and stack traces.
  */
 
+import { spawnSync } from "child_process";
+
 // Strip ANSI escape codes (colors, styling, cursor movements)
 export function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex
@@ -142,6 +144,19 @@ function processStackTrace(trace: string[], target: string[]) {
 
 // Main compression function
 export function compressRTK(text: string, options: { logs?: boolean; paths?: boolean; stacks?: boolean } = {}): string {
+  // Try to use the official rtk CLI tool first (Option A)
+  try {
+    const proc = spawnSync("rtk", ["pipe", "--command", "cat"], {
+      input: text,
+      encoding: "utf-8"
+    });
+    if (proc.status === 0 && proc.stdout) {
+      return proc.stdout;
+    }
+  } catch (err) {
+    // Fallback silently if rtk is not installed
+  }
+
   const opts = { logs: true, paths: true, stacks: true, ...options };
   let result = stripAnsi(text);
   

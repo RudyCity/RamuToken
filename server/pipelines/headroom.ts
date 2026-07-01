@@ -3,6 +3,8 @@
  * Minifies JSON, prunes meta fields, and replaces long context blocks with reversible tokens.
  */
 
+import { spawnSync } from "child_process";
+
 // Memory registry for CCR (Client Context Retrieval) mappings
 // Map: placeholder -> original content
 interface CcrEntry {
@@ -149,6 +151,19 @@ export function compressHeadroom(
   text: string, 
   options: { minify?: boolean; prune?: boolean; ccr?: boolean; blacklist?: string[]; minCcrLength?: number } = {}
 ): { text: string; mapping: Record<string, string> } {
+  // Try to use the official headroom CLI tool first (Option A)
+  try {
+    const proc = spawnSync("headroom", ["compress"], {
+      input: text,
+      encoding: "utf-8"
+    });
+    if (proc.status === 0 && proc.stdout) {
+      return { text: proc.stdout, mapping: {} };
+    }
+  } catch (err) {
+    // Fallback silently if headroom is not installed
+  }
+
   const opts = { minify: true, prune: true, ccr: true, blacklist: ["metadata", "id_token"], minCcrLength: 300, ...options };
   
   let result = text;

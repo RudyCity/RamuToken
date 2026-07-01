@@ -3,6 +3,8 @@
  * Injects guidelines into the system prompt to force the LLM to output in a highly compressed style.
  */
 
+import { spawnSync } from "child_process";
+
 export const CAVEMAN_INSTRUCTIONS = {
   low: "[CAVEMAN MODE: LOW] Omit polite greetings, introductions, and generic helpful statements. Reply directly to the query with minimal preamble.",
   medium: "[CAVEMAN MODE: MEDIUM] Omit pronouns, polite greetings, and generic helpful statements. Keep responses direct and concise. Never explain code blocks unless explicitly requested.",
@@ -18,6 +20,19 @@ export interface Message {
 
 // Injects the caveman instruction into the request messages
 export function injectCavemanPrompt(messages: Message[], level: "low" | "medium" | "high" = "medium"): Message[] {
+  // Try to use the official caveman CLI tool first (Option A)
+  try {
+    const proc = spawnSync("caveman", ["prompt", "--level", level], {
+      input: JSON.stringify(messages),
+      encoding: "utf-8"
+    });
+    if (proc.status === 0 && proc.stdout) {
+      return JSON.parse(proc.stdout);
+    }
+  } catch (err) {
+    // Fallback silently if caveman is not installed
+  }
+
   const result = [...messages];
   const systemMsgIdx = result.findIndex(m => m.role === "system");
   const instruction = CAVEMAN_INSTRUCTIONS[level] || CAVEMAN_INSTRUCTIONS.medium;

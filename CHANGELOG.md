@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.8] - 2026-07-01
+
+### Added
+- **Official CLI Integrations**: Added support for invoking the official command-line tools for all 4 compression pipelines (RTK, Serena, Headroom, and Caveman) via child-process execution.
+- **Graceful Fallbacks**: Implemented robust fallbacks to the custom local TypeScript pipelines in case the official binaries/commands are not found on the system PATH, ensuring continuous functionality.
+
+---
+
 ## [1.3.7] - 2026-07-01
 
 ### Added

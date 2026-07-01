@@ -3,6 +3,8 @@
  * Parses TS/JS and Python files to extract signatures and collapse function/method bodies.
  */
 
+import { spawnSync } from "child_process";
+
 // Extracts alphanumeric word tokens from the user's query
 export function extractKeywords(userQuery: string): Set<string> {
   const keywords = new Set<string>();
@@ -261,6 +263,19 @@ export function resolveDependencies(code: string, keywords: Set<string>, isPytho
 
 // Main Serena compressor
 export function compressSerena(text: string, userQuery: string, options: { minLines?: number } = {}): string {
+  // Try to use the official serena CLI tool first (Option A)
+  try {
+    const proc = spawnSync("serena", ["prune", "--query", userQuery], {
+      input: text,
+      encoding: "utf-8"
+    });
+    if (proc.status === 0 && proc.stdout) {
+      return proc.stdout;
+    }
+  } catch (err) {
+    // Fallback silently if serena is not installed
+  }
+
   const minLines = options.minLines ?? 5;
   const initialKeywords = extractKeywords(userQuery);
   
