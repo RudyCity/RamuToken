@@ -263,58 +263,16 @@ export function resolveDependencies(code: string, keywords: Set<string>, isPytho
   return activeKeywords;
 }
 
-/**
- * Calls the serena-mcp-server via JSON-RPC 2.0 over stdio.
- * Performs: initialize → initialized → tools/call get_symbols_overview
- * Returns an array of symbol objects { name, start_line, end_line, kind } or null on failure.
- */
 function serenaGetSymbols(filePath: string, projectDir: string): Array<{ name: string; start_line: number; end_line: number; kind: string }> | null {
   try {
-    // Build the MCP messages sequence (newline-delimited JSON-RPC 2.0)
-    const initRequest = JSON.stringify({
-      jsonrpc: "2.0", id: 1, method: "initialize",
-      params: {
-        protocolVersion: "2024-11-05",
-        capabilities: {},
-        clientInfo: { name: "ramutoken-proxy", version: "1.0.0" }
-      }
+    const scriptPath = join(import.meta.dirname, "get_symbols.py");
+    const proc = spawnSync("python", [scriptPath, projectDir, filePath], {
+      encoding: "utf-8",
+      timeout: 15_000
     });
-    const initializedNotif = JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} });
-    const toolCall = JSON.stringify({
-      jsonrpc: "2.0", id: 2, method: "tools/call",
-      params: {
-        name: "get_symbols_overview",
-        arguments: { relative_file_path: filePath }
-      }
-    });
-    const input = [initRequest, initializedNotif, toolCall, ""].join("\n");
 
-    // Try serena-mcp-server first, then python -m serena.mcp as fallback
-    const commands = [
-      { cmd: "serena-mcp-server", args: ["--project-dir", projectDir] },
-      { cmd: "python", args: ["-m", "serena.mcp", "--project-dir", projectDir] },
-    ];
-
-    for (const { cmd, args } of commands) {
-      const proc = spawnSync(cmd, args, {
-        input,
-        encoding: "utf-8",
-        timeout: 10_000
-      });
-      if (proc.status === 0 && proc.stdout) {
-        // Parse newline-delimited JSON responses
-        const lines = proc.stdout.split("\n").filter(l => l.trim());
-        for (const line of lines) {
-          try {
-            const msg = JSON.parse(line);
-            // Find the response to our tool call (id: 2)
-            if (msg.id === 2 && msg.result) {
-              const content = msg.result.content?.[0]?.text ?? "";
-              return JSON.parse(content);
-            }
-          } catch { /* skip non-JSON lines */ }
-        }
-      }
+    if (proc.status === 0 && proc.stdout) {
+      return JSON.parse(proc.stdout.trim());
     }
   } catch { /* serena not installed — return null */ }
   return null;

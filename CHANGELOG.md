@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.12] - 2026-07-01
+
+### Fixed
+- **Serena Native Package Integration** (`server/pipelines/serena.ts`): Replaced the broken/hanging MCP stdio server JSON-RPC spawning mechanism with a lightweight, direct Python script call (`get_symbols.py`) that imports the official `serena` package and extracts LSP symbol ranges. This prevents test timeouts and handles cases where the Python Scripts directory is not on the system PATH.
+
+---
+
 ## [1.3.11] - 2026-07-01
 
 ### Changed
