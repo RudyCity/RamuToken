@@ -38,7 +38,7 @@ export function countPayloadTokens(messages: Message[], system?: string): number
 export function compressMessageList(
   messages: Message[], 
   userQuery: string
-): { compressedMessages: Message[]; originalText: string; compressedText: string; ccrCount: number } {
+): { compressedMessages: Message[]; originalPrompt: string; compressedPrompt: string; ccrCount: number } {
   let originalAccumulated = "";
   let compressedAccumulated = "";
   let ccrCount = 0;
@@ -90,8 +90,8 @@ export function compressMessageList(
 
   return {
     compressedMessages: processed,
-    originalText: originalAccumulated,
-    compressedText: compressedAccumulated,
+    originalPrompt: originalAccumulated,
+    compressedPrompt: compressedAccumulated,
     ccrCount
   };
 }
