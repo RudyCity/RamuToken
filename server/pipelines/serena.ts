@@ -316,42 +316,90 @@ function pruneBySerenaSymbols(
   return result.join("\n");
 }
 
+interface CodeBlock {
+  lang: string;
+  code: string;
+  isPython: boolean;
+  tempFile: string;
+  matchStr: string;
+}
+
 // Main Serena compressor
 export function compressSerena(text: string, userQuery: string, options: { minLines?: number } = {}): string {
   const minLines = options.minLines ?? 5;
   const initialKeywords = extractKeywords(userQuery);
 
-  // Deep integration: write each code block to a temp file, ask serena-mcp-server for symbol overview,
-  // prune irrelevant functions by their exact line spans reported by the LSP backend.
   const tempDir = join(import.meta.dirname, "../../data");
   const codeBlockRegex = /```(typescript|javascript|js|ts|python|py)\n([\s\S]*?)```/g;
 
-  return text.replace(codeBlockRegex, (match, lang, code) => {
+  // Extract all code blocks
+  const blocks: CodeBlock[] = [];
+  let match;
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    const [matchStr, lang, code] = match;
     const isPython = lang === "python" || lang === "py";
     const ext = isPython ? ".py" : ".ts";
-    const tempFile = join(tempDir, `temp_serena_${Math.random().toString(36).substring(2, 9)}${ext}`);
+    const tempFile = join(tempDir, `temp_serena_${Math.random().toString(36).substring(2, 9)}_${blocks.length}${ext}`);
+    blocks.push({ lang, code, isPython, tempFile, matchStr });
+  }
 
-    try {
-      if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true });
-      writeFileSync(tempFile, code, "utf8");
+  if (blocks.length === 0) return text;
 
-      // Ask Serena MCP server for symbol map of the temp file
-      const symbols = serenaGetSymbols(tempFile, tempDir);
-      if (symbols && symbols.length > 0) {
-        const keywords = resolveDependencies(code, initialKeywords, isPython);
-        const pruned = pruneBySerenaSymbols(code, symbols, keywords, minLines);
-        return `\`\`\`${lang}\n${pruned}\`\`\``;
+  // Batch execute symbol retriever
+  let batchSymbolsMap: Record<string, any> = {};
+  try {
+    if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true });
+    for (const block of blocks) {
+      writeFileSync(block.tempFile, block.code, "utf8");
+    }
+
+    const scriptPath = join(import.meta.dirname, "get_symbols.py");
+    const tempPaths = blocks.map(b => b.tempFile);
+    const proc = spawnSync("python", [scriptPath, tempDir, ...tempPaths], {
+      encoding: "utf-8",
+      timeout: 15_000
+    });
+
+    if (proc.status === 0 && proc.stdout) {
+      batchSymbolsMap = JSON.parse(proc.stdout.trim());
+    }
+  } catch (err) {
+    console.error("[Serena] Batch symbol retrieval error:", err);
+  }
+
+  // Process text by replacing each code block match
+  let resultText = text;
+  for (const block of blocks) {
+    let prunedCode: string | null = null;
+    const fileSymbols = batchSymbolsMap[block.tempFile];
+
+    if (Array.isArray(fileSymbols) && fileSymbols.length > 0) {
+      try {
+        const keywords = resolveDependencies(block.code, initialKeywords, block.isPython);
+        prunedCode = pruneBySerenaSymbols(block.code, fileSymbols, keywords, minLines);
+      } catch {
+        prunedCode = null;
       }
-    } catch { /* fall through to local pruner */ } finally {
-      try { if (existsSync(tempFile)) unlinkSync(tempFile); } catch {}
     }
 
     // Fallback: custom AST-style local pruner
-    const keywords = resolveDependencies(code, initialKeywords, isPython);
-    const compressedCode = isPython
-      ? compressPython(code, keywords, minLines)
-      : compressJS(code, keywords, minLines);
-    return `\`\`\`${lang}\n${compressedCode}\`\`\``;
-  });
+    if (prunedCode === null) {
+      const keywords = resolveDependencies(block.code, initialKeywords, block.isPython);
+      prunedCode = block.isPython
+        ? compressPython(block.code, keywords, minLines)
+        : compressJS(block.code, keywords, minLines);
+    }
+
+    resultText = resultText.replace(block.matchStr, `\`\`\`${block.lang}\n${prunedCode}\`\`\``);
+  }
+
+  // Cleanup all temp files
+  for (const block of blocks) {
+    try {
+      if (existsSync(block.tempFile)) unlinkSync(block.tempFile);
+    } catch {}
+  }
+
+  return resultText;
 }
 

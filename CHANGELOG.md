@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.13] - 2026-07-01
+
+### Fixed
+- **Serena Batch Performance Optimization** (`server/pipelines/serena.ts` & `get_symbols.py`): Optimized symbol extraction by processing all code blocks in a request payload as a single batch. This starts Python and the language server only once per request rather than sequentially for every code block, eliminating major response delays.
+
+---
+
 ## [1.3.12] - 2026-07-01
 
 ### Fixed

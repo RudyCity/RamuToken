@@ -11,7 +11,7 @@ def main():
 
     try:
         project_root = os.path.abspath(sys.argv[1])
-        file_path = os.path.abspath(sys.argv[2])
+        file_paths = [os.path.abspath(p) for p in sys.argv[2:]]
         
         config = SerenaConfig.from_config_file()
         project = config.get_project(project_root)
@@ -23,30 +23,37 @@ def main():
         
         retriever = LanguageServerSymbolRetriever(project)
         
-        # Get path relative to project root
-        rel_file_path = os.path.relpath(file_path, project_root).replace("\\", "/")
-        
-        overview = retriever.get_symbol_overview(rel_file_path)
-        symbols = overview.get(rel_file_path, [])
-        
-        symbol_dicts = []
-        for symbol in symbols:
-            loc = symbol.symbol_root.get("location")
-            if loc and "range" in loc:
-                start_line = loc["range"]["start"]["line"]
-                end_line = loc["range"]["end"]["line"]
-            else:
-                start_line = symbol.line
-                end_line = symbol.line
-
-            symbol_dicts.append({
-                "name": symbol.name,
-                "kind": symbol.symbol_kind_name,
-                "start_line": start_line,
-                "end_line": end_line
-            })
+        results = {}
+        for file_path in file_paths:
+            # Get path relative to project root
+            rel_file_path = os.path.relpath(file_path, project_root).replace("\\", "/")
             
-        print(json.dumps(symbol_dicts))
+            try:
+                overview = retriever.get_symbol_overview(rel_file_path)
+                symbols = overview.get(rel_file_path, [])
+                
+                symbol_dicts = []
+                for symbol in symbols:
+                    loc = symbol.symbol_root.get("location")
+                    if loc and "range" in loc:
+                        start_line = loc["range"]["start"]["line"]
+                        end_line = loc["range"]["end"]["line"]
+                    else:
+                        start_line = symbol.line
+                        end_line = symbol.line
+
+                    symbol_dicts.append({
+                        "name": symbol.name,
+                        "kind": symbol.symbol_kind_name,
+                        "start_line": start_line,
+                        "end_line": end_line
+                    })
+                results[file_path] = symbol_dicts
+            except Exception as e:
+                # If one file fails (e.g. unsupported extension), log error in dict and continue
+                results[file_path] = {"error": str(e)}
+            
+        print(json.dumps(results))
         
         # Shutdown language servers
         project.shutdown()
