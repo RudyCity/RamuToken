@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2026-07-01
+
+### Fixed
+- **Models endpoint now proxied to upstream**: `GET /v1/models`, `/openai/v1/models`, and `/anthropic/v1/models` now forward the request to the active upstream provider (Custom, Bifrost, or Direct OpenAI/Anthropic) instead of returning a hardcoded mock list. This allows AI agents and tools like Cursor or Continue to see the real models available from the configured provider.
+  - Added `handleModelsProxy(req, provider)` in `server/proxy.ts` with a dedicated `buildGetHeaders()` helper that mirrors the auth logic from `fetchUpstream()` for GET requests.
+  - Removed all static mock model arrays from `server/index.ts`.
+
+---
+
 ## [1.3.3] - 2026-07-01
 
 ### Changed

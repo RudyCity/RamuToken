@@ -863,3 +863,90 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
+
+// -----------------------------------------------------------------------------
+// Models List Proxy — forwards GET /v1/models to upstream provider
+// Falls back to a static list only if the upstream request fails.
+// -----------------------------------------------------------------------------
+
+/** Build request headers for a GET request to the upstream (no body). */
+async function buildGetHeaders(
+  incomingHeaders: Headers,
+  provider: "openai" | "anthropic"
+): Promise<{ targetBase: string; headers: Headers }> {
+  const preferCustom = settings.upstream.preferCustom && settings.upstream.customUrl;
+  const preferBifrost = !preferCustom && settings.upstream.preferBifrost && settings.upstream.bifrostUrl;
+
+  const requestHeaders = new Headers();
+  // Forward relevant incoming headers (skip host / content-length)
+  incomingHeaders.forEach((value, key) => {
+    if (!key.toLowerCase().startsWith("host") && !key.toLowerCase().startsWith("content-length")) {
+      requestHeaders.set(key, value);
+    }
+  });
+
+  let targetBase = "";
+
+  if (preferCustom) {
+    targetBase = settings.upstream.customUrl.replace(/\/$/, "");
+    const headerName = settings.upstream.customHeader || "Authorization";
+    const headerVal = settings.upstream.customKey || incomingHeaders.get(headerName) || "";
+    if (headerVal) {
+      if (headerName.toLowerCase() === "authorization" && !headerVal.toLowerCase().startsWith("bearer ")) {
+        requestHeaders.set(headerName, `Bearer ${headerVal}`);
+      } else {
+        requestHeaders.set(headerName, headerVal);
+      }
+    }
+    console.log(`[Proxy] Models → Custom Upstream: ${targetBase}`);
+  } else if (preferBifrost) {
+    targetBase = settings.upstream.bifrostUrl.replace(/\/$/, "");
+    console.log(`[Proxy] Models → Bifrost: ${targetBase}`);
+  } else if (provider === "openai") {
+    targetBase = "https://api.openai.com";
+    requestHeaders.set(
+      "Authorization",
+      `Bearer ${settings.upstream.openaiKey || incomingHeaders.get("Authorization")?.replace("Bearer ", "") || ""}`
+    );
+    console.log(`[Proxy] Models → OpenAI direct`);
+  } else {
+    targetBase = "https://api.anthropic.com";
+    requestHeaders.set("x-api-key", settings.upstream.anthropicKey || incomingHeaders.get("x-api-key") || "");
+    requestHeaders.set("anthropic-version", incomingHeaders.get("anthropic-version") || "2023-06-01");
+    console.log(`[Proxy] Models → Anthropic direct`);
+  }
+
+  return { targetBase, headers: requestHeaders };
+}
+
+/**
+ * Forwards a GET /v1/models (or /anthropic/v1/models) request to the upstream.
+ * @param req      - original incoming request (for headers / auth)
+ * @param provider - "openai" | "anthropic"
+ */
+export async function handleModelsProxy(req: Request, provider: "openai" | "anthropic"): Promise<Response> {
+  try {
+    const { targetBase, headers } = await buildGetHeaders(req.headers, provider);
+    const endpoint = "/v1/models";
+    const upstreamUrl = `${targetBase}${endpoint}`;
+
+    const upstreamRes = await fetch(upstreamUrl, { method: "GET", headers });
+
+    if (!upstreamRes.ok) {
+      const errText = await upstreamRes.text();
+      console.warn(`[Proxy] Models upstream error ${upstreamRes.status}: ${errText}`);
+      return new Response(errText, {
+        status: upstreamRes.status,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const json = await upstreamRes.json();
+    return new Response(JSON.stringify(json), {
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (err: any) {
+    console.error(`[Proxy] Models fetch failed: ${err.message}`);
+    return new Response(JSON.stringify({ error: err.message }), { status: 502 });
+  }
+}

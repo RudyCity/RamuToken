@@ -3,7 +3,7 @@
  * Listens on port 6875, routes API requests, handles WebSockets,
  * and serves the Vite client app.
  */
-import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countTokens, handleAnthropicTranspiledProxy } from "./proxy";
+import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countTokens, handleAnthropicTranspiledProxy, handleModelsProxy } from "./proxy";
 import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
 import { join } from "path";
 
@@ -85,34 +85,12 @@ const server = Bun.serve({
       });
     }
 
-    // OpenAI models list
-    if (path === "/openai/v1/models") {
-      const mockModels = {
-        object: "list",
-        data: [
-          { id: "gpt-4o", object: "model", created: 1715640000, owned_by: "openai" },
-          { id: "gpt-4-turbo", object: "model", created: 1711756800, owned_by: "openai" },
-          { id: "gpt-3.5-turbo", object: "model", created: 1677610602, owned_by: "openai" }
-        ]
-      };
-      return new Response(JSON.stringify(mockModels), {
-        headers: { "Content-Type": "application/json", ...corsHeaders }
-      });
-    }
-
-    if (path === "/v1/models") {
-      const mockModels = {
-        object: "list",
-        data: [
-          { id: "gpt-4o", object: "model", created: 1715640000, owned_by: "openai" },
-          { id: "gpt-4-turbo", object: "model", created: 1711756800, owned_by: "openai" },
-          { id: "gpt-3.5-turbo", object: "model", created: 1677610602, owned_by: "openai" },
-          { id: "claude-3-5-sonnet", object: "model", created: 1718841600, owned_by: "anthropic" },
-          { id: "claude-3-opus", object: "model", created: 1709251200, owned_by: "anthropic" }
-        ]
-      };
-      return new Response(JSON.stringify(mockModels), {
-        headers: { "Content-Type": "application/json", ...corsHeaders }
+    // OpenAI models list — forward to upstream
+    if (path === "/v1/models" || path === "/openai/v1/models") {
+      return handleModelsProxy(req, "openai").then(res => {
+        const newHeaders = new Headers(res.headers);
+        Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
+        return new Response(res.body, { status: res.status, headers: newHeaders });
       });
     }
 
@@ -134,18 +112,12 @@ const server = Bun.serve({
       });
     }
 
-    // Anthropic models list
+    // Anthropic models list — forward to upstream
     if (path === "/anthropic/v1/models") {
-      const mockModels = {
-        object: "list",
-        data: [
-          { id: "claude-3-5-sonnet", object: "model", created: 1718841600, owned_by: "anthropic" },
-          { id: "claude-3-opus", object: "model", created: 1709251200, owned_by: "anthropic" },
-          { id: "claude-3-haiku", object: "model", created: 1709251200, owned_by: "anthropic" }
-        ]
-      };
-      return new Response(JSON.stringify(mockModels), {
-        headers: { "Content-Type": "application/json", ...corsHeaders }
+      return handleModelsProxy(req, "anthropic").then(res => {
+        const newHeaders = new Headers(res.headers);
+        Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
+        return new Response(res.body, { status: res.status, headers: newHeaders });
       });
     }
 
