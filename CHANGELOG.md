@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-07-01
+
+### Added
+- **Dual API Endpoint Prefixes**: Added dedicated prefixes for routing OpenAI and Anthropic requests:
+  - OpenAI URL: `http://localhost:<PORT>/openai/v1`
+  - Anthropic URL: `http://localhost:<PORT>/anthropic/v1`
+- **OpenAI-to-Anthropic Transpilation Layer**: Added full request and response translation handlers (`translateOpenAIToAnthropic`, `translateAnthropicToOpenAI`, and stream mapper `makeAnthropicToOpenAIStream`) inside the proxy. If a client targets `/anthropic/v1/chat/completions` (OpenAI chat completion format), the proxy translates the request payload, fetches from Anthropic, and maps the response chunks back to OpenAI format. This allows seamless integration of Claude models in Cursor without requiring Bifrost.
+- **Improved Settings UI**: Exposes copy buttons for both OpenAI and Anthropic endpoint URLs in the settings tab.
+
+---
+
 ## [1.1.5] - 2026-07-01
 
 ### Added

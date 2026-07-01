@@ -54,7 +54,8 @@ export default function SettingsTab({
 }: SettingsTabProps) {
   const [bifrostStatus, setBifrostStatus] = useState<BifrostStatus>("idle");
   const [bifrostLatency, setBifrostLatency] = useState<number | null>(null);
-  const [copiedEndpoint, setCopiedEndpoint] = useState(false);
+  const [copiedOpenAI, setCopiedOpenAI] = useState(false);
+  const [copiedAnthropic, setCopiedAnthropic] = useState(false);
   const [showToken, setShowToken] = useState(false);
 
   const generateToken = () => {
@@ -170,75 +171,107 @@ export default function SettingsTab({
       {/* ── RamuToken Access Control & Endpoint ──────────────────── */}
       <Section>
         <div>
-          <SectionTitle gradient="from-neon-purple to-neon-cyan">RAMUTOKEN ACCESS & ENDPOINT</SectionTitle>
+          <SectionTitle gradient="from-neon-purple to-neon-cyan">RAMUTOKEN ACCESS & ENDPOINTS</SectionTitle>
           <p className="text-xxs text-slate-500 font-mono">
             Copy your proxy base URL and secure client connections with an access token.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Endpoint URL Field */}
-          <div className="space-y-2">
-            <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
-              Agent Endpoint URL (Base URL)
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="input-endpoint-url"
-                type="text"
-                readOnly
-                value={`http://localhost:${backendPort}/v1`}
-                className="flex-1 bg-slate-950/80 border border-white/5 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-400 focus:outline-none"
-              />
-              <button
-                id="btn-copy-endpoint"
-                onClick={() => {
-                  navigator.clipboard.writeText(`http://localhost:${backendPort}/v1`);
-                  setCopiedEndpoint(true);
-                  setTimeout(() => setCopiedEndpoint(false), 2000);
-                }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-all cursor-pointer shrink-0"
-              >
-                {copiedEndpoint ? "Copied!" : "Copy"}
-              </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Endpoint URLs */}
+          <div className="space-y-4">
+            {/* OpenAI Endpoint */}
+            <div className="space-y-1.5">
+              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+                OpenAI Router Base URL
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="input-endpoint-openai"
+                  type="text"
+                  readOnly
+                  value={`http://localhost:${backendPort}/openai/v1`}
+                  className="flex-1 bg-slate-950/80 border border-white/5 rounded-xl px-4 py-2.5 text-xs font-mono text-slate-400 focus:outline-none"
+                />
+                <button
+                  id="btn-copy-openai"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`http://localhost:${backendPort}/openai/v1`);
+                    setCopiedOpenAI(true);
+                    setTimeout(() => setCopiedOpenAI(false), 2000);
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-all cursor-pointer shrink-0 min-w-[70px]"
+                >
+                  {copiedOpenAI ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </div>
+
+            {/* Anthropic Endpoint */}
+            <div className="space-y-1.5">
+              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+                Anthropic Router Base URL
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="input-endpoint-anthropic"
+                  type="text"
+                  readOnly
+                  value={`http://localhost:${backendPort}/anthropic/v1`}
+                  className="flex-1 bg-slate-950/80 border border-white/5 rounded-xl px-4 py-2.5 text-xs font-mono text-slate-400 focus:outline-none"
+                />
+                <button
+                  id="btn-copy-anthropic"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`http://localhost:${backendPort}/anthropic/v1`);
+                    setCopiedAnthropic(true);
+                    setTimeout(() => setCopiedAnthropic(false), 2000);
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-all cursor-pointer shrink-0 min-w-[70px]"
+                >
+                  {copiedAnthropic ? "Copied!" : "Copy"}
+                </button>
+              </div>
             </div>
             <p className="text-[10px] text-slate-500 font-mono">
-              Configure this as the custom OpenAI-compatible "Base URL" in Cursor or other coding agents.
+              Use OpenAI URL for GPT models, and Anthropic URL for Claude models. Anthropic URL auto-translates format for Cursor!
             </p>
           </div>
 
           {/* Access Token Field */}
-          <div className="space-y-2">
-            <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
-              RamuToken Access Token (Authorization Key)
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="input-access-token"
-                type={showToken ? "text" : "password"}
-                value={settings.server?.accessToken || ""}
-                onChange={(e) => handleServerTokenChange(e.target.value)}
-                onBlur={() => handleSaveSettings(settings)}
-                placeholder="No key set (unsecured)"
-                className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-purple transition-colors"
-              />
-              <button
-                id="btn-show-token"
-                onClick={() => setShowToken(!showToken)}
-                className="px-3 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-bold font-mono transition-all cursor-pointer shrink-0"
-              >
-                {showToken ? "Hide" : "Show"}
-              </button>
-              <button
-                id="btn-gen-token"
-                onClick={generateToken}
-                className="px-3 rounded-xl bg-neon-purple/10 border border-neon-purple/20 hover:bg-neon-purple/15 text-neon-purple text-xs font-bold font-mono transition-all cursor-pointer shrink-0"
-              >
-                Gen Key
-              </button>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+                RamuToken Access Token (Authorization Key)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="input-access-token"
+                  type={showToken ? "text" : "password"}
+                  value={settings.server?.accessToken || ""}
+                  onChange={(e) => handleServerTokenChange(e.target.value)}
+                  onBlur={() => handleSaveSettings(settings)}
+                  placeholder="No key set (unsecured)"
+                  className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-purple transition-colors"
+                />
+                <button
+                  id="btn-show-token"
+                  onClick={() => setShowToken(!showToken)}
+                  className="px-3 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-bold font-mono transition-all cursor-pointer shrink-0"
+                >
+                  {showToken ? "Hide" : "Show"}
+                </button>
+                <button
+                  id="btn-gen-token"
+                  onClick={generateToken}
+                  className="px-3 rounded-xl bg-neon-purple/10 border border-neon-purple/20 hover:bg-neon-purple/15 text-neon-purple text-xs font-bold font-mono transition-all cursor-pointer shrink-0"
+                >
+                  Gen Key
+                </button>
+              </div>
             </div>
             <p className="text-[10px] text-slate-500 font-mono">
-              If configured, you must enter this token as the "API Key" in your coding agent to authorize requests.
+              If configured, enter this token as the "API Key" in your coding agent (Cursor, Claude Code, etc.) to authorize requests.
             </p>
           </div>
         </div>

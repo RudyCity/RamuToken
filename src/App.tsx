@@ -10,7 +10,7 @@ import DashboardTab from "./components/DashboardTab";
 import TestBenchTab from "./components/TestBenchTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.1.5";
+const APP_VERSION = "1.2.0";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");

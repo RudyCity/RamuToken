@@ -3,7 +3,7 @@
  * Listens on port 6875, routes API requests, handles WebSockets,
  * and serves the Vite client app.
  */
-import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countTokens } from "./proxy";
+import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countTokens, handleAnthropicTranspiledProxy } from "./proxy";
 import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
 import { join } from "path";
 
@@ -30,7 +30,11 @@ const server = Bun.serve({
     }
 
     // Auth verification for client endpoints
-    if (path.startsWith("/v1/") || path === "/v1") {
+    const isProxyPath = path.startsWith("/v1/") || path === "/v1" ||
+                        path.startsWith("/openai/") ||
+                        path.startsWith("/anthropic/");
+                        
+    if (isProxyPath) {
       const authRequired = settings.server?.accessToken && settings.server.accessToken.trim() !== "";
       if (authRequired) {
         const authHeader = req.headers.get("Authorization") || "";
@@ -73,9 +77,8 @@ const server = Bun.serve({
     }
 
     // 2. OpenAI compatible routing
-    if (path === "/v1/chat/completions") {
+    if (path === "/v1/chat/completions" || path === "/openai/v1/chat/completions") {
       return handleOpenAIProxy(req).then(res => {
-        // Inject CORS headers
         const newHeaders = new Headers(res.headers);
         Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
         return new Response(res.body, { status: res.status, headers: newHeaders });
@@ -83,6 +86,20 @@ const server = Bun.serve({
     }
 
     // OpenAI models list
+    if (path === "/openai/v1/models") {
+      const mockModels = {
+        object: "list",
+        data: [
+          { id: "gpt-4o", object: "model", created: 1715640000, owned_by: "openai" },
+          { id: "gpt-4-turbo", object: "model", created: 1711756800, owned_by: "openai" },
+          { id: "gpt-3.5-turbo", object: "model", created: 1677610602, owned_by: "openai" }
+        ]
+      };
+      return new Response(JSON.stringify(mockModels), {
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
+
     if (path === "/v1/models") {
       const mockModels = {
         object: "list",
@@ -100,11 +117,35 @@ const server = Bun.serve({
     }
 
     // 3. Anthropic compatible routing
-    if (path === "/v1/messages") {
+    if (path === "/v1/messages" || path === "/anthropic/v1/messages") {
       return handleAnthropicProxy(req).then(res => {
         const newHeaders = new Headers(res.headers);
         Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
         return new Response(res.body, { status: res.status, headers: newHeaders });
+      });
+    }
+
+    // Anthropic Transpiled Route (allows OpenAI clients to use Anthropic models directly)
+    if (path === "/anthropic/v1/chat/completions") {
+      return handleAnthropicTranspiledProxy(req).then(res => {
+        const newHeaders = new Headers(res.headers);
+        Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
+        return new Response(res.body, { status: res.status, headers: newHeaders });
+      });
+    }
+
+    // Anthropic models list
+    if (path === "/anthropic/v1/models") {
+      const mockModels = {
+        object: "list",
+        data: [
+          { id: "claude-3-5-sonnet", object: "model", created: 1718841600, owned_by: "anthropic" },
+          { id: "claude-3-opus", object: "model", created: 1709251200, owned_by: "anthropic" },
+          { id: "claude-3-haiku", object: "model", created: 1709251200, owned_by: "anthropic" }
+        ]
+      };
+      return new Response(JSON.stringify(mockModels), {
+        headers: { "Content-Type": "application/json", ...corsHeaders }
       });
     }
 
