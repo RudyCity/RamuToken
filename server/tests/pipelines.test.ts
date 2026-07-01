@@ -1,6 +1,6 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { compressRTK, stripAnsi, collapseRepeatedLogs, shortenPaths, pruneStackTraces } from "../pipelines/rtk";
-import { compressSerena, extractKeywords, compressJS, compressPython } from "../pipelines/serena";
+import { compressSerena, extractKeywords, compressJS, compressPython, resolveDependencies } from "../pipelines/serena";
 import { compressHeadroom, restoreCCR, clearRegistry, getRegistry, minifyJSON, pruneJSONFields } from "../pipelines/headroom";
 import { injectCavemanPrompt, deCavemanize } from "../pipelines/caveman";
 import { generateRequestKey, getCachedResponse, setCachedResponse, clearCache, getCacheSize, preserveCacheControl } from "../pipelines/cache";
@@ -172,6 +172,30 @@ function inner() {}
     // 'work' is in keywords, should be fully preserved
     expect(compressed).toContain("print('Working')");
   });
+
+  test("should recursively resolve caller-callee dependencies", () => {
+    const code = [
+      "function parent() {",
+      "  console.log('parent');",
+      "  child();",
+      "}",
+      "",
+      "function child() {",
+      "  console.log('child');",
+      "}",
+      "",
+      "function stranger() {",
+      "  console.log('stranger');",
+      "}"
+    ].join("\n");
+
+    const initialKeywords = new Set<string>(["parent"]);
+    const resolvedKeywords = resolveDependencies(code, initialKeywords, false);
+
+    expect(resolvedKeywords.has("parent")).toBe(true);
+    expect(resolvedKeywords.has("child")).toBe(true); // Dependency resolved
+    expect(resolvedKeywords.has("stranger")).toBe(false); // Unrelated block
+  });
 });
 
 describe("Headroom Pipeline (JSON & Reversible Context CCR)", () => {
@@ -254,8 +278,8 @@ describe("Caveman Pipeline (Prose Compressor)", () => {
       { role: "user", content: "Explain React." }
     ];
 
-    const injected = injectCavemanPrompt(messages);
-    expect(injected[0].content).toContain("CAVEMAN MODE ACTIVE");
+    const injected = injectCavemanPrompt(messages, "high");
+    expect(injected[0].content).toContain("CAVEMAN MODE: HIGH");
   });
 
   test("should prepend system message if none exists", () => {
@@ -263,8 +287,9 @@ describe("Caveman Pipeline (Prose Compressor)", () => {
       { role: "user", content: "Explain React." }
     ];
 
-    const injected = injectCavemanPrompt(messages);
+    const injected = injectCavemanPrompt(messages, "medium");
     expect(injected[0].role).toBe("system");
+    expect(injected[0].content).toContain("CAVEMAN MODE: MEDIUM");
   });
 
   test("should run deCavemanize helper formatting", () => {

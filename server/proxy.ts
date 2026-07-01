@@ -85,7 +85,7 @@ export function compressMessageList(
 
   // 4. Caveman Compression (append system prompt instruction)
   if (settings.caveman.enabled) {
-    processed = injectCavemanPrompt(processed);
+    processed = injectCavemanPrompt(processed, settings.caveman.level);
   }
 
   return {

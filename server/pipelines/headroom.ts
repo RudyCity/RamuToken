@@ -5,7 +5,12 @@
 
 // Memory registry for CCR (Client Context Retrieval) mappings
 // Map: placeholder -> original content
-const ccrRegistry = new Map<string, string>();
+interface CcrEntry {
+  originalValue: string;
+  timestamp: number;
+}
+
+const ccrRegistry = new Map<string, CcrEntry>();
 let ccrCounter = 0;
 
 export function getRegistry() {
@@ -95,7 +100,27 @@ export function compressCCR(text: string, minLength = 300): { compressedText: st
   let compressedText = text.replace(blockRegex, (match) => {
     if (match.length >= minLength) {
       const placeholder = `{{HR_CCR_${ccrCounter++}}}`;
-      ccrRegistry.set(placeholder, match);
+      
+      // Evict expired entries and enforce size limits
+      const now = Date.now();
+      const TTL = 30 * 60 * 1000; // 30 minutes
+      const MAX_SIZE = 1000;
+
+      for (const [k, v] of ccrRegistry.entries()) {
+        if (now - v.timestamp > TTL) {
+          ccrRegistry.delete(k);
+        }
+      }
+
+      if (ccrRegistry.size >= MAX_SIZE) {
+        // Enforce FIFO eviction
+        const oldestKey = ccrRegistry.keys().next().value;
+        if (oldestKey !== undefined) {
+          ccrRegistry.delete(oldestKey);
+        }
+      }
+
+      ccrRegistry.set(placeholder, { originalValue: match, timestamp: now });
       mapping[placeholder] = match;
       return placeholder;
     }
@@ -110,9 +135,9 @@ export function restoreCCR(responseText: string): string {
   let restored = responseText;
   
   // Iterate and replace keys in response
-  ccrRegistry.forEach((originalValue, placeholder) => {
+  ccrRegistry.forEach((entry, placeholder) => {
     if (restored.includes(placeholder)) {
-      restored = restored.replaceAll(placeholder, originalValue);
+      restored = restored.replaceAll(placeholder, entry.originalValue);
     }
   });
 

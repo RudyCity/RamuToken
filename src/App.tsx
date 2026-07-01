@@ -26,7 +26,7 @@ export default function App() {
     rtk: { enabled: true, logs: true, paths: true, stacks: true },
     serena: { enabled: true, minLines: 8 },
     headroom: { enabled: true, minify: true, prune: true, ccr: true, minCcrLength: 200, blacklist: [] },
-    caveman: { enabled: false },
+    caveman: { enabled: false, level: "medium" },
     cache: { enabled: true },
     upstream: { bifrostUrl: "http://localhost:8080", openaiKey: "", anthropicKey: "", preferBifrost: true }
   });
@@ -175,6 +175,13 @@ export default function App() {
     setSettings(updated);
   };
 
+  const handleCavemanLevelChange = (level: "low" | "medium" | "high") => {
+    const updated = { ...settings };
+    updated.caveman.level = level;
+    setSettings(updated);
+    handleSaveSettings(updated);
+  };
+
   // Run test compression
   const runTestCompression = async () => {
     if (!testText.trim()) return;
@@ -292,6 +299,7 @@ export default function App() {
             handleSliderChange={handleSliderChange}
             handleInputChange={handleInputChange}
             handleSaveSettings={handleSaveSettings}
+            handleCavemanLevelChange={handleCavemanLevelChange}
           />
         )}
       </main>

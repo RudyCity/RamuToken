@@ -19,6 +19,7 @@ export interface CompressorSettings {
   };
   caveman: {
     enabled: boolean;
+    level: "low" | "medium" | "high";
   };
   cache: {
     enabled: boolean;

@@ -1,7 +1,5 @@
-/**
- * Configuration & State Management
- * Holds active settings, API keys, upstream URLs, and request metrics history.
- */
+import { join } from "path";
+import { existsSync, mkdirSync, readFileSync } from "fs";
 
 export interface CompressorSettings {
   rtk: {
@@ -24,6 +22,7 @@ export interface CompressorSettings {
   };
   caveman: {
     enabled: boolean;
+    level: "low" | "medium" | "high";
   };
   cache: {
     enabled: boolean;
@@ -74,6 +73,7 @@ export let settings: CompressorSettings = {
   },
   caveman: {
     enabled: false, // Turned off by default, opt-in
+    level: "medium",
   },
   cache: {
     enabled: true,
@@ -111,6 +111,7 @@ export function updateSettings(newSettings: Partial<CompressorSettings>) {
     cache: { ...settings.cache, ...newSettings.cache },
     upstream: { ...settings.upstream, ...newSettings.upstream },
   };
+  saveToDisk();
   return settings;
 }
 
@@ -137,6 +138,8 @@ export function addLog(log: Omit<RequestLog, "id" | "timestamp">) {
   metrics.totalSavedTokens += saved;
   // Estimate cost saved: avg $0.005 per 1K input tokens (Claude 3.5 Sonnet is $3/$15, OpenAI GPT-4o is $2.5/$10)
   metrics.totalSavedCost += (saved / 1000) * 0.005;
+
+  saveToDisk();
 
   // Broadcast update to WebSocket clients
   broadcastMetricsUpdate();
@@ -196,3 +199,49 @@ export function broadcastSettingsUpdate() {
     }
   }
 }
+
+const DB_PATH = join(import.meta.dirname, "../data/db.json");
+
+// Helper to save data to disk
+export function saveToDisk() {
+  try {
+    const dataDir = join(import.meta.dirname, "../data");
+    if (!existsSync(dataDir)) {
+      mkdirSync(dataDir, { recursive: true });
+    }
+    const payload = JSON.stringify({
+      settings,
+      metrics,
+      logsHistory
+    }, null, 2);
+    Bun.write(DB_PATH, payload);
+  } catch (err) {
+    console.error("[Persistence] Error saving database to disk:", err);
+  }
+}
+
+// Helper to load data from disk
+export function loadFromDisk() {
+  try {
+    if (existsSync(DB_PATH)) {
+      const fileContent = readFileSync(DB_PATH, "utf8");
+      const db = JSON.parse(fileContent);
+      if (db.settings) {
+        settings = { ...settings, ...db.settings };
+      }
+      if (db.metrics) {
+        Object.assign(metrics, db.metrics);
+      }
+      if (db.logsHistory && Array.isArray(db.logsHistory)) {
+        logsHistory.length = 0;
+        logsHistory.push(...db.logsHistory);
+      }
+      console.log(`[Persistence] Loaded settings, metrics, and ${logsHistory.length} logs from disk.`);
+    }
+  } catch (err) {
+    console.error("[Persistence] Error loading database from disk:", err);
+  }
+}
+
+// Initial load on startup
+loadFromDisk();

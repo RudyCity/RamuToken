@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.7] - 2026-07-01
+
+### Added
+- **Settings & Metrics Persistence**: Implemented local JSON database (`data/db.json`) saving settings, logs, and cumulative statistics across proxy server restarts.
+- **AST Dependency Resolution**: Upgraded Serena pipeline to recursively resolve caller-callee dependencies, preventing dependent helper functions from being pruned.
+- **Eviction Cache Policy**: Bounded CCR registry size to 1,000 mappings and added a 30-minute Time-To-Live (TTL) expiration on substitutions to prevent memory leaks in production.
+- **Customizable Caveman Levels**: Added settings panel level configurations (Low, Medium, High) for the Caveman prompt injector.
+
 ## [1.0.6] - 2026-07-01
 
 ### Fixed

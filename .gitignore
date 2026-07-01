@@ -4,6 +4,7 @@ bun.lockb
 
 # Builds
 dist/
+data/
 
 # Env & Secrets
 .env

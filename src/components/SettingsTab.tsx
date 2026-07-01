@@ -7,6 +7,7 @@ interface SettingsTabProps {
   handleSliderChange: (pipeline: "serena" | "headroom", field: string, val: number) => void;
   handleInputChange: (field: string, val: string) => void;
   handleSaveSettings: (updatedSettings: CompressorSettings) => void;
+  handleCavemanLevelChange: (level: "low" | "medium" | "high") => void;
 }
 
 export default function SettingsTab({
@@ -14,7 +15,8 @@ export default function SettingsTab({
   toggleSettingsField,
   handleSliderChange,
   handleInputChange,
-  handleSaveSettings
+  handleSaveSettings,
+  handleCavemanLevelChange
 }: SettingsTabProps) {
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -331,6 +333,23 @@ export default function SettingsTab({
                 {settings.caveman.enabled ? "ACTIVE" : "INACTIVE"}
               </button>
             </div>
+
+            {settings.caveman.enabled && (
+              <div className="pl-6 space-y-2 max-w-xs">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1 font-mono">
+                  Compression Level
+                </label>
+                <select
+                  value={settings.caveman.level || "medium"}
+                  onChange={(e) => handleCavemanLevelChange(e.target.value as "low" | "medium" | "high")}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-pink"
+                >
+                  <option value="low">Low (Remove Filler & Greetings)</option>
+                  <option value="medium">Medium (Direct & Concise, Code-focused)</option>
+                  <option value="high">High (Telegraphic Caveman Mode)</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* 5. Local Cache Config */}
