@@ -8,6 +8,13 @@ export interface CompressorSettings {
   serena: {
     enabled: boolean;
     minLines: number;
+    referenceGraphPruning: boolean;
+    projectRoot: string;
+  };
+  verification: {
+    enabled: boolean;
+    testCommand: string;
+    maxRetries: number;
   };
   headroom: {
     enabled: boolean;

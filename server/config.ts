@@ -11,6 +11,13 @@ export interface CompressorSettings {
   serena: {
     enabled: boolean;
     minLines: number;
+    referenceGraphPruning: boolean;
+    projectRoot: string;
+  };
+  verification: {
+    enabled: boolean;
+    testCommand: string;
+    maxRetries: number;
   };
   headroom: {
     enabled: boolean;
@@ -70,6 +77,13 @@ export let settings: CompressorSettings = {
   serena: {
     enabled: true,
     minLines: 8,
+    referenceGraphPruning: true,
+    projectRoot: "",
+  },
+  verification: {
+    enabled: false,
+    testCommand: "npm test",
+    maxRetries: 3,
   },
   headroom: {
     enabled: true,
@@ -127,6 +141,7 @@ export function updateSettings(newSettings: Partial<CompressorSettings>) {
     cache: { ...settings.cache, ...newSettings.cache },
     upstream: { ...settings.upstream, ...newSettings.upstream },
     server: { ...settings.server, ...newSettings.server },
+    verification: { ...settings.verification, ...newSettings.verification },
   };
   saveToDisk();
   return settings;

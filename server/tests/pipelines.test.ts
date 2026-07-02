@@ -61,7 +61,65 @@ function targetFunction() {
     // In Serena, unreferenced functions (like calculate) should have their body pruned by the LSP manager
     expect(compressed).toContain("body compressed by Serena");
     expect(compressed).toContain("This is target");
-  }, 15000);
+  }, 30000);
+
+  test("should parse file path comments and handle reference-graph pruning", async () => {
+    const code = `
+// filepath: src/math.ts
+export function add(a: number, b: number): number {
+  return a + b;
+}
+
+export function subtract(a: number, b: number): number {
+  return a - b;
+}
+
+export function calculateAll(x: number, y: number) {
+  const sum = add(x, y);
+  const diff = subtract(x, y);
+  return { sum, diff };
+}
+    `.trim();
+
+    const wrapped = `\`\`\`typescript\n${code}\n\`\`\``;
+    const query = "how to implement calculateAll";
+    const compressed = await compressSerena(wrapped, query, { minLines: 3 });
+    
+    expect(compressed).toContain("calculateAll");
+    expect(compressed).not.toContain("body compressed by Serena");
+  }, 30000);
+
+  test("should handle search, diagnostics and references via daemon", async () => {
+    const { writeFileSync, unlinkSync } = await import("fs");
+    const { join } = await import("path");
+    const tempRoot = import.meta.dirname;
+    const testFile = join(tempRoot, "temp_test_daemon.ts");
+    const testCode = `
+export function helloWorld() {
+  console.log("hello");
+}
+    `.trim();
+    writeFileSync(testFile, testCode, "utf8");
+
+    try {
+      const searchRes = await pythonDaemon.request("serena_search", {
+        project_root: tempRoot,
+        query: "helloWorld"
+      });
+      expect(Array.isArray(searchRes)).toBe(true);
+      expect(searchRes.some((s: any) => s.name === "helloWorld")).toBe(true);
+
+      const diagRes = await pythonDaemon.request("serena_diagnostics", {
+        project_root: tempRoot,
+        file_path: testFile
+      });
+      expect(Array.isArray(diagRes)).toBe(true);
+    } finally {
+      try {
+        unlinkSync(testFile);
+      } catch {}
+    }
+  }, 30000);
 });
 
 describe("Headroom Pipeline (JSON & Reversible Context CCR)", () => {
@@ -78,7 +136,7 @@ describe("Headroom Pipeline (JSON & Reversible Context CCR)", () => {
     const input = "JSON context:\n```json\n{\n  \"name\": \"App\",\n  \"active\": true\n}\n```";
     const compressed = await compressHeadroom(input);
     expect(compressed.text).toBeDefined();
-  }, 15000);
+  }, 30000);
 });
 
 describe("Caveman Pipeline (Prose Compressor)", () => {

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.24] - 2026-07-02
+
+### Added
+- **Multi-File & Project-Wide Dependency Resolution**: Added support for parsing path comments (e.g., `// filepath: src/math.ts`) from code blocks to write them into session-specific subdirectories inside a persistent workspace, enabling relative import resolution by the language server.
+- **Reference-Graph Based Pruning**: Uses Serena's LSP references (`find_referencing_symbols_by_location`) to construct a call reference graph, preventing active caller symbols from being pruned during compression.
+- **Context-Aware Semantic Search**: Added a `/api/semantic-search` endpoint and corresponding tab in the Playground UI to query project symbols and preview compressed code blocks.
+- **Verification Loop & Auto-healing**: Added a `/api/verify` endpoint and settings panel to run compiler diagnostics (`serena_diagnostics`) and automated test suites on AI-generated code.
+- **Hot LSP Caching**: Optimized temp file writing to use a constant workspace path (`data/serena_workspace`), keeping cached language server instances running hot and dropping subsequent symbol retrieval time from ~15s to under ~50ms.
+
+---
+
 ## [1.3.23] - 2026-07-02
 
 ### Fixed

@@ -4,9 +4,24 @@
  */
 
 import { spawnSync, spawn } from "child_process";
-import { writeFileSync, unlinkSync, existsSync, mkdirSync } from "fs";
+import { writeFileSync, unlinkSync, existsSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { pythonDaemon } from "./python_daemon";
+import { settings } from "../config";
+
+function parseFilePath(code: string, isPython: boolean): string | null {
+  const lines = code.split("\n").slice(0, 5); // check first 5 lines
+  const pathRegex = isPython 
+    ? /^\s*#\s*(?:filepath|path|file):\s*([a-zA-Z0-9_\-\.\/\\ ]+)/i
+    : /^\s*\/\/\s*(?:filepath|path|file):\s*([a-zA-Z0-9_\-\.\/\\ ]+)/i;
+  for (const line of lines) {
+    const match = line.match(pathRegex);
+    if (match) {
+      return match[1].trim().replace(/\\/g, "/");
+    }
+  }
+  return null;
+}
 
 // Extracts alphanumeric word tokens from the user's query
 export function extractKeywords(userQuery: string): Set<string> {
@@ -200,29 +215,48 @@ export async function compressSerena(text: string, userQuery: string, options: {
   const codeBlockRegex = /```(typescript|javascript|js|ts|python|py)\n([\s\S]*?)```/g;
 
   // Extract all code blocks
-  const blocks: Array<{ lang: string; code: string; isPython: boolean; tempFile: string; matchStr: string }> = [];
+  interface CodeBlockDetail {
+    lang: string;
+    code: string;
+    isPython: boolean;
+    relPath: string;
+    tempFile: string;
+    matchStr: string;
+  }
+  const blocks: CodeBlockDetail[] = [];
   let match;
+  let blockIdx = 0;
+  const sessionId = Math.random().toString(36).substring(2, 9);
+  const workspaceRoot = join(import.meta.dirname, "../../data/serena_workspace");
+  const sessionDir = join(workspaceRoot, `session_${sessionId}`);
+
   while ((match = codeBlockRegex.exec(text)) !== null) {
     const [matchStr, lang, code] = match;
     const isPython = lang === "python" || lang === "py";
     const ext = isPython ? ".py" : ".ts";
-    const tempFile = join(import.meta.dirname, `../../data/temp_serena_${Math.random().toString(36).substring(2, 9)}_${blocks.length}${ext}`);
-    blocks.push({ lang, code, isPython, tempFile, matchStr });
+    const parsedPath = parseFilePath(code, isPython);
+    const relPath = parsedPath || `temp_block_${blockIdx}${ext}`;
+    const tempFile = join(sessionDir, relPath);
+    blocks.push({ lang, code, isPython, relPath, tempFile, matchStr });
+    blockIdx++;
   }
 
   if (blocks.length === 0) return text;
 
-  const tempDir = join(import.meta.dirname, "../../data");
   try {
-    if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true });
+    // Ensure all directories exist
     for (const block of blocks) {
+      const parentDir = join(block.tempFile, "..");
+      if (!existsSync(parentDir)) {
+        mkdirSync(parentDir, { recursive: true });
+      }
       writeFileSync(block.tempFile, block.code, "utf8");
     }
 
     const tempPaths = blocks.map(b => b.tempFile);
-    // Always request symbols from the python daemon
+    // Request symbols from python daemon (using workspaceRoot as project_root for caching)
     const batchSymbolsMap = await pythonDaemon.request("serena", {
-      project_root: tempDir,
+      project_root: workspaceRoot,
       file_paths: tempPaths
     });
 
@@ -231,8 +265,38 @@ export async function compressSerena(text: string, userQuery: string, options: {
       const fileSymbols = batchSymbolsMap[block.tempFile];
       if (Array.isArray(fileSymbols) && fileSymbols.length > 0) {
         try {
-          const keywords = resolveDependencies(block.code, initialKeywords, block.isPython);
-          const prunedCode = pruneBySerenaSymbols(block.code, fileSymbols, keywords, minLines);
+          const keywords = new Set(initialKeywords);
+
+          // Resolve references if enabled
+          if (settings.serena.referenceGraphPruning) {
+            // Find which symbols match initial query keywords
+            const matchedSymbolNames = fileSymbols
+              .filter(sym => keywords.has(sym.name))
+              .map(sym => sym.name);
+
+            if (matchedSymbolNames.length > 0) {
+              try {
+                const refs = await pythonDaemon.request("serena_references", {
+                  project_root: workspaceRoot,
+                  file_path: block.tempFile,
+                  symbols: matchedSymbolNames
+                });
+                if (Array.isArray(refs)) {
+                  for (const ref of refs) {
+                    if (ref.name) {
+                      keywords.add(ref.name);
+                    }
+                  }
+                }
+              } catch (refErr) {
+                console.error("[Serena] Failed to fetch references:", refErr);
+              }
+            }
+          }
+
+          // Resolve AST caller-callee dependencies
+          const resolvedKeywords = resolveDependencies(block.code, keywords, block.isPython);
+          const prunedCode = pruneBySerenaSymbols(block.code, fileSymbols, resolvedKeywords, minLines);
           resultText = resultText.replace(block.matchStr, `\`\`\`${block.lang}\n${prunedCode}\`\`\``);
         } catch (err) {
           console.error("[Serena] Failed to prune block symbols:", err);
@@ -244,12 +308,11 @@ export async function compressSerena(text: string, userQuery: string, options: {
     console.error("[Serena] Daemon symbol retrieval error:", err);
     return text;
   } finally {
-    // Cleanup all temp files
-    for (const block of blocks) {
-      try {
-        if (existsSync(block.tempFile)) unlinkSync(block.tempFile);
-      } catch {}
-    }
+    try {
+      if (existsSync(sessionDir)) {
+        rmSync(sessionDir, { recursive: true, force: true });
+      }
+    } catch {}
   }
 }
 

@@ -7,6 +7,7 @@ import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countToke
 import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
 import { join } from "path";
 import { pythonDaemon } from "./pipelines/python_daemon";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 
 const PORT = process.env.PORT || settings.server?.port || 6875;
 const DIST_DIR = join(import.meta.dirname, "../dist");
@@ -185,6 +186,135 @@ const server = Bun.serve({
       return new Response(JSON.stringify({ success: true, message: "Daemon restarted successfully" }), {
         headers: { "Content-Type": "application/json", ...corsHeaders }
       });
+    }
+
+    if (path === "/api/semantic-search" && req.method === "POST") {
+      return req.json()
+        .then(async body => {
+          const query = body.query || "";
+          const projectRoot = body.projectRoot || settings.serena.projectRoot || process.cwd();
+          
+          if (!query) {
+            return new Response(JSON.stringify({ error: "Missing query parameter" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
+          }
+
+          const symbols = await pythonDaemon.request("serena_search", {
+            project_root: projectRoot,
+            query
+          });
+
+          const enriched = [];
+          if (Array.isArray(symbols)) {
+            for (const sym of symbols) {
+              try {
+                if (existsSync(sym.file_path)) {
+                  const fileContent = readFileSync(sym.file_path, "utf8");
+                  const lines = fileContent.split("\n");
+                  const snippetLines = lines.slice(sym.start_line, sym.end_line + 1);
+                  const snippet = snippetLines.join("\n");
+                  enriched.push({ ...sym, snippet });
+                } else {
+                  enriched.push(sym);
+                }
+              } catch {
+                enriched.push(sym);
+              }
+            }
+          }
+
+          return new Response(JSON.stringify({ success: true, symbols: enriched }), {
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        })
+        .catch(err => {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        });
+    }
+
+    if (path === "/api/verify" && req.method === "POST") {
+      return req.json()
+        .then(async body => {
+          const filePath = body.filePath || "";
+          const code = body.code || "";
+          const projectRoot = body.projectRoot || settings.serena.projectRoot || process.cwd();
+
+          if (!filePath || !code) {
+            return new Response(JSON.stringify({ error: "Missing filePath or code" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
+          }
+
+          const { resolve, dirname } = await import("path");
+          const resolvedProjectRoot = resolve(projectRoot);
+          const resolvedFilePath = resolve(filePath);
+          if (!resolvedFilePath.startsWith(resolvedProjectRoot)) {
+            return new Response(JSON.stringify({ error: "Access Denied: File path is outside the project root" }), {
+              status: 403,
+              headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
+          }
+
+          const parentDir = dirname(resolvedFilePath);
+          if (!existsSync(parentDir)) {
+            mkdirSync(parentDir, { recursive: true });
+          }
+          writeFileSync(resolvedFilePath, code, "utf8");
+
+          let diagnostics = [];
+          try {
+            diagnostics = await pythonDaemon.request("serena_diagnostics", {
+              project_root: resolvedProjectRoot,
+              file_path: resolvedFilePath
+            });
+          } catch (diagErr: any) {
+            console.error("[Verify] Diagnostics error:", diagErr);
+          }
+
+          const errors = (diagnostics || []).filter((d: any) => d.severity === 1 || d.severity === 2);
+          const hasErrors = errors.length > 0;
+
+          let testOutput = "";
+          let testExitCode = 0;
+
+          if (!hasErrors && settings.verification.enabled && settings.verification.testCommand) {
+            const { execSync } = await import("child_process");
+            try {
+              testOutput = execSync(settings.verification.testCommand, {
+                cwd: resolvedProjectRoot,
+                encoding: "utf8",
+                timeout: 30000
+              });
+              testExitCode = 0;
+            } catch (execErr: any) {
+              testOutput = execErr.stdout || execErr.message;
+              testExitCode = execErr.status !== undefined ? execErr.status : 1;
+            }
+          }
+
+          const success = !hasErrors && testExitCode === 0;
+
+          return new Response(JSON.stringify({
+            success,
+            diagnostics: diagnostics || [],
+            testOutput,
+            testExitCode
+          }), {
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        })
+        .catch(err => {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        });
     }
 
     // Test bench compressor playground

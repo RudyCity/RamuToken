@@ -4,7 +4,7 @@ import { CompressorSettings } from "../types";
 
 interface SettingsTabProps {
   settings: CompressorSettings;
-  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream", field: string) => void;
+  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification", field: string) => void;
   handleSliderChange: (pipeline: "serena" | "headroom", field: string, val: number) => void;
   handleInputChange: (field: string, val: string) => void;
   handleSaveSettings: (updatedSettings: CompressorSettings) => void;
@@ -63,7 +63,7 @@ interface PipelineSectionProps {
   color: string;
   activeGradient: string;
   children?: React.ReactNode;
-  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream", field: string) => void;
+  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification", field: string) => void;
 }
 
 function PipelineSection({
@@ -780,20 +780,49 @@ export default function SettingsTab({
           activeGradient="from-neon-cyan to-neon-green"
           toggleSettingsField={toggleSettingsField}
         >
-          <div className="max-w-lg">
-            <div className="flex justify-between text-xxs font-mono text-slate-400 mb-2">
-              <span>Min lines to trigger signature collapse:</span>
-              <span className="text-neon-cyan font-bold">{settings.serena.minLines} lines</span>
+          <div className="space-y-4 max-w-lg">
+            <div>
+              <div className="flex justify-between text-xxs font-mono text-slate-400 mb-2">
+                <span>Min lines to trigger signature collapse:</span>
+                <span className="text-neon-cyan font-bold">{settings.serena.minLines} lines</span>
+              </div>
+              <input
+                id="slider-serena-minlines"
+                type="range" min={3} max={30}
+                value={settings.serena.minLines}
+                onChange={(e) => handleSliderChange("serena", "minLines", parseInt(e.target.value))}
+                onMouseUp={() => handleSaveSettings(settings)}
+                onTouchEnd={() => handleSaveSettings(settings)}
+                className="w-full accent-cyan-400"
+              />
             </div>
-            <input
-              id="slider-serena-minlines"
-              type="range" min={3} max={30}
-              value={settings.serena.minLines}
-              onChange={(e) => handleSliderChange("serena", "minLines", parseInt(e.target.value))}
-              onMouseUp={() => handleSaveSettings(settings)}
-              onTouchEnd={() => handleSaveSettings(settings)}
-              className="w-full accent-cyan-400"
-            />
+
+            <div className="pt-2 border-t border-white/5 space-y-3">
+              <CheckOption 
+                label="Reference Graph Pruning" 
+                sub="Prunes based on symbol call graph references" 
+                checked={settings.serena.referenceGraphPruning} 
+                onChange={() => toggleSettingsField("serena", "referenceGraphPruning")} 
+                color="#06b6d4" 
+              />
+              
+              <div>
+                <label className="block text-xxs font-mono text-slate-400 mb-1">
+                  Default Project Root Dir:
+                </label>
+                <input
+                  type="text"
+                  value={settings.serena.projectRoot || ""}
+                  placeholder="e.g. D:/projects/my-app"
+                  onChange={(e) => {
+                    const updated = { ...settings };
+                    updated.serena.projectRoot = e.target.value;
+                    handleSaveSettings(updated);
+                  }}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-cyan"
+                />
+              </div>
+            </div>
           </div>
         </PipelineSection>
 
@@ -873,6 +902,55 @@ export default function SettingsTab({
           activeGradient="from-neon-cyan to-neon-green"
           toggleSettingsField={toggleSettingsField}
         />
+
+        {/* 6. Verification Loop */}
+        <PipelineSection
+          id="verification.enabled"
+          icon={<Terminal className="w-4 h-4 text-neon-green shrink-0" />}
+          name="Validation & Verification Loop"
+          desc="Performs compiler/LSP check & executes test suites to self-correct AI code."
+          active={settings.verification.enabled}
+          color="#10b981"
+          activeGradient="from-neon-green to-neon-cyan"
+          toggleSettingsField={toggleSettingsField}
+        >
+          <div className="space-y-4 max-w-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xxs font-mono text-slate-400 mb-1">
+                  Test Execution Command:
+                </label>
+                <input
+                  type="text"
+                  value={settings.verification.testCommand || "npm test"}
+                  placeholder="e.g. npm test or bun test"
+                  onChange={(e) => {
+                    const updated = { ...settings };
+                    updated.verification.testCommand = e.target.value;
+                    handleSaveSettings(updated);
+                  }}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-green"
+                />
+              </div>
+              <div>
+                <label className="block text-xxs font-mono text-slate-400 mb-1">
+                  Max Healing Retries:
+                </label>
+                <input
+                  type="number"
+                  min={1} max={5}
+                  value={settings.verification.maxRetries || 3}
+                  onChange={(e) => {
+                    const updated = { ...settings };
+                    updated.verification.maxRetries = parseInt(e.target.value) || 3;
+                    handleSaveSettings(updated);
+                  }}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-green"
+                />
+              </div>
+            </div>
+          </div>
+        </PipelineSection>
       </Section>
     </div>
   );

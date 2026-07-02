@@ -10,7 +10,7 @@ import DashboardTab from "./components/DashboardTab";
 import PlaygroundTab from "./components/PlaygroundTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.3.7";
+const APP_VERSION = "1.3.24";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");
@@ -27,7 +27,8 @@ export default function App() {
   const [backendPort, setBackendPort] = useState<number>(6875);
   const [settings, setSettings] = useState<CompressorSettings>({
     rtk: { enabled: true, logs: true, paths: true, stacks: true },
-    serena: { enabled: true, minLines: 8 },
+    serena: { enabled: true, minLines: 8, referenceGraphPruning: true, projectRoot: "" },
+    verification: { enabled: false, testCommand: "npm test", maxRetries: 3 },
     headroom: { enabled: true, minify: true, prune: true, ccr: true, minCcrLength: 200, blacklist: [] },
     caveman: { enabled: false, level: "medium" },
     cache: { enabled: true },
@@ -145,12 +146,13 @@ export default function App() {
   };
 
   const toggleSettingsField = (
-    pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream",
+    pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification",
     field: string
   ) => {
     const updated = { ...settings };
     if (pipeline === "rtk") (updated.rtk as any)[field] = !(updated.rtk as any)[field];
     else if (pipeline === "serena") (updated.serena as any)[field] = !(updated.serena as any)[field];
+    else if (pipeline === "verification") (updated.verification as any)[field] = !(updated.verification as any)[field];
     else if (pipeline === "headroom") (updated.headroom as any)[field] = !(updated.headroom as any)[field];
     else if (pipeline === "caveman") updated.caveman.enabled = !updated.caveman.enabled;
     else if (pipeline === "cache") updated.cache.enabled = !updated.cache.enabled;
