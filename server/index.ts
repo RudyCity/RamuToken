@@ -444,6 +444,49 @@ const server = Bun.serve({
         });
     }
 
+    // Caveman Write Rule File Tool
+    if (path === "/api/caveman/write-rules" && req.method === "POST") {
+      return req.json()
+        .then(async body => {
+          const fileName = body.fileName || "";
+          const content = body.content || "";
+          const projectRoot = body.projectRoot || settings.serena.projectRoot || process.cwd();
+
+          if (!fileName || !content) {
+            return new Response(JSON.stringify({ error: "Missing fileName or content" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
+          }
+
+          const { resolve, dirname } = await import("path");
+          const resolvedProjectRoot = resolve(projectRoot);
+          const resolvedFilePath = resolve(resolvedProjectRoot, fileName);
+          if (!resolvedFilePath.startsWith(resolvedProjectRoot)) {
+            return new Response(JSON.stringify({ error: "Access Denied: File path is outside the project root" }), {
+              status: 403,
+              headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
+          }
+
+          const parentDir = dirname(resolvedFilePath);
+          if (!existsSync(parentDir)) {
+            mkdirSync(parentDir, { recursive: true });
+          }
+          writeFileSync(resolvedFilePath, content, "utf8");
+
+          return new Response(JSON.stringify({ success: true, filePath: resolvedFilePath }), {
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        })
+        .catch(err => {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        });
+    }
+
     // 5. Serve static files in production from "../dist"
     // Check if the file is an asset (e.g. /assets/index.js)
     const filePath = path === "/" ? "/index.html" : path;

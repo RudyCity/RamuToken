@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.29] - 2026-07-02
+
+### Added
+- **Rule File Generator**: Built a new "Rules Generator" sub-tool inside the Caveman tools section of the Playground. It compiles Caveman communication guidelines and RamuToken context instructions into rules files (like `.cursorrules`, `.clinerules`, or `AGENTS.md`) and allows writing them directly to the project root with workspace boundary protections.
+- **Rules Write Endpoint**: Registered `POST /api/caveman/write-rules` to write instruction files safely into project workspaces.
+
+---
+
 ## [1.3.28] - 2026-07-02
 
 ### Added

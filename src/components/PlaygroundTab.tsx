@@ -34,7 +34,14 @@ export default function PlaygroundTab({
   const [subTab, setSubTab] = useState<"compress" | "search" | "verify" | "caveman">("compress");
   
   // Caveman tools state
-  const [cavemanTool, setCavemanTool] = useState<"compressor" | "commit" | "review">("compressor");
+  const [cavemanTool, setCavemanTool] = useState<"compressor" | "commit" | "review" | "rules">("compressor");
+  
+  // 4. Rules Generator state
+  const [rulesAgent, setRulesAgent] = useState<"cursor" | "cline" | "copilot" | "general">("cursor");
+  const [includeProxyRules, setIncludeProxyRules] = useState(true);
+  const [rulesWriteResult, setRulesWriteResult] = useState<any>(null);
+  const [writingRules, setWritingRules] = useState(false);
+  const [rulesCopied, setRulesCopied] = useState(false);
   
   // 1. Reference File Compressor state
   const [compressorInputText, setCompressorInputText] = useState("");
@@ -254,6 +261,72 @@ export default function PlaygroundTab({
       setReviewResult(`Error: ${err.message}`);
     } finally {
       setReviewLoading(false);
+    }
+  };
+
+  const generateRulesContent = () => {
+    const level = playgroundSettings.caveman.level || "medium";
+    
+    // Choose caveman instructions text
+    let instructions = "";
+    if (level === "low") {
+      instructions = `- Remove filler phrases (like "Certainly!", "Of course!", "I'd be happy to", "Sure!", "Absolutely!", "Great!").\n- Reply directly without greeting or intro/outro pleasantries.\n- Maintain full technical accuracy and detail.`;
+    } else if (level === "high") {
+      instructions = `- Speak in max-compression telegraphic style.\n- Zero articles (the/a/an) and zero pronouns.\n- Omit pleasantries, acknowledgments, and transitional phrases.\n- Use symbols: → (leads to), ∴ (therefore), ∵ (because), & (and).\n- Noun phrases only: "Fix: remove null check" not "You should remove the null check".\n- Code blocks only, zero surrounding prose unless requested.\n- State line number + fix for errors.`;
+    } else if (level === "wenyan") {
+      instructions = `- Use Classical Chinese style grammar and vocabulary for extreme brevity.\n- Zero pleasantries, noun phrases or single/dual characters only.\n- Keep technical accuracy, code, paths, and URLs unchanged.`;
+    } else { // medium
+      instructions = `- Speak compressed. No pronouns (I, we, you, they, it) and no articles.\n- No filler ("Certainly", "Of course", "Happy to help", "Sure", "Absolutely").\n- No preamble, intro sentences, or sign-offs.\n- Code blocks: no explanation unless asked.\n- Lists: terse keywords only.\n- Errors: state fix, not cause-analysis prose.`;
+    }
+
+    let proxySection = "";
+    if (includeProxyRules) {
+      proxySection = `\n## RamuToken Context Compression Integration\nAlways write clean, structured code. If you see temporary placeholder tokens (like {{HR_CCR_xxxx}}), do not modify or strip them; they will be decompressed automatically.\nTo maximize token savings:\n- Use minified configurations.\n- Focus code changes strictly on relevant scopes.\n- Return raw code blocks when executing commands or writing files.`;
+    }
+
+    const titleMap = {
+      cursor: "Cursor AI Rules (.cursorrules)",
+      cline: "Cline Agent Instructions (.clinerules)",
+      copilot: "GitHub Copilot Instructions (.github/copilot-instructions.md)",
+      general: "General Workspace Rules (AGENTS.md)"
+    };
+
+    return `# ${titleMap[rulesAgent]}\n\n## Caveman Communication Guidelines (Level: ${level.toUpperCase()})\n${instructions}\n${proxySection}`.trim();
+  };
+
+  const writeRulesFile = async () => {
+    const fileNameMap = {
+      cursor: ".cursorrules",
+      cline: ".clinerules",
+      copilot: ".github/copilot-instructions.md",
+      general: "AGENTS.md"
+    };
+    const fileName = fileNameMap[rulesAgent];
+    const content = generateRulesContent();
+
+    setWritingRules(true);
+    setRulesWriteResult(null);
+    try {
+      const res = await fetch("/api/caveman/write-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName,
+          content,
+          projectRoot: globalSettings.serena.projectRoot || undefined
+        }),
+      });
+      if (res.ok) {
+        setRulesWriteResult(await res.json());
+      } else {
+        const data = await res.json();
+        setRulesWriteResult({ error: data.error || "Failed to write rules file" });
+      }
+    } catch (err: any) {
+      console.error("Rules write failed", err);
+      setRulesWriteResult({ error: err.message });
+    } finally {
+      setWritingRules(false);
     }
   };
 
@@ -893,8 +966,8 @@ export default function PlaygroundTab({
         {subTab === "caveman" && (
           <div className="space-y-4">
             {/* Inner tool selection tabs */}
-            <div className="flex bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-1 max-w-md">
-              {(["compressor", "commit", "review"] as const).map((tool) => (
+            <div className="flex bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-1 max-w-2xl">
+              {(["compressor", "commit", "review", "rules"] as const).map((tool) => (
                 <button
                   key={tool}
                   onClick={() => setCavemanTool(tool)}
@@ -904,7 +977,7 @@ export default function PlaygroundTab({
                       : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                   }`}
                 >
-                  {tool === "compressor" ? "Reference Compressor" : tool === "commit" ? "Commit Generator" : "Review Commenter"}
+                  {tool === "compressor" ? "Reference Compressor" : tool === "commit" ? "Commit Generator" : tool === "review" ? "Review Commenter" : "Rules Generator"}
                 </button>
               ))}
             </div>
@@ -1126,6 +1199,109 @@ export default function PlaygroundTab({
                         <span className="text-xs font-mono">Compressed review comment will appear here</span>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 4. Rules Generator Tool */}
+            {cavemanTool === "rules" && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 animate-in">
+                <div className="flex flex-col space-y-4">
+                  <div>
+                    <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-2 font-mono">
+                      Target AI Coding Agent
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["cursor", "cline", "copilot", "general"] as const).map((agent) => (
+                        <button
+                          key={agent}
+                          onClick={() => {
+                            setRulesAgent(agent);
+                            setRulesWriteResult(null);
+                          }}
+                          className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                            rulesAgent === agent
+                              ? "bg-neon-pink/10 border-neon-pink text-neon-pink shadow-[0_0_8px_rgba(244,63,94,0.15)]"
+                              : "bg-slate-950 border-white/5 text-slate-400 hover:text-slate-200"
+                          }`}
+                        >
+                          {agent === "cursor" ? "Cursor Rules" : agent === "cline" ? "Cline Rules" : agent === "copilot" ? "Copilot Instructions" : "General AGENTS.md"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/60 p-4 border border-white/5 rounded-2xl space-y-2">
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-300 font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={includeProxyRules}
+                        onChange={() => setIncludeProxyRules(!includeProxyRules)}
+                        className="rounded border-white/10 text-neon-pink focus:ring-0 cursor-pointer"
+                      />
+                      <span>Include RamuToken Proxy Instructions</span>
+                    </label>
+                    <p className="text-xxs text-slate-500 font-mono pl-6 leading-relaxed">
+                      Instructs your AI agent to format output properly and avoid disrupting CCR token substitutions.
+                    </p>
+                  </div>
+
+                  <div className="mt-3 flex justify-end gap-3">
+                    <button
+                      onClick={writeRulesFile}
+                      disabled={writingRules}
+                      className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black tracking-wider cursor-pointer bg-neon-pink text-slate-950 shadow-[0_0_12px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {writingRules ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                      {writingRules ? "WRITING…" : "WRITE TO PROJECT ROOT"}
+                    </button>
+                  </div>
+
+                  {rulesWriteResult && (
+                    <div className="animate-in">
+                      {rulesWriteResult.error ? (
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3.5 rounded-xl flex items-start gap-2.5 text-xs font-mono">
+                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold block mb-0.5">Failed to Write File</span>
+                            {rulesWriteResult.error}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-neon-green/10 border border-neon-green/25 text-neon-green p-3.5 rounded-xl flex items-start gap-2.5 text-xs font-mono">
+                          <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold block mb-0.5">Rules File Written!</span>
+                            Successfully saved rules to workspace root as <span className="font-bold underline">{rulesAgent === "cursor" ? ".cursorrules" : rulesAgent === "cline" ? ".clinerules" : rulesAgent === "copilot" ? ".github/copilot-instructions.md" : "AGENTS.md"}</span>.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono mb-2">
+                    Generated Rules Content
+                  </label>
+                  <div className="border border-white/5 bg-slate-950/40 rounded-2xl p-4 flex-1 flex flex-col justify-between min-h-[20rem]">
+                    <pre className="p-4 bg-black/60 rounded-xl text-slate-300 font-mono text-xs overflow-auto border border-white/5 leading-relaxed max-h-[22rem] flex-1 select-all whitespace-pre-wrap">
+                      {generateRulesContent()}
+                    </pre>
+                    <div className="flex justify-end mt-4">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generateRulesContent());
+                          setRulesCopied(true);
+                          setTimeout(() => setRulesCopied(false), 2000);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-xs font-mono text-slate-300 transition-all cursor-pointer"
+                      >
+                        {rulesCopied ? <CheckCheck className="w-3.5 h-3.5 text-neon-green" /> : <Copy className="w-3.5 h-3.5" />}
+                        {rulesCopied ? "Copied!" : "Copy Rules"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
