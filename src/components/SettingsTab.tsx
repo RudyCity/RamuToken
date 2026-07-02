@@ -40,6 +40,101 @@ function Toggle({ checked, onChange, color = "#10b981", id }: ToggleProps) {
 // ── Bifrost status type ───────────────────────────────────────────────────────
 type BifrostStatus = "idle" | "checking" | "online" | "offline";
 
+// ── Section wrapper ─────────────────────────────────────────────
+function Section({ children }: { children: React.ReactNode }) {
+  return <div className="glass-panel p-6 rounded-2xl space-y-5">{children}</div>;
+}
+
+function SectionTitle({ children, gradient }: { children: React.ReactNode; gradient: string }) {
+  return (
+    <h2 className={`text-sm font-black text-transparent bg-clip-text bg-gradient-to-r ${gradient} mb-1`}>
+      {children}
+    </h2>
+  );
+}
+
+// Pipeline row with toggle
+interface PipelineSectionProps {
+  id: string;
+  icon: React.ReactNode;
+  name: string;
+  desc: string;
+  active: boolean;
+  color: string;
+  activeGradient: string;
+  children?: React.ReactNode;
+  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream", field: string) => void;
+}
+
+function PipelineSection({
+  id, icon, name, desc, active, color, activeGradient, children, toggleSettingsField,
+}: PipelineSectionProps) {
+  return (
+    <div className="border border-white/5 rounded-xl overflow-hidden">
+      <div
+        className="flex justify-between items-center p-4"
+        style={active ? { background: color + "08" } : { background: "rgba(15,20,35,0.5)" }}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          {icon}
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold leading-none">{name}</h3>
+            <p className="text-xxs text-slate-500 font-mono mt-0.5 truncate">{desc}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0 ml-4">
+          <span
+            className="text-xxs font-black font-mono hidden sm:inline"
+            style={{ color: active ? color : "#64748b" }}
+          >
+            {active ? "ACTIVE" : "IDLE"}
+          </span>
+          <Toggle
+            id={`toggle-${id}`}
+            checked={active}
+            onChange={() => toggleSettingsField(id.split(".")[0] as any, id.split(".")[1] || "enabled")}
+            color={color}
+          />
+        </div>
+      </div>
+      {active && children && (
+        <div className="p-4 pt-3 border-t border-white/5 bg-slate-950/30 space-y-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Checkbox option
+interface CheckOptionProps {
+  label: string;
+  sub: string;
+  checked: boolean;
+  onChange: () => void;
+  color: string;
+}
+
+function CheckOption({
+  label, sub, checked, onChange, color,
+}: CheckOptionProps) {
+  return (
+    <label className="flex items-center gap-3 bg-slate-950/50 p-3 rounded-xl border border-white/5 cursor-pointer hover:bg-white/[0.02] transition-colors">
+      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+      <div
+        className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all"
+        style={checked ? { background: color, borderColor: color } : { borderColor: "rgba(255,255,255,0.15)" }}
+      >
+        {checked && <span className="text-white text-[10px] font-bold leading-none">✓</span>}
+      </div>
+      <div>
+        <span className="text-xs font-bold block">{label}</span>
+        <span className="text-xxs text-slate-500 font-mono">{sub}</span>
+      </div>
+    </label>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function SettingsTab({
   settings,
@@ -158,78 +253,7 @@ export default function SettingsTab({
     }
   };
 
-  // ── Section wrapper ─────────────────────────────────────────────
-  const Section = ({ children }: { children: React.ReactNode }) => (
-    <div className="glass-panel p-6 rounded-2xl space-y-5">{children}</div>
-  );
-
-  const SectionTitle = ({ children, gradient }: { children: React.ReactNode; gradient: string }) => (
-    <h2 className={`text-sm font-black text-transparent bg-clip-text bg-gradient-to-r ${gradient} mb-1`}>
-      {children}
-    </h2>
-  );
-
-  // Pipeline row with toggle
-  const PipelineSection = ({
-    id, icon, name, desc, active, color, activeGradient, children,
-  }: {
-    id: string; icon: React.ReactNode; name: string; desc: string;
-    active: boolean; color: string; activeGradient: string;
-    children?: React.ReactNode;
-  }) => (
-    <div className="border border-white/5 rounded-xl overflow-hidden">
-      <div
-        className="flex justify-between items-center p-4"
-        style={active ? { background: color + "08" } : { background: "rgba(15,20,35,0.5)" }}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          {icon}
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold leading-none">{name}</h3>
-            <p className="text-xxs text-slate-500 font-mono mt-0.5 truncate">{desc}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 shrink-0 ml-4">
-          <span
-            className="text-xxs font-black font-mono hidden sm:inline"
-            style={{ color: active ? color : "#64748b" }}
-          >
-            {active ? "ACTIVE" : "IDLE"}
-          </span>
-          <Toggle
-            id={`toggle-${id}`}
-            checked={active}
-            onChange={() => toggleSettingsField(id.split(".")[0] as any, id.split(".")[1] || "enabled")}
-            color={color}
-          />
-        </div>
-      </div>
-      {active && children && (
-        <div className="p-4 pt-3 border-t border-white/5 bg-slate-950/30 space-y-4">
-          {children}
-        </div>
-      )}
-    </div>
-  );
-
-  // Checkbox option
-  const CheckOption = ({
-    label, sub, checked, onChange, color,
-  }: { label: string; sub: string; checked: boolean; onChange: () => void; color: string }) => (
-    <label className="flex items-center gap-3 bg-slate-950/50 p-3 rounded-xl border border-white/5 cursor-pointer hover:bg-white/[0.02] transition-colors">
-      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
-      <div
-        className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all"
-        style={checked ? { background: color, borderColor: color } : { borderColor: "rgba(255,255,255,0.15)" }}
-      >
-        {checked && <span className="text-white text-[10px] font-bold leading-none">✓</span>}
-      </div>
-      <div>
-        <span className="text-xs font-bold block">{label}</span>
-        <span className="text-xxs text-slate-500 font-mono">{sub}</span>
-      </div>
-    </label>
-  );
+  // Nested components moved outside SettingsTab to prevent unmounting & scroll resets
 
   return (
     <div className="space-y-6 animate-in">
@@ -736,6 +760,7 @@ export default function SettingsTab({
           active={settings.rtk.enabled}
           color="#a855f7"
           activeGradient="from-neon-purple to-neon-cyan"
+          toggleSettingsField={toggleSettingsField}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <CheckOption label="Log Deduplication" sub="Groups repeated log lines" checked={settings.rtk.logs} onChange={() => toggleSettingsField("rtk", "logs")} color="#a855f7" />
@@ -753,6 +778,7 @@ export default function SettingsTab({
           active={settings.serena.enabled}
           color="#06b6d4"
           activeGradient="from-neon-cyan to-neon-green"
+          toggleSettingsField={toggleSettingsField}
         >
           <div className="max-w-lg">
             <div className="flex justify-between text-xxs font-mono text-slate-400 mb-2">
@@ -780,6 +806,7 @@ export default function SettingsTab({
           active={settings.headroom.enabled}
           color="#10b981"
           activeGradient="from-neon-green to-neon-cyan"
+          toggleSettingsField={toggleSettingsField}
         >
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -816,6 +843,7 @@ export default function SettingsTab({
           active={settings.caveman.enabled}
           color="#ec4899"
           activeGradient="from-neon-pink to-neon-purple"
+          toggleSettingsField={toggleSettingsField}
         >
           <div className="max-w-xs">
             <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-2 font-mono">
@@ -843,6 +871,7 @@ export default function SettingsTab({
           active={settings.cache.enabled}
           color="#06b6d4"
           activeGradient="from-neon-cyan to-neon-green"
+          toggleSettingsField={toggleSettingsField}
         />
       </Section>
     </div>

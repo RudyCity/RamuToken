@@ -61,7 +61,7 @@ function targetFunction() {
     // In Serena, unreferenced functions (like calculate) should have their body pruned by the LSP manager
     expect(compressed).toContain("body compressed by Serena");
     expect(compressed).toContain("This is target");
-  });
+  }, 15000);
 });
 
 describe("Headroom Pipeline (JSON & Reversible Context CCR)", () => {
@@ -78,7 +78,7 @@ describe("Headroom Pipeline (JSON & Reversible Context CCR)", () => {
     const input = "JSON context:\n```json\n{\n  \"name\": \"App\",\n  \"active\": true\n}\n```";
     const compressed = await compressHeadroom(input);
     expect(compressed.text).toBeDefined();
-  });
+  }, 15000);
 });
 
 describe("Caveman Pipeline (Prose Compressor)", () => {

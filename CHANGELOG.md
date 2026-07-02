@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.23] - 2026-07-02
+
+### Fixed
+- **Settings Layout and Scroll Reset Bug**: Refactored `Section`, `SectionTitle`, `PipelineSection`, and `CheckOption` in `SettingsTab.tsx` from inner helper components to module-level components. This stops React from unmounting and recreating these DOM trees on every render (which previously caused range input sliders to lose focus and reset the viewport scroll to the top of the container during auto-saves).
+- **Test Stability**: Increased test timeouts for slow-running background daemon integration tests (Serena and Headroom) to 15 seconds, preventing timeouts on slower/initial runs.
+
+---
+
 ## [1.3.22] - 2026-07-02
 
 ### Fixed
