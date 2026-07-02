@@ -137,66 +137,6 @@ describe("Headroom Pipeline (JSON & Reversible Context CCR)", () => {
     const compressed = await compressHeadroom(input);
     expect(compressed.text).toBeDefined();
   }, 30000);
-
-  test("should minify JSON raw and inside code blocks", () => {
-    const rawJson = '{\n  "name": "RamuToken",\n  "active": true\n}';
-    expect(minifyJSON(rawJson)).toBe('{"name":"RamuToken","active":true}');
-
-    const markdownJson = 'Some text\n```json\n{\n  "name": "RamuToken",\n  "active": true\n}\n```\nOther text';
-    expect(minifyJSON(markdownJson)).toBe('Some text\n```json\n{"name":"RamuToken","active":true}\n```\nOther text');
-  });
-
-  test("should prune blacklisted and empty fields from JSON", () => {
-    const rawJson = '{\n  "name": "RamuToken",\n  "emptyStr": "",\n  "emptyArr": [],\n  "emptyObj": {},\n  "nullVal": null,\n  "blacklistMe": "secret",\n  "nested": {\n    "keep": 123,\n    "blacklistMe": "hidden"\n  }\n}';
-    const pruned = pruneJSONFields(rawJson, ["blacklistMe"]);
-    expect(pruned).toBe('{"name":"RamuToken","nested":{"keep":123}}');
-  });
-
-  test("should compress via TS fallback and restore CCR placeholders", async () => {
-    const codeSegment = "export function sampleFunction() {\n  console.log('This is a very long code segment to trigger CCR compression');\n  return 42;\n}";
-    const input = `Here is my code:\n\`\`\`typescript\n${codeSegment}\n\`\`\`\nLet me know what you think.`;
-    
-    const result = await compressHeadroom(input, { ccr: true, minCcrLength: 50 });
-    
-    expect(result.text).toContain("{{HR_CCR_");
-    expect(result.text).not.toContain("sampleFunction");
-    expect(Object.keys(result.mapping).length).toBe(1);
-
-    const placeholder = Object.keys(result.mapping)[0];
-    expect(getRegistry().has(placeholder)).toBe(true);
-
-    const llmResponse = `Sure, here is the original code: ${placeholder}`;
-    const restored = restoreCCR(llmResponse);
-    expect(restored).toContain("sampleFunction");
-    expect(restored).toContain("export function sampleFunction");
-  });
-
-  test("should compress large prose paragraphs when ccrProse is enabled", async () => {
-    const prose = "This is a very long paragraph. It contains multiple sentences and is designed to exceed the minimum threshold length. We want to test if it gets compressed into a CCR placeholder properly.";
-    const input = `${prose}\n\nSome short paragraph.`;
-
-    const result = await compressHeadroom(input, { ccr: true, minCcrLength: 40, ccrProse: true });
-    expect(result.text).toContain("{{HR_CCR_");
-    expect(result.text).not.toContain("This is a very long paragraph");
-    expect(result.text).toContain("Some short paragraph.");
-    
-    const placeholder = Object.keys(result.mapping)[0];
-    const restored = restoreCCR(`Here is: ${placeholder}`);
-    expect(restored).toContain(prose);
-  });
-
-  test("should filter code block compression using ccrLanguages whitelist", async () => {
-    const jsCode = "function testJs() {\n  console.log('Very long code segment in JS to exceed min length...');\n}";
-    const pyCode = "def test_py():\n    print('Very long code segment in Python to exceed min length...')";
-    
-    const input = `\`\`\`javascript\n${jsCode}\n\`\`\`\n\n\`\`\`python\n${pyCode}\n\`\`\``;
-
-    const result = await compressHeadroom(input, { ccr: true, minCcrLength: 30, ccrLanguages: ["python"] });
-    expect(result.text).toContain("```javascript");
-    expect(result.text).toContain("testJs");
-    expect(result.text).not.toContain("test_py");
-    expect(result.text).toContain("{{HR_CCR_");
-  });
 });
 
 describe("Caveman Pipeline (Prose Compressor)", () => {

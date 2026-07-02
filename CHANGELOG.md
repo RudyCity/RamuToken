@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.27] - 2026-07-02
+
+### Changed
+- **Removed Custom TypeScript Headroom Fallback**: Reverted the headroom pipeline back to relying exclusively on the official `headroom-ai` python package and local proxy. Removed custom TS fallback implementations (JSON minifier, metadata key pruner, and custom CCR placeholder substitutions).
+- **Settings UI Cleanup**: Removed prose paragraph compression checkboxes and language whitelist configurations from the Settings Tab in the dashboard.
+
+---
+
 ## [1.3.26] - 2026-07-02
 
 ### Added

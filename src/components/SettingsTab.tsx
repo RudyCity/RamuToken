@@ -844,63 +844,20 @@ export default function SettingsTab({
               <CheckOption label="Reversible CCR" sub="Context shorthand substitution" checked={settings.headroom.ccr} onChange={() => toggleSettingsField("headroom", "ccr")} color="#10b981" />
             </div>
             {settings.headroom.ccr && (
-              <div className="space-y-4 max-w-lg p-3 rounded-lg border border-white/5 bg-white/2">
-                <div>
-                  <div className="flex justify-between text-xxs font-mono text-slate-400 mb-2">
-                    <span>Min chars to replace with CCR placeholder:</span>
-                    <span className="text-neon-green font-bold">{settings.headroom.minCcrLength} chars</span>
-                  </div>
-                  <input
-                    id="slider-headroom-ccr"
-                    type="range" min={100} max={1000}
-                    value={settings.headroom.minCcrLength}
-                    onChange={(e) => handleSliderChange("headroom", "minCcrLength", parseInt(e.target.value))}
-                    onMouseUp={() => handleSaveSettings(settings)}
-                    onTouchEnd={() => handleSaveSettings(settings)}
-                    className="w-full accent-emerald-400"
-                  />
+              <div className="max-w-lg">
+                <div className="flex justify-between text-xxs font-mono text-slate-400 mb-2">
+                  <span>Min chars to replace with CCR placeholder:</span>
+                  <span className="text-neon-green font-bold">{settings.headroom.minCcrLength} chars</span>
                 </div>
-
-                <div className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    id="headroom-ccr-prose"
-                    checked={settings.headroom.ccrProse !== false}
-                    onChange={() => toggleSettingsField("headroom", "ccrProse")}
-                    className="mt-0.5 h-3.5 w-3.5 rounded border-white/10 bg-slate-950 text-neon-green focus:ring-neon-green/30 accent-neon-green cursor-pointer"
-                  />
-                  <div>
-                    <label htmlFor="headroom-ccr-prose" className="text-xxs font-bold text-slate-200 cursor-pointer block select-none">
-                      Compress Prose Paragraphs
-                    </label>
-                    <span className="text-3xs text-slate-400 block mt-0.5">
-                      Substitutes large plain text sections exceeding the character threshold
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1 font-mono">
-                    Allowed Languages for Code CCR
-                  </label>
-                  <input
-                    type="text"
-                    placeholder='e.g., typescript, javascript, python, json (or "*" for all)'
-                    value={settings.headroom.ccrLanguages?.join(", ") ?? ""}
-                    onChange={(e) => {
-                      const list = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
-                      const updated = {
-                        ...settings,
-                        headroom: { ...settings.headroom, ccrLanguages: list }
-                      };
-                      handleSaveSettings(updated);
-                    }}
-                    className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-green"
-                  />
-                  <span className="text-3xs text-slate-500 block mt-0.5">
-                    Use * or leave empty to allow compression on all languages.
-                  </span>
-                </div>
+                <input
+                  id="slider-headroom-ccr"
+                  type="range" min={100} max={1000}
+                  value={settings.headroom.minCcrLength}
+                  onChange={(e) => handleSliderChange("headroom", "minCcrLength", parseInt(e.target.value))}
+                  onMouseUp={() => handleSaveSettings(settings)}
+                  onTouchEnd={() => handleSaveSettings(settings)}
+                  className="w-full accent-emerald-400"
+                />
               </div>
             )}
           </div>

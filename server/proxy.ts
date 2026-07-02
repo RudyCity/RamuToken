@@ -75,9 +75,7 @@ export async function compressMessageList(
           prune: activeSettings.headroom.prune,
           ccr: activeSettings.headroom.ccr,
           minCcrLength: activeSettings.headroom.minCcrLength,
-          blacklist: activeSettings.headroom.blacklist,
-          ccrProse: activeSettings.headroom.ccrProse,
-          ccrLanguages: activeSettings.headroom.ccrLanguages
+          blacklist: activeSettings.headroom.blacklist
         });
         content = hrResult.text;
         ccrCount += Object.keys(hrResult.mapping).length;
