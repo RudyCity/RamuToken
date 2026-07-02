@@ -4,6 +4,9 @@
  * and serves the Vite client app.
  */
 import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countTokens, handleAnthropicTranspiledProxy, handleModelsProxy } from "./proxy";
+import { callUpstreamLLM } from "./pipelines/upstream";
+// @ts-ignore
+import { compress } from "caveman-shrink/compress";
 import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
 import { join } from "path";
 import { pythonDaemon } from "./pipelines/python_daemon";
@@ -349,6 +352,93 @@ const server = Bun.serve({
         .catch(err => {
           return new Response(JSON.stringify({ error: err.message }), {
             status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        });
+    }
+
+    // Caveman File Compression Tool
+    if (path === "/api/caveman/compress-file" && req.method === "POST") {
+      return req.json()
+        .then(body => {
+          const text = body.text || "";
+          
+          const start = Date.now();
+          const res = compress(text);
+          const elapsed = Date.now() - start;
+
+          const originalTokens = countTokens(text);
+          const compressedText = res.compressed;
+          const compressedTokens = countTokens(compressedText);
+          const savingsPercent = originalTokens > 0 ? ((originalTokens - compressedTokens) / originalTokens) * 100 : 0;
+
+          return new Response(JSON.stringify({
+            compressedText,
+            originalTokens,
+            compressedTokens,
+            savingsPercent,
+            durationMs: elapsed
+          }), {
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        })
+        .catch(err => {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        });
+    }
+
+    // Caveman Git Commit Generator Tool
+    if (path === "/api/caveman/commit" && req.method === "POST") {
+      return req.json()
+        .then(async body => {
+          const diff = body.diff || "";
+          if (!diff.trim()) {
+            return new Response(JSON.stringify({ error: "Git diff cannot be empty." }), {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
+          }
+
+          const systemPrompt = "You are Caveman Commit Generator. Generate a Conventional Commit message based on the provided diff. Rules:\n- Format: <type>: <subject> (e.g. feat: add auth, fix: solve null ref)\n- Subject must be ≤ 50 characters\n- Speak in caveman style (extreme brevity, direct keywords, focus on why over what)\n- Return ONLY the raw commit message (no markdown blocks, no intro/outro).";
+          const commitMessage = await callUpstreamLLM(diff, systemPrompt);
+
+          return new Response(JSON.stringify({ commitMessage: commitMessage.trim() }), {
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        })
+        .catch(err => {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        });
+    }
+
+    // Caveman PR Review Commenter Tool
+    if (path === "/api/caveman/review" && req.method === "POST") {
+      return req.json()
+        .then(async body => {
+          const commentDraft = body.commentDraft || "";
+          if (!commentDraft.trim()) {
+            return new Response(JSON.stringify({ error: "Review comment draft cannot be empty." }), {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
+          }
+
+          const systemPrompt = "You are Caveman Review Commenter. Compress the provided code review feedback draft into a single-line, highly concise caveman-speak comment. Rules:\n- Return ONLY a single line (no introductory text, no markdown code blocks except minimal inline backticks if referencing symbols)\n- Focus on direct instruction, e.g., 'L42: bug: user null. Add guard.'\n- Speak in caveman style (no articles, no pronouns, direct keywords).";
+          const reviewComment = await callUpstreamLLM(commentDraft, systemPrompt);
+
+          return new Response(JSON.stringify({ reviewComment: reviewComment.trim() }), {
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        })
+        .catch(err => {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
             headers: { "Content-Type": "application/json", ...corsHeaders }
           });
         });

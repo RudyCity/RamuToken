@@ -8,7 +8,7 @@ interface SettingsTabProps {
   handleSliderChange: (pipeline: "serena" | "headroom", field: string, val: number) => void;
   handleInputChange: (field: string, val: string) => void;
   handleSaveSettings: (updatedSettings: CompressorSettings) => void;
-  handleCavemanLevelChange: (level: "low" | "medium" | "high") => void;
+  handleCavemanLevelChange: (level: "low" | "medium" | "high" | "wenyan") => void;
   backendPort: number;
   handleServerPortChange: (val: number) => void;
   handleServerTokenChange: (val: string) => void;
@@ -874,20 +874,32 @@ export default function SettingsTab({
           activeGradient="from-neon-pink to-neon-purple"
           toggleSettingsField={toggleSettingsField}
         >
-          <div className="max-w-xs">
-            <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-2 font-mono">
-              Compression Level
-            </label>
-            <select
-              id="select-caveman-level"
-              value={settings.caveman.level || "medium"}
-              onChange={(e) => handleCavemanLevelChange(e.target.value as "low" | "medium" | "high")}
-              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-pink cursor-pointer"
-            >
-              <option value="low">Low — Remove filler & greetings</option>
-              <option value="medium">Medium — Direct & concise, code-focused</option>
-              <option value="high">High — Telegraphic caveman mode</option>
-            </select>
+          <div className="space-y-4 max-w-lg">
+            <div className="max-w-xs">
+              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-2 font-mono">
+                Compression Level
+              </label>
+              <select
+                id="select-caveman-level"
+                value={settings.caveman.level || "medium"}
+                onChange={(e) => handleCavemanLevelChange(e.target.value as "low" | "medium" | "high" | "wenyan")}
+                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-pink cursor-pointer"
+              >
+                <option value="low">Low — Remove filler & greetings</option>
+                <option value="medium">Medium — Direct & concise, code-focused</option>
+                <option value="high">High — Telegraphic caveman mode</option>
+                <option value="wenyan">Wenyan — Classical Chinese style (shortest)</option>
+              </select>
+            </div>
+            <div>
+              <CheckOption 
+                label="Compress MCP Tool Descriptions" 
+                sub="Shrinks tool/function descriptions dynamically to save input tokens" 
+                checked={settings.caveman.compressMcpDescriptions} 
+                onChange={() => toggleSettingsField("caveman", "compressMcpDescriptions")} 
+                color="#ec4899" 
+              />
+            </div>
           </div>
         </PipelineSection>
 

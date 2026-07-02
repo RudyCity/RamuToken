@@ -5,10 +5,11 @@
  */
 import { getEncoding } from "js-tiktoken";
 import { settings, addLog, RequestLog, CompressorSettings } from "./config";
+import { fetchUpstream } from "./pipelines/upstream";
 import { compressRTK } from "./pipelines/rtk";
 import { compressSerena } from "./pipelines/serena";
 import { compressHeadroom, restoreCCR } from "./pipelines/headroom";
-import { injectCavemanPrompt, Message } from "./pipelines/caveman";
+import { injectCavemanPrompt, Message, compressToolDescriptions } from "./pipelines/caveman";
 import { generateRequestKey, getCachedResponse, setCachedResponse, preserveCacheControl } from "./pipelines/cache";
 
 // Initialize local tokenizer for token calculations (GPT-4 / Claude compatible base)
@@ -113,67 +114,7 @@ function extractUserQuery(messages: Message[]): string {
   return "";
 }
 
-// Relays request to the upstream target (Bifrost or Direct)
-async function fetchUpstream(
-  endpoint: string, 
-  headers: Headers, 
-  body: any, 
-  provider: "openai" | "anthropic"
-): Promise<Response> {
-  const preferCustom = settings.upstream.preferCustom && settings.upstream.customUrl;
-  const preferBifrost = !preferCustom && settings.upstream.preferBifrost && settings.upstream.bifrostUrl;
-  let targetUrl = "";
-  const requestHeaders = new Headers();
 
-  // Copy standard headers
-  headers.forEach((value, key) => {
-    if (!key.toLowerCase().startsWith("host") && !key.toLowerCase().startsWith("content-length")) {
-      requestHeaders.set(key, value);
-    }
-  });
-
-  if (preferCustom) {
-    // Route to custom upstream URL
-    // Strip trailing slash if present
-    const baseUrl = settings.upstream.customUrl.replace(/\/$/, "");
-    targetUrl = `${baseUrl}${endpoint}`;
-    
-    const headerName = settings.upstream.customHeader || "Authorization";
-    const headerVal = settings.upstream.customKey || headers.get(headerName) || "";
-    if (headerVal) {
-      if (headerName.toLowerCase() === "authorization" && !headerVal.toLowerCase().startsWith("bearer ")) {
-        requestHeaders.set(headerName, `Bearer ${headerVal}`);
-      } else {
-        requestHeaders.set(headerName, headerVal);
-      }
-    }
-    console.log(`[Proxy] Routing Custom Upstream: ${targetUrl}`);
-  } else if (preferBifrost) {
-    // Route to local Bifrost gateway
-    // Bifrost maps routes as OpenAI endpoints. OpenAI or Anthropic targets are mapped internally.
-    targetUrl = `${settings.upstream.bifrostUrl}${endpoint}`;
-    console.log(`[Proxy] Routing via Bifrost: ${targetUrl}`);
-  } else {
-    // Route directly to official provider APIs
-    if (provider === "openai") {
-      targetUrl = `https://api.openai.com${endpoint}`;
-      requestHeaders.set("Authorization", `Bearer ${settings.upstream.openaiKey || headers.get("Authorization")?.replace("Bearer ", "")}`);
-    } else {
-      targetUrl = `https://api.anthropic.com${endpoint}`;
-      requestHeaders.set("x-api-key", settings.upstream.anthropicKey || headers.get("x-api-key") || "");
-      requestHeaders.set("anthropic-version", headers.get("anthropic-version") || "2023-06-01");
-    }
-    console.log(`[Proxy] Routing Direct: ${targetUrl}`);
-  }
-
-  requestHeaders.set("Content-Type", "application/json");
-
-  return fetch(targetUrl, {
-    method: "POST",
-    headers: requestHeaders,
-    body: JSON.stringify(body),
-  });
-}
 
 // Stream Processor that performs in-flight response decompression/CCR reconstruction
 function makeReconstructStream(originalStream: ReadableStream, provider: "openai" | "anthropic"): ReadableStream {
@@ -251,6 +192,10 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
     body = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
+  }
+
+  if (settings.caveman.enabled && settings.caveman.compressMcpDescriptions && body.tools) {
+    compressToolDescriptions(body.tools);
   }
 
   const originalMessages = body.messages || [];
@@ -403,6 +348,10 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
     body = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
+  }
+
+  if (settings.caveman.enabled && settings.caveman.compressMcpDescriptions && body.tools) {
+    compressToolDescriptions(body.tools);
   }
 
   const originalMessages = body.messages || [];

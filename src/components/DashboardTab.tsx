@@ -122,6 +122,7 @@ export default function DashboardTab({
 }: DashboardTabProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [tweetCopied, setTweetCopied] = useState(false);
 
   const totalPages = Math.ceil(logs.length / itemsPerPage);
   const activePage = Math.min(currentPage, Math.max(1, totalPages));
@@ -227,88 +228,142 @@ export default function DashboardTab({
       {/* ── Middle row: Pipeline Status + Bar Chart ────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Pipeline status */}
-        <div className="glass-panel p-6 rounded-2xl lg:col-span-1 flex flex-col">
-          <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-slate-300 flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-neon-purple" />
-            Pipeline Status
-          </h3>
-          <div className="space-y-2.5 flex-1">
-            <PipelineRow
-              icon={<Terminal className="w-4 h-4 text-neon-purple" />}
-              name="RTK Compressor"
-              sub="CLI outputs & logs"
-              active={settings.rtk.enabled}
-              dotColor="#a855f7"
-            />
-            <PipelineRow
-              icon={<FileCode className="w-4 h-4 text-neon-cyan" />}
-              name="Serena Pruner"
-              sub="AST function collapse"
-              active={settings.serena.enabled}
-              dotColor="#06b6d4"
-            />
-            <PipelineRow
-              icon={<Database className="w-4 h-4 text-neon-green" />}
-              name="Headroom Layer"
-              sub="JSON & Reversible CCR"
-              active={settings.headroom.enabled}
-              dotColor="#10b981"
-            />
-            <PipelineRow
-              icon={<Cpu className="w-4 h-4 text-neon-pink" />}
-              name="Caveman Prose"
-              sub="Output instruction injection"
-              active={settings.caveman.enabled}
-              dotColor="#ec4899"
-            />
-          </div>
-          <div className="mt-4 pt-4 border-t border-white/5 space-y-1.5">
-            <div className="flex justify-between text-xxs font-mono">
-              <span className="text-slate-400">Target Router:</span>
-              <span
-                className="font-bold"
-                style={{
-                  color: settings.upstream.preferCustom
-                    ? "#10b981"
-                    : settings.upstream.preferBifrost
-                    ? "#06b6d4"
-                    : "#a855f7",
-                }}
-              >
-                {settings.upstream.preferCustom
-                  ? "Custom Upstream"
-                  : settings.upstream.preferBifrost
-                  ? "Bifrost Gateway"
-                  : "Direct API"}
-              </span>
+        {/* Pipeline status & Caveman Badge */}
+        <div className="flex flex-col gap-6 lg:col-span-1">
+          {/* Pipeline status card */}
+          <div className="glass-panel p-6 rounded-2xl flex flex-col">
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-slate-300 flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-neon-purple" />
+              Pipeline Status
+            </h3>
+            <div className="space-y-2.5 flex-1">
+              <PipelineRow
+                icon={<Terminal className="w-4 h-4 text-neon-purple" />}
+                name="RTK Compressor"
+                sub="CLI outputs & logs"
+                active={settings.rtk.enabled}
+                dotColor="#a855f7"
+              />
+              <PipelineRow
+                icon={<FileCode className="w-4 h-4 text-neon-cyan" />}
+                name="Serena Pruner"
+                sub="AST function collapse"
+                active={settings.serena.enabled}
+                dotColor="#06b6d4"
+              />
+              <PipelineRow
+                icon={<Database className="w-4 h-4 text-neon-green" />}
+                name="Headroom Layer"
+                sub="JSON & Reversible CCR"
+                active={settings.headroom.enabled}
+                dotColor="#10b981"
+              />
+              <PipelineRow
+                icon={<Cpu className="w-4 h-4 text-neon-pink" />}
+                name="Caveman Prose"
+                sub="Output instruction injection"
+                active={settings.caveman.enabled}
+                dotColor="#ec4899"
+              />
             </div>
-            {settings.upstream.preferCustom && (
-              <div className="flex justify-between text-xxs font-mono text-slate-500">
-                <span>Custom Endpoint:</span>
-                <span className="truncate max-w-[140px]">{settings.upstream.customUrl || "—"}</span>
-              </div>
-            )}
-            {!settings.upstream.preferCustom && settings.upstream.preferBifrost && (
-              <div className="flex justify-between text-xxs font-mono text-slate-500">
-                <span>Bifrost Endpoint:</span>
-                <span className="truncate max-w-[140px]">{settings.upstream.bifrostUrl}</span>
-              </div>
-            )}
-            <div className="flex flex-col gap-1 pt-1 border-t border-white/5">
+            <div className="mt-4 pt-4 border-t border-white/5 space-y-1.5">
               <div className="flex justify-between text-xxs font-mono">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                  OpenAI Base URL:
+                <span className="text-slate-400">Target Router:</span>
+                <span
+                  className="font-bold"
+                  style={{
+                    color: settings.upstream.preferCustom
+                      ? "#10b981"
+                      : settings.upstream.preferBifrost
+                      ? "#06b6d4"
+                      : "#a855f7",
+                  }}
+                >
+                  {settings.upstream.preferCustom
+                    ? "Custom Upstream"
+                    : settings.upstream.preferBifrost
+                    ? "Bifrost Gateway"
+                    : "Direct API"}
                 </span>
-                <span className="text-neon-cyan font-bold">http://localhost:{backendPort}/v1</span>
               </div>
-              <div className="flex justify-between text-xxs font-mono">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-400"></span>
-                  Anthropic Base URL:
-                </span>
-                <span className="text-orange-300 font-bold">http://localhost:{backendPort}/anthropic/v1</span>
+              {settings.upstream.preferCustom && (
+                <div className="flex justify-between text-xxs font-mono text-slate-500">
+                  <span>Custom Endpoint:</span>
+                  <span className="truncate max-w-[140px]">{settings.upstream.customUrl || "—"}</span>
+                </div>
+              )}
+              {!settings.upstream.preferCustom && settings.upstream.preferBifrost && (
+                <div className="flex justify-between text-xxs font-mono text-slate-500">
+                  <span>Bifrost Endpoint:</span>
+                  <span className="truncate max-w-[140px]">{settings.upstream.bifrostUrl}</span>
+                </div>
+              )}
+              <div className="flex flex-col gap-1 pt-1 border-t border-white/5">
+                <div className="flex justify-between text-xxs font-mono">
+                  <span className="text-slate-400 flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    OpenAI Base URL:
+                  </span>
+                  <span className="text-neon-cyan font-bold">http://localhost:{backendPort}/v1</span>
+                </div>
+                <div className="flex justify-between text-xxs font-mono">
+                  <span className="text-slate-400 flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                    Anthropic Base URL:
+                  </span>
+                  <span className="text-orange-300 font-bold">http://localhost:{backendPort}/anthropic/v1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Caveman Stats & Badge card */}
+          <div className="glass-panel p-6 rounded-2xl flex flex-col relative overflow-hidden border border-neon-pink/10">
+            <div className="absolute -right-6 -top-6 w-16 h-16 rounded-full bg-neon-pink/8 blur-2xl pointer-events-none" />
+            
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-slate-300 flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-neon-pink" />
+              Caveman Stats & Badge
+            </h3>
+            
+            <div className="space-y-4 flex-1">
+              {/* Visual badge mockup */}
+              <div className="bg-slate-950 border border-white/5 p-4 rounded-xl flex flex-col items-center justify-center gap-1.5 font-mono">
+                <span className="text-[10px] text-slate-500 uppercase tracking-widest">Claude Code Status Badge</span>
+                <div className="bg-slate-900 border border-neon-pink/35 px-4 py-1.5 rounded-lg text-xs flex items-center gap-2 text-neon-pink shadow-[0_0_15px_rgba(236,72,153,0.15)] font-bold">
+                  <span>[CAVEMAN]</span>
+                  <span>⛏</span>
+                  <span className="text-white">{metrics.totalSavedTokens >= 1000 ? `${(metrics.totalSavedTokens / 1000).toFixed(1)}k` : metrics.totalSavedTokens}</span>
+                </div>
+              </div>
+
+              {/* Token savings stats */}
+              <div className="grid grid-cols-2 gap-2 text-xxs font-mono">
+                <div className="bg-slate-900/40 p-2.5 rounded-lg border border-white/5">
+                  <span className="text-slate-500 block">Saved Tokens:</span>
+                  <span className="text-xs font-bold text-slate-300">{metrics.totalSavedTokens.toLocaleString()}</span>
+                </div>
+                <div className="bg-slate-900/40 p-2.5 rounded-lg border border-white/5">
+                  <span className="text-slate-500 block">USD Saved:</span>
+                  <span className="text-xs font-bold text-neon-green">${metrics.totalSavedCost.toFixed(3)}</span>
+                </div>
+              </div>
+
+              {/* Share action */}
+              <div className="pt-2 border-t border-white/5">
+                <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Share your savings</label>
+                <button
+                  onClick={() => {
+                    const shareText = `⚡ RamuToken saved me ${metrics.totalSavedTokens.toLocaleString()} tokens ($${metrics.totalSavedCost.toFixed(3)})! Speed up your AI coding agents with RamuToken. #AI #Coding`;
+                    navigator.clipboard.writeText(shareText);
+                    setTweetCopied(true);
+                    setTimeout(() => setTweetCopied(false), 2000);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-slate-300"
+                >
+                  {tweetCopied ? <Check className="w-3.5 h-3.5 text-neon-green" /> : <Copy className="w-3.5 h-3.5" />}
+                  {tweetCopied ? "Copied tweet draft!" : "Copy Shareable Tweet"}
+                </button>
               </div>
             </div>
           </div>

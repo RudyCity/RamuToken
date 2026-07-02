@@ -29,7 +29,8 @@ export interface CompressorSettings {
   };
   caveman: {
     enabled: boolean;
-    level: "low" | "medium" | "high";
+    level: "low" | "medium" | "high" | "wenyan";
+    compressMcpDescriptions: boolean;
   };
   cache: {
     enabled: boolean;
@@ -96,6 +97,7 @@ export let settings: CompressorSettings = {
   caveman: {
     enabled: false, // Turned off by default, opt-in
     level: "medium",
+    compressMcpDescriptions: false,
   },
   cache: {
     enabled: true,

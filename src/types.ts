@@ -26,7 +26,8 @@ export interface CompressorSettings {
   };
   caveman: {
     enabled: boolean;
-    level: "low" | "medium" | "high";
+    level: "low" | "medium" | "high" | "wenyan";
+    compressMcpDescriptions: boolean;
   };
   cache: {
     enabled: boolean;

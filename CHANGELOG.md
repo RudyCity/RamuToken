@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.28] - 2026-07-02
+
+### Added
+- **Caveman Integration**: Expanded Caveman configurations to support all four levels of output token compression (`low`, `medium`, `high`, and `wenyan` mode).
+- **Tool Description Compression**: Added a toggle option `compressMcpDescriptions` to dynamically shrink OpenAI/Anthropic request tool descriptions to save substantial input tokens.
+- **Upstream LLM Client**: Created a dedicated `upstream.ts` module with `fetchUpstream` and a new `callUpstreamLLM` helper, avoiding circular dependencies and keeping proxy handlers under the 1000-line constraint.
+- **Caveman API Endpoints**: Registered three new endpoints:
+  - `POST /api/caveman/compress-file` for rule-based reference file compression.
+  - `POST /api/caveman/commit` for generating caveman-style conventional commit messages.
+  - `POST /api/caveman/review` for compressing code review draft feedback into single-line comments.
+- **Playground Tab Enhancements**: Built a new "Caveman Tools" tab exposing interactive tools for file compression, commit message generation, and code review compression.
+- **Dashboard Stats & Badge**: Added a Caveman Stats card showing a visual status badge and a "Copy Shareable Tweet" utility for token and cost savings.
+
+---
+
 ## [1.3.27] - 2026-07-02
 
 ### Changed

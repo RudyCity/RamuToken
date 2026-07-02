@@ -31,7 +31,28 @@ export default function PlaygroundTab({
   const [copied, setCopied] = useState(false);
   const [showConfig, setShowConfig] = useState(true);
 
-  const [subTab, setSubTab] = useState<"compress" | "search" | "verify">("compress");
+  const [subTab, setSubTab] = useState<"compress" | "search" | "verify" | "caveman">("compress");
+  
+  // Caveman tools state
+  const [cavemanTool, setCavemanTool] = useState<"compressor" | "commit" | "review">("compressor");
+  
+  // 1. Reference File Compressor state
+  const [compressorInputText, setCompressorInputText] = useState("");
+  const [compressorResult, setCompressorResult] = useState<any>(null);
+  const [compressorLoading, setCompressorLoading] = useState(false);
+  const [compressorCopied, setCompressorCopied] = useState(false);
+
+  // 2. Commit Generator state
+  const [commitDiff, setCommitDiff] = useState("");
+  const [commitResult, setCommitResult] = useState("");
+  const [commitLoading, setCommitLoading] = useState(false);
+  const [commitCopied, setCommitCopied] = useState(false);
+
+  // 3. Review Commenter state
+  const [reviewInput, setReviewInput] = useState("");
+  const [reviewResult, setReviewResult] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewCopied, setReviewCopied] = useState(false);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -157,10 +178,83 @@ export default function PlaygroundTab({
     setPlaygroundSettings(updated);
   };
 
-  const handleLocalCavemanLevel = (level: "low" | "medium" | "high") => {
+  const handleLocalCavemanLevel = (level: "low" | "medium" | "high" | "wenyan") => {
     const updated = { ...playgroundSettings };
     updated.caveman.level = level;
     setPlaygroundSettings(updated);
+  };
+
+  const runFileCompression = async () => {
+    if (!compressorInputText.trim()) return;
+    setCompressorLoading(true);
+    setCompressorResult(null);
+    try {
+      const res = await fetch("/api/caveman/compress-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: compressorInputText,
+          level: playgroundSettings.caveman.level || "medium"
+        }),
+      });
+      if (res.ok) {
+        setCompressorResult(await res.json());
+      }
+    } catch (err) {
+      console.error("Reference compression failed", err);
+    } finally {
+      setCompressorLoading(false);
+    }
+  };
+
+  const runCommitGeneration = async () => {
+    if (!commitDiff.trim()) return;
+    setCommitLoading(true);
+    setCommitResult("");
+    try {
+      const res = await fetch("/api/caveman/commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ diff: commitDiff }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCommitResult(data.commitMessage || "");
+      } else {
+        const data = await res.json();
+        setCommitResult(`Error: ${data.error || "Failed to generate commit message"}`);
+      }
+    } catch (err: any) {
+      console.error("Commit generation failed", err);
+      setCommitResult(`Error: ${err.message}`);
+    } finally {
+      setCommitLoading(false);
+    }
+  };
+
+  const runReviewCompression = async () => {
+    if (!reviewInput.trim()) return;
+    setReviewLoading(true);
+    setReviewResult("");
+    try {
+      const res = await fetch("/api/caveman/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentDraft: reviewInput }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReviewResult(data.reviewComment || "");
+      } else {
+        const data = await res.json();
+        setReviewResult(`Error: ${data.error || "Failed to compress review"}`);
+      }
+    } catch (err: any) {
+      console.error("Review compression failed", err);
+      setReviewResult(`Error: ${err.message}`);
+    } finally {
+      setReviewLoading(false);
+    }
   };
 
   const inputTokens = countTokens(testText);
@@ -324,21 +418,33 @@ export default function PlaygroundTab({
               {playgroundSettings.caveman.enabled && (
                 <div className="space-y-2 pt-1 font-mono">
                   <span className="text-xxs text-slate-400 block">Compression level:</span>
-                  <div className="flex bg-slate-950 p-0.5 rounded-lg border border-white/5">
-                    {(["low", "medium", "high"] as const).map((l) => (
+                  <div className="flex bg-slate-950 p-0.5 rounded-lg border border-white/5 flex-wrap gap-0.5">
+                    {(["low", "medium", "high", "wenyan"] as const).map((l) => (
                       <button
                         key={l}
                         onClick={() => handleLocalCavemanLevel(l)}
-                        className={`flex-1 text-center py-1 rounded text-xxs font-bold uppercase transition-all cursor-pointer ${
+                        className={`flex-1 text-center py-1 rounded text-[10px] font-bold uppercase transition-all cursor-pointer min-w-[40px] ${
                           playgroundSettings.caveman.level === l
                             ? "bg-neon-pink text-slate-950 font-black shadow-[0_0_8px_rgba(244,63,94,0.3)]"
                             : "text-slate-500 hover:text-slate-300"
                         }`}
                       >
-                        {l}
+                        {l === "medium" ? "med" : l === "wenyan" ? "wnyn" : l}
                       </button>
                     ))}
                   </div>
+                  <label className="flex items-center gap-2 cursor-pointer text-xxs text-slate-400 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={playgroundSettings.caveman.compressMcpDescriptions}
+                      onChange={() => {
+                        const updated = { ...playgroundSettings };
+                        updated.caveman.compressMcpDescriptions = !updated.caveman.compressMcpDescriptions;
+                        setPlaygroundSettings(updated);
+                      }}
+                    />
+                    Compress MCP Tools
+                  </label>
                 </div>
               )}
             </div>
@@ -396,6 +502,14 @@ export default function PlaygroundTab({
             }`}
           >
             VERIFICATION LOOP
+          </button>
+          <button
+            onClick={() => setSubTab("caveman")}
+            className={`px-4 py-2 text-xs font-mono font-bold border-b-2 cursor-pointer transition-all ${
+              subTab === "caveman" ? "border-neon-pink text-neon-pink" : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            CAVEMAN TOOLS
           </button>
         </div>
 
@@ -773,6 +887,249 @@ export default function PlaygroundTab({
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {subTab === "caveman" && (
+          <div className="space-y-4">
+            {/* Inner tool selection tabs */}
+            <div className="flex bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-1 max-w-md">
+              {(["compressor", "commit", "review"] as const).map((tool) => (
+                <button
+                  key={tool}
+                  onClick={() => setCavemanTool(tool)}
+                  className={`flex-1 text-center py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    cavemanTool === tool
+                      ? "bg-neon-pink text-slate-950 font-black shadow-[0_0_12px_rgba(244,63,94,0.25)]"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                  }`}
+                >
+                  {tool === "compressor" ? "Reference Compressor" : tool === "commit" ? "Commit Generator" : "Review Commenter"}
+                </button>
+              ))}
+            </div>
+
+            {/* 1. Reference File Compressor Tool */}
+            {cavemanTool === "compressor" && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 animate-in">
+                <div className="flex flex-col">
+                  <label className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono mb-2">
+                    Reference File Content (e.g. CLAUDE.md / instructions)
+                  </label>
+                  <textarea
+                    value={compressorInputText}
+                    onChange={(e) => setCompressorInputText(e.target.value)}
+                    rows={12}
+                    placeholder="Paste reference file or prose content here..."
+                    className="w-full bg-slate-950/95 border border-white/8 rounded-2xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-neon-pink/50 transition-all resize-y leading-relaxed"
+                    style={{ minHeight: "15rem" }}
+                  />
+                  <div className="mt-3 flex justify-between items-center">
+                    <span className="text-xxs font-mono text-slate-500">
+                      Level: <span className="text-neon-pink font-bold">{playgroundSettings.caveman.level || "medium"}</span>
+                    </span>
+                    <button
+                      onClick={runFileCompression}
+                      disabled={compressorLoading || !compressorInputText.trim()}
+                      className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black tracking-wider cursor-pointer bg-neon-pink text-slate-950 shadow-[0_0_12px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {compressorLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                      {compressorLoading ? "COMPRESSING…" : "COMPRESS FILE"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono mb-2">
+                    Compressed Output
+                  </label>
+                  <div className="border border-white/5 bg-slate-950/40 rounded-2xl p-4 flex-1 flex flex-col justify-between min-h-[18rem]">
+                    {compressorLoading ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2 py-16">
+                        <RefreshCw className="w-6 h-6 animate-spin text-neon-pink" />
+                        <span className="text-xs font-mono">Running Caveman rules engine...</span>
+                      </div>
+                    ) : compressorResult ? (
+                      <div className="flex-1 flex flex-col justify-between h-full space-y-4">
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="bg-slate-900/60 p-2 border border-white/5 rounded-xl text-center">
+                            <span className="block text-[10px] font-mono text-slate-500 uppercase">Original</span>
+                            <span className="text-sm font-black text-slate-200">{compressorResult.originalTokens} tok</span>
+                          </div>
+                          <div className="bg-slate-900/60 p-2 border border-white/5 rounded-xl text-center">
+                            <span className="block text-[10px] font-mono text-slate-500 uppercase">Compressed</span>
+                            <span className="text-sm font-black text-neon-pink">{compressorResult.compressedTokens} tok</span>
+                          </div>
+                          <div className="bg-slate-900/60 p-2 border border-white/5 rounded-xl text-center">
+                            <span className="block text-[10px] font-mono text-slate-500 uppercase">Savings</span>
+                            <span className="text-sm font-black text-neon-green">{compressorResult.savingsPercent.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                        <pre className="p-3 bg-black/60 rounded-xl text-slate-300 font-mono text-xs overflow-auto border border-white/5 leading-relaxed max-h-48 flex-1 select-all">
+                          {compressorResult.compressedText}
+                        </pre>
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(compressorResult.compressedText);
+                              setCompressorCopied(true);
+                              setTimeout(() => setCompressorCopied(false), 2000);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-xs font-mono text-slate-300 transition-all cursor-pointer"
+                          >
+                            {compressorCopied ? <CheckCheck className="w-3.5 h-3.5 text-neon-green" /> : <Copy className="w-3.5 h-3.5" />}
+                            {compressorCopied ? "Copied!" : "Copy Compressed"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-slate-700 gap-2 py-16">
+                        <Terminal className="w-8 h-8" />
+                        <span className="text-xs font-mono">Compressed file content will appear here</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 2. Commit Generator Tool */}
+            {cavemanTool === "commit" && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 animate-in">
+                <div className="flex flex-col">
+                  <label className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono mb-2">
+                    Git Diff Output (git diff)
+                  </label>
+                  <textarea
+                    value={commitDiff}
+                    onChange={(e) => setCommitDiff(e.target.value)}
+                    rows={12}
+                    placeholder="Paste git diff here..."
+                    className="w-full bg-slate-950/95 border border-white/8 rounded-2xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-neon-pink/50 transition-all resize-y leading-relaxed"
+                    style={{ minHeight: "15rem" }}
+                  />
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={runCommitGeneration}
+                      disabled={commitLoading || !commitDiff.trim()}
+                      className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black tracking-wider cursor-pointer bg-neon-pink text-slate-950 shadow-[0_0_12px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {commitLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                      {commitLoading ? "GENERATING…" : "GENERATE COMMIT"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono mb-2">
+                    Caveman Commit Message
+                  </label>
+                  <div className="border border-white/5 bg-slate-950/40 rounded-2xl p-4 flex-1 flex flex-col justify-between min-h-[18rem]">
+                    {commitLoading ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2 py-16">
+                        <RefreshCw className="w-6 h-6 animate-spin text-neon-pink" />
+                        <span className="text-xs font-mono">Contacting Upstream LLM for commit message...</span>
+                      </div>
+                    ) : commitResult ? (
+                      <div className="flex-1 flex flex-col justify-between h-full space-y-4">
+                        <div className="bg-black/60 p-5 rounded-2xl border border-white/5 flex-1 flex items-center justify-center font-mono text-sm font-bold text-neon-pink text-center select-all">
+                          {commitResult}
+                        </div>
+                        {!commitResult.startsWith("Error:") && (
+                          <div className="flex justify-end mt-2">
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(commitResult);
+                                setCommitCopied(true);
+                                setTimeout(() => setCommitCopied(false), 2000);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-xs font-mono text-slate-300 transition-all cursor-pointer"
+                            >
+                              {commitCopied ? <CheckCheck className="w-3.5 h-3.5 text-neon-green" /> : <Copy className="w-3.5 h-3.5" />}
+                              {commitCopied ? "Copied!" : "Copy Commit Message"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-slate-700 gap-2 py-16">
+                        <Terminal className="w-8 h-8" />
+                        <span className="text-xs font-mono">Generated commit message will appear here</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Review Commenter Tool */}
+            {cavemanTool === "review" && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 animate-in">
+                <div className="flex flex-col">
+                  <label className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono mb-2">
+                    Review Feedback Draft
+                  </label>
+                  <textarea
+                    value={reviewInput}
+                    onChange={(e) => setReviewInput(e.target.value)}
+                    rows={12}
+                    placeholder="Enter long code review notes or issues here..."
+                    className="w-full bg-slate-950/95 border border-white/8 rounded-2xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-neon-pink/50 transition-all resize-y leading-relaxed"
+                    style={{ minHeight: "15rem" }}
+                  />
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={runReviewCompression}
+                      disabled={reviewLoading || !reviewInput.trim()}
+                      className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black tracking-wider cursor-pointer bg-neon-pink text-slate-950 shadow-[0_0_12px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {reviewLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                      {reviewLoading ? "COMPRESSING…" : "COMPRESS REVIEW"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono mb-2">
+                    Compressed One-Line Review Comment
+                  </label>
+                  <div className="border border-white/5 bg-slate-950/40 rounded-2xl p-4 flex-1 flex flex-col justify-between min-h-[18rem]">
+                    {reviewLoading ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2 py-16">
+                        <RefreshCw className="w-6 h-6 animate-spin text-neon-pink" />
+                        <span className="text-xs font-mono">Contacting Upstream LLM for review compression...</span>
+                      </div>
+                    ) : reviewResult ? (
+                      <div className="flex-1 flex flex-col justify-between h-full space-y-4">
+                        <div className="bg-black/60 p-5 rounded-2xl border border-white/5 flex-1 flex items-center justify-center font-mono text-sm font-bold text-neon-pink text-center select-all leading-relaxed">
+                          {reviewResult}
+                        </div>
+                        {!reviewResult.startsWith("Error:") && (
+                          <div className="flex justify-end mt-2">
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(reviewResult);
+                                setReviewCopied(true);
+                                setTimeout(() => setReviewCopied(false), 2000);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-xs font-mono text-slate-300 transition-all cursor-pointer"
+                            >
+                              {reviewCopied ? <CheckCheck className="w-3.5 h-3.5 text-neon-green" /> : <Copy className="w-3.5 h-3.5" />}
+                              {reviewCopied ? "Copied!" : "Copy Review Comment"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-slate-700 gap-2 py-16">
+                        <Terminal className="w-8 h-8" />
+                        <span className="text-xs font-mono">Compressed review comment will appear here</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

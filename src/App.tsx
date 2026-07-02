@@ -10,7 +10,7 @@ import DashboardTab from "./components/DashboardTab";
 import PlaygroundTab from "./components/PlaygroundTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.3.24";
+const APP_VERSION = "1.3.28";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");
@@ -30,7 +30,7 @@ export default function App() {
     serena: { enabled: true, minLines: 8, referenceGraphPruning: true, projectRoot: "" },
     verification: { enabled: false, testCommand: "npm test", maxRetries: 3 },
     headroom: { enabled: true, minify: true, prune: true, ccr: true, minCcrLength: 200, blacklist: [] },
-    caveman: { enabled: false, level: "medium" },
+    caveman: { enabled: false, level: "medium", compressMcpDescriptions: false },
     cache: { enabled: true },
     upstream: {
       bifrostUrl: "http://localhost:8080",
@@ -154,7 +154,13 @@ export default function App() {
     else if (pipeline === "serena") (updated.serena as any)[field] = !(updated.serena as any)[field];
     else if (pipeline === "verification") (updated.verification as any)[field] = !(updated.verification as any)[field];
     else if (pipeline === "headroom") (updated.headroom as any)[field] = !(updated.headroom as any)[field];
-    else if (pipeline === "caveman") updated.caveman.enabled = !updated.caveman.enabled;
+    else if (pipeline === "caveman") {
+      if (field === "compressMcpDescriptions") {
+        updated.caveman.compressMcpDescriptions = !updated.caveman.compressMcpDescriptions;
+      } else {
+        updated.caveman.enabled = !updated.caveman.enabled;
+      }
+    }
     else if (pipeline === "cache") updated.cache.enabled = !updated.cache.enabled;
     else if (pipeline === "upstream") {
       if (field === "preferCustom") {
@@ -188,7 +194,7 @@ export default function App() {
     setSettings(updated);
   };
 
-  const handleCavemanLevelChange = (level: "low" | "medium" | "high") => {
+  const handleCavemanLevelChange = (level: "low" | "medium" | "high" | "wenyan") => {
     const updated = { ...settings };
     updated.caveman.level = level;
     setSettings(updated);

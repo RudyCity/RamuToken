@@ -1,11 +1,12 @@
 // @ts-ignore
-import { compress } from "caveman-shrink/compress";
+import { compress, compressDescriptionsInPlace } from "caveman-shrink/compress";
 
 /**
  * Faithfully reproduced from the JuliusBrussee/caveman SKILL.md files:
  * - low  → "lite" mode: strip filler phrases
  * - medium → "full" mode: default caveman compression
  * - high → "ultra" mode: telegraphic caveman, max compression
+ * - wenyan → "wenyan" mode: classical Chinese style for maximum brevity
  */
 export const CAVEMAN_INSTRUCTIONS: Record<string, string> = {
   low: `[CAVEMAN MODE: LOW]
@@ -34,7 +35,10 @@ Max compression. Telegraphic style. Rules:
 - Code: no surrounding prose
 - Errors: line number + fix only
 - Lists: single words/phrases per bullet
-- Token budget: critical. Every word must earn its place.`
+- Token budget: critical. Every word must earn its place.`,
+
+  wenyan: `[CAVEMAN MODE: WENYAN]
+Use Classical Chinese style grammar and vocabulary for extreme brevity. Zero pleasantries. Noun phrases or single/dual characters. Keep technical accuracy, code, paths, and URLs unchanged.`
 };
 
 export interface Message {
@@ -59,7 +63,7 @@ function cavemanShrink(text: string, level: string): string | null {
 
 
 // Injects the caveman instruction into the request messages
-export function injectCavemanPrompt(messages: Message[], level: "low" | "medium" | "high" = "medium"): Message[] {
+export function injectCavemanPrompt(messages: Message[], level: "low" | "medium" | "high" | "wenyan" = "medium"): Message[] {
   const result = [...messages];
   const systemMsgIdx = result.findIndex(m => m.role === "system");
   const instruction = CAVEMAN_INSTRUCTIONS[level] ?? CAVEMAN_INSTRUCTIONS.medium;
@@ -90,8 +94,18 @@ export function injectCavemanPrompt(messages: Message[], level: "low" | "medium"
 }
 
 // Compresses any arbitrary prose string using caveman-shrink (useful for compressing assistant content)
-export function cavemanCompressProse(text: string, level: "low" | "medium" | "high" = "medium"): string {
+export function cavemanCompressProse(text: string, level: "low" | "medium" | "high" | "wenyan" = "medium"): string {
   return cavemanShrink(text, level) ?? text;
+}
+
+// Compresses tool descriptions in place
+export function compressToolDescriptions(tools: any[]) {
+  if (!tools || !Array.isArray(tools)) return;
+  try {
+    compressDescriptionsInPlace(tools, ["description"]);
+  } catch (err) {
+    console.error("[Caveman] Failed to compress tool descriptions:", err);
+  }
 }
 
 // Format/Clean up Caveman prose (if needed) for readable client output
