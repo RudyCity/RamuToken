@@ -137,6 +137,39 @@ describe("Headroom Pipeline (JSON & Reversible Context CCR)", () => {
     const compressed = await compressHeadroom(input);
     expect(compressed.text).toBeDefined();
   }, 30000);
+
+  test("should minify JSON raw and inside code blocks", () => {
+    const rawJson = '{\n  "name": "RamuToken",\n  "active": true\n}';
+    expect(minifyJSON(rawJson)).toBe('{"name":"RamuToken","active":true}');
+
+    const markdownJson = 'Some text\n```json\n{\n  "name": "RamuToken",\n  "active": true\n}\n```\nOther text';
+    expect(minifyJSON(markdownJson)).toBe('Some text\n```json\n{"name":"RamuToken","active":true}\n```\nOther text');
+  });
+
+  test("should prune blacklisted and empty fields from JSON", () => {
+    const rawJson = '{\n  "name": "RamuToken",\n  "emptyStr": "",\n  "emptyArr": [],\n  "emptyObj": {},\n  "nullVal": null,\n  "blacklistMe": "secret",\n  "nested": {\n    "keep": 123,\n    "blacklistMe": "hidden"\n  }\n}';
+    const pruned = pruneJSONFields(rawJson, ["blacklistMe"]);
+    expect(pruned).toBe('{"name":"RamuToken","nested":{"keep":123}}');
+  });
+
+  test("should compress via TS fallback and restore CCR placeholders", async () => {
+    const codeSegment = "export function sampleFunction() {\n  console.log('This is a very long code segment to trigger CCR compression');\n  return 42;\n}";
+    const input = `Here is my code:\n\`\`\`typescript\n${codeSegment}\n\`\`\`\nLet me know what you think.`;
+    
+    const result = await compressHeadroom(input, { ccr: true, minCcrLength: 50 });
+    
+    expect(result.text).toContain("{{HR_CCR_");
+    expect(result.text).not.toContain("sampleFunction");
+    expect(Object.keys(result.mapping).length).toBe(1);
+
+    const placeholder = Object.keys(result.mapping)[0];
+    expect(getRegistry().has(placeholder)).toBe(true);
+
+    const llmResponse = `Sure, here is the original code: ${placeholder}`;
+    const restored = restoreCCR(llmResponse);
+    expect(restored).toContain("sampleFunction");
+    expect(restored).toContain("export function sampleFunction");
+  });
 });
 
 describe("Caveman Pipeline (Prose Compressor)", () => {

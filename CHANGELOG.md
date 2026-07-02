@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.25] - 2026-07-02
+
+### Added
+- **Native TypeScript Fallback for Headroom**: Fully implemented structural JSON minification, metadata field pruning, and Reversible Context Substitution (CCR) with deterministic base36 hash placeholders in native TypeScript. This acts as a robust, high-performance fallback when the python daemon or headroom proxy is unavailable.
+- **CCR Decompression**: Completed the placeholder restoration registry and search replacement in `restoreCCR` to correctly expand placeholders back to their original code/text blocks in LLM responses.
+
+---
+
 ## [1.3.24] - 2026-07-02
 
 ### Added
