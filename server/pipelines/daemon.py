@@ -17,7 +17,13 @@ def get_serena_project(project_root):
             from serena.config.serena_config import SerenaConfig
             from serena.symbol import LanguageServerSymbolRetriever
         except ImportError:
-            raise Exception("Serena package is not installed or available in Python")
+            try:
+                import subprocess
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "serena-agent"])
+                from serena.config.serena_config import SerenaConfig
+                from serena.symbol import LanguageServerSymbolRetriever
+            except Exception as e:
+                raise Exception(f"Serena package is not installed and auto-installation failed: {e}")
     
     if project_root in serena_projects:
         return serena_projects[project_root]
@@ -73,7 +79,12 @@ def handle_headroom(payload):
         try:
             from headroom import compress as headroom_compress
         except ImportError:
-            raise Exception("headroom-ai package is not installed or available in Python")
+            try:
+                import subprocess
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "headroom-ai"])
+                from headroom import compress as headroom_compress
+            except Exception as e:
+                raise Exception(f"headroom-ai package is not installed and auto-installation failed: {e}")
     
     text = payload["text"]
     msgs = [{"role": "user", "content": text}]
