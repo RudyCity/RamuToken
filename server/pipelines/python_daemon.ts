@@ -27,18 +27,22 @@ class PythonDaemonManager {
         this.stdoutBuffer = this.stdoutBuffer.substring(newlineIdx + 1);
         if (line) {
           try {
-            const resp = JSON.parse(line);
-            const { id, status, result, error } = resp;
-            if (id) {
-              const cb = this.pending.get(id);
-              if (cb) {
-                this.pending.delete(id);
-                if (status === "success") {
-                  cb.resolve(result);
-                } else {
-                  cb.reject(new Error(error || "Python execution failed"));
+            if (line.startsWith("{") && line.endsWith("}")) {
+              const resp = JSON.parse(line);
+              const { id, status, result, error } = resp;
+              if (id) {
+                const cb = this.pending.get(id);
+                if (cb) {
+                  this.pending.delete(id);
+                  if (status === "success") {
+                    cb.resolve(result);
+                  } else {
+                    cb.reject(new Error(error || "Python execution failed"));
+                  }
                 }
               }
+            } else {
+              console.log("[Daemon Info]:", line);
             }
           } catch (err) {
             console.error("[Daemon] Failed to parse daemon line:", line, err);

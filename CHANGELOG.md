@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.21] - 2026-07-02
+
+### Fixed
+- **Daemon stdout IPC Pollution**: Redirected standard output (`stdout`) of dynamic `pip install` subprocess calls inside the Python daemon to `sys.stderr` to avoid corrupting the JSON IPC stream.
+- **Robust JSON IPC Parsing**: Added boundary verification to the TypeScript daemon stdout reader, ensuring only lines wrapped in `{...}` are parsed as JSON, and logging other outputs as info logs rather than throwing `SyntaxError`.
+
+---
+
 ## [1.3.20] - 2026-07-02
 
 ### Fixed

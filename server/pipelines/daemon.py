@@ -20,7 +20,7 @@ def get_serena_project(project_root):
             try:
                 import subprocess
                 import importlib
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "serena-agent"])
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "serena-agent"], stdout=sys.stderr)
                 importlib.invalidate_caches()
                 from serena.config.serena_config import SerenaConfig
                 from serena.symbol import LanguageServerSymbolRetriever
@@ -84,7 +84,7 @@ def handle_headroom(payload):
             try:
                 import subprocess
                 import importlib
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "headroom-ai"])
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "headroom-ai"], stdout=sys.stderr)
                 importlib.invalidate_caches()
                 from headroom import compress as headroom_compress
             except Exception as e:
