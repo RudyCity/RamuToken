@@ -6,7 +6,6 @@ class PythonDaemonManager {
   private proc: ChildProcess | null = null;
   private reqCounter = 0;
   private pending = new Map<string, { resolve: (val: any) => void; reject: (err: any) => void }>();
-  private stdoutBuffer = "";
 
   private getProc(): ChildProcess {
     if (this.proc && this.proc.exitCode === null) {
@@ -14,17 +13,19 @@ class PythonDaemonManager {
     }
 
     const scriptPath = join(import.meta.dirname, "daemon.py");
-    this.proc = spawn("python", [scriptPath], {
+    const currentProc = spawn("python", [scriptPath], {
       stdio: ["pipe", "pipe", "inherit"],
       env: { ...process.env, PYTHONUNBUFFERED: "1" }
     });
+    this.proc = currentProc;
 
-    this.proc.stdout!.on("data", (chunk: Buffer) => {
-      this.stdoutBuffer += chunk.toString("utf8");
+    let localBuffer = "";
+    currentProc.stdout!.on("data", (chunk: Buffer) => {
+      localBuffer += chunk.toString("utf8");
       let newlineIdx;
-      while ((newlineIdx = this.stdoutBuffer.indexOf("\n")) !== -1) {
-        const line = this.stdoutBuffer.substring(0, newlineIdx).trim();
-        this.stdoutBuffer = this.stdoutBuffer.substring(newlineIdx + 1);
+      while ((newlineIdx = localBuffer.indexOf("\n")) !== -1) {
+        const line = localBuffer.substring(0, newlineIdx).trim();
+        localBuffer = localBuffer.substring(newlineIdx + 1);
         if (line) {
           try {
             if (line.startsWith("{") && line.endsWith("}")) {
@@ -51,21 +52,25 @@ class PythonDaemonManager {
       }
     });
 
-    this.proc.on("error", (err) => {
+    currentProc.on("error", (err) => {
       console.error("[Daemon] Process error:", err);
-      this.cleanupPending(err);
-      this.proc = null;
+      if (this.proc === currentProc) {
+        this.cleanupPending(err);
+        this.proc = null;
+      }
     });
 
-    this.proc.on("exit", (code) => {
+    currentProc.on("exit", (code) => {
       if (code !== 0 && code !== null) {
         console.warn(`[Daemon] Process exited with code ${code}`);
       }
-      this.cleanupPending(new Error(`Daemon process exited with code ${code}`));
-      this.proc = null;
+      if (this.proc === currentProc) {
+        this.cleanupPending(new Error(`Daemon process exited with code ${code}`));
+        this.proc = null;
+      }
     });
 
-    return this.proc;
+    return currentProc;
   }
 
   private cleanupPending(error: Error) {
@@ -96,6 +101,7 @@ class PythonDaemonManager {
         this.proc.stdin!.write(JSON.stringify({ id: "shutdown", action: "shutdown", payload: {} }) + "\n");
       } catch {}
       this.proc = null;
+      this.cleanupPending(new Error("Daemon was shutdown"));
     }
   }
 }

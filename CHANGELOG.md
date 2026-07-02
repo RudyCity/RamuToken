@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.30] - 2026-07-02
+
+### Fixed
+- **Daemon Restart & Startup Pre-warming**: Configured the server to pre-warm the Python background daemon asynchronously on startup so that it immediately displays as active and avoids subprocess spawn latency for the initial request. Modified the daemon restart handler to immediately restart and pre-warm the daemon.
+- **Robust Process Isolation**: Isolated stdout buffer chunks and exit/error event handlers to each specific process instance, avoiding stdout parser corruption or incorrect pending request rejection when restarting the persistent python daemon.
+
+---
+
 ## [1.3.29] - 2026-07-02
 
 ### Added

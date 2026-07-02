@@ -186,6 +186,11 @@ const server = Bun.serve({
 
     if (path === "/api/daemon-restart" && req.method === "POST") {
       pythonDaemon.shutdown();
+      try {
+        await pythonDaemon.request("status", {});
+      } catch (err) {
+        console.error("[Daemon] Failed to pre-warm daemon process on restart:", err);
+      }
       return new Response(JSON.stringify({ success: true, message: "Daemon restarted successfully" }), {
         headers: { "Content-Type": "application/json", ...corsHeaders }
       });
@@ -542,3 +547,10 @@ const server = Bun.serve({
 });
 
 console.log(`⚡ Proxy & API Server listening at http://localhost:${PORT}`);
+
+// Pre-warm the background python daemon asynchronously on startup
+pythonDaemon.request("status", {}).then(() => {
+  console.log("[Daemon] Background Python daemon pre-warmed and running (hot).");
+}).catch(err => {
+  console.error("[Daemon] Failed to pre-warm background Python daemon on startup:", err);
+});
