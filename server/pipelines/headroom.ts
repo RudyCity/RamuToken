@@ -131,7 +131,15 @@ async function headroomViaProxy(text: string): Promise<string | null> {
 // Main Headroom compressor
 export async function compressHeadroom(
   text: string, 
-  options: { minify?: boolean; prune?: boolean; ccr?: boolean; blacklist?: string[]; minCcrLength?: number } = {}
+  options: { 
+    minify?: boolean; 
+    prune?: boolean; 
+    ccr?: boolean; 
+    blacklist?: string[]; 
+    minCcrLength?: number;
+    ccrProse?: boolean;
+    ccrLanguages?: string[];
+  } = {}
 ): Promise<{ text: string; mapping: Record<string, string> }> {
   // Deep integration approach 2: headroom proxy HTTP (if already running on port 8787)
   const proxyResult = await headroomViaProxy(text);
@@ -161,9 +169,17 @@ export async function compressHeadroom(
 
   if (options.ccr) {
     const minLen = options.minCcrLength ?? 200;
+    
+    // 1. Language-filtered code block compression
     const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)\n```/g;
     processedText = processedText.replace(codeBlockRegex, (match, lang, content) => {
-      if (content.length >= minLen) {
+      const targetLang = lang ? lang.toLowerCase() : "";
+      const allowedLanguages = options.ccrLanguages ?? ["*"];
+      const isAllowed = allowedLanguages.includes("*") || 
+                        allowedLanguages.includes(targetLang) || 
+                        (allowedLanguages.length === 0);
+
+      if (isAllowed && content.length >= minLen) {
         const placeholder = `{{HR_CCR_${getHash(content)}}}`;
         ccrRegistry.set(placeholder, match);
         mapping[placeholder] = match;
@@ -171,6 +187,27 @@ export async function compressHeadroom(
       }
       return match;
     });
+
+    // 2. Prose paragraph compression
+    if (options.ccrProse) {
+      const paragraphs = processedText.split(/\n\n+/);
+      const processedParagraphs = paragraphs.map(p => {
+        const trimmed = p.trim();
+        if (
+          trimmed.length >= minLen && 
+          !trimmed.startsWith("{{HR_CCR_") && 
+          !trimmed.endsWith("}}") && 
+          !trimmed.includes("```")
+        ) {
+          const placeholder = `{{HR_CCR_${getHash(p)}}}`;
+          ccrRegistry.set(placeholder, p);
+          mapping[placeholder] = p;
+          return placeholder;
+        }
+        return p;
+      });
+      processedText = processedParagraphs.join("\n\n");
+    }
   }
 
   return { text: processedText, mapping };

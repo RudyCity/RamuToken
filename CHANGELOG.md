@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.26] - 2026-07-02
+
+### Added
+- **Prose Paragraph CCR**: Extended Headroom's TypeScript fallback to support context-aware compression for large prose text paragraphs (independent of markdown code block format) when `ccrProse` is enabled.
+- **Language Filtering for Code Blocks**: Added `ccrLanguages` whitelist configuration to let users selectively compress code blocks of specific languages (e.g., Python or TypeScript) while leaving other languages uncompressed.
+- **Dashboard UI Controls**: Added checkboxes and input fields in the Settings Tab to allow users to toggle prose paragraph compression and edit the whitelist of allowed code block languages.
+
+---
+
 ## [1.3.25] - 2026-07-02
 
 ### Added

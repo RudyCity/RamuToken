@@ -26,6 +26,8 @@ export interface CompressorSettings {
     ccr: boolean;
     minCcrLength: number;
     blacklist: string[];
+    ccrProse: boolean;
+    ccrLanguages: string[];
   };
   caveman: {
     enabled: boolean;
@@ -92,6 +94,8 @@ export let settings: CompressorSettings = {
     ccr: true,
     minCcrLength: 200,
     blacklist: ["metadata", "id_token", "hash"],
+    ccrProse: true,
+    ccrLanguages: ["typescript", "javascript", "python", "json", "html", "css", "rust", "go", "bash", "sh"],
   },
   caveman: {
     enabled: false, // Turned off by default, opt-in
