@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.20] - 2026-07-02
+
+### Fixed
+- **Robust Auto-Download Timeout & API Failbacks**: Added a 2-second timeout to the global check process and timeouts to the download and API fetch requests to prevent blocking the thread in case of poor network.
+- **GitHub API Rate Limit Fallback**: Added a hardcoded direct fallback URL for stable release version `v0.43.0` assets if the GitHub API is rate-limited or fails.
+- **Python Import Cache Invalidation**: Added `importlib.invalidate_caches()` after dynamic pip installations inside the Python daemon, ensuring the newly installed packages are immediately discoverable by Python.
+
+---
+
 ## [1.3.19] - 2026-07-02
 
 ### Added

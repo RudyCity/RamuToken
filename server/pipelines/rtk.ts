@@ -25,10 +25,17 @@ async function checkRtkGlobal(): Promise<boolean> {
   return new Promise((resolve) => {
     try {
       const proc = spawn("rtk", ["--version"], { shell: true });
+      const timer = setTimeout(() => {
+        try { proc.kill(); } catch {}
+        resolve(false);
+      }, 2000);
+
       proc.on("close", (code) => {
+        clearTimeout(timer);
         resolve(code === 0);
       });
       proc.on("error", () => {
+        clearTimeout(timer);
         resolve(false);
       });
     } catch {
@@ -69,23 +76,41 @@ async function ensureRtkAvailable(): Promise<string> {
   try {
     if (!existsSync(binDir)) mkdirSync(binDir, { recursive: true });
 
-    // Fetch latest release info from GitHub
-    const res = await fetch("https://api.github.com/repos/rtk-ai/rtk/releases/latest", {
-      headers: { "User-Agent": "RamuToken-Setup" }
-    });
-    if (!res.ok) throw new Error(`GitHub API returned status ${res.status}`);
-    const releaseInfo = await res.json() as any;
-
     let assetUrl = "";
-    if (process.platform === "win32") {
-      const asset = releaseInfo.assets.find((a: any) => a.name.includes("windows-msvc") && a.name.endsWith(".zip"));
-      if (asset) assetUrl = asset.browser_download_url;
-    } else if (process.platform === "darwin") {
-      const asset = releaseInfo.assets.find((a: any) => a.name.includes("apple-darwin") && a.name.endsWith(".tar.gz"));
-      if (asset) assetUrl = asset.browser_download_url;
-    } else if (process.platform === "linux") {
-      const asset = releaseInfo.assets.find((a: any) => a.name.includes("unknown-linux") && a.name.endsWith(".tar.gz"));
-      if (asset) assetUrl = asset.browser_download_url;
+    
+    // Attempt to fetch latest release from GitHub API
+    try {
+      const res = await fetch("https://api.github.com/repos/rtk-ai/rtk/releases/latest", {
+        headers: { "User-Agent": "RamuToken-Setup" },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (res.ok) {
+        const releaseInfo = await res.json() as any;
+        if (process.platform === "win32") {
+          const asset = releaseInfo.assets.find((a: any) => a.name.includes("windows-msvc") && a.name.endsWith(".zip"));
+          if (asset) assetUrl = asset.browser_download_url;
+        } else if (process.platform === "darwin") {
+          const asset = releaseInfo.assets.find((a: any) => a.name.includes("apple-darwin") && a.name.endsWith(".tar.gz"));
+          if (asset) assetUrl = asset.browser_download_url;
+        } else if (process.platform === "linux") {
+          const asset = releaseInfo.assets.find((a: any) => a.name.includes("unknown-linux") && a.name.endsWith(".tar.gz"));
+          if (asset) assetUrl = asset.browser_download_url;
+        }
+      }
+    } catch (apiErr) {
+      console.warn("[RTK] GitHub API fetch failed or timed out, using fallback URL:", apiErr);
+    }
+
+    // Fallback directly to stable v0.43.0 release assets if API rate-limited or failed
+    if (!assetUrl) {
+      const version = "v0.43.0";
+      if (process.platform === "win32") {
+        assetUrl = `https://github.com/rtk-ai/rtk/releases/download/${version}/rtk-x86_64-pc-windows-msvc.zip`;
+      } else if (process.platform === "darwin") {
+        assetUrl = `https://github.com/rtk-ai/rtk/releases/download/${version}/rtk-x86_64-apple-darwin.tar.gz`;
+      } else if (process.platform === "linux") {
+        assetUrl = `https://github.com/rtk-ai/rtk/releases/download/${version}/rtk-x86_64-unknown-linux-musl.tar.gz`;
+      }
     }
 
     if (!assetUrl) {
@@ -93,7 +118,9 @@ async function ensureRtkAvailable(): Promise<string> {
     }
 
     console.log(`[RTK] Downloading RTK from ${assetUrl}...`);
-    const downloadRes = await fetch(assetUrl);
+    const downloadRes = await fetch(assetUrl, {
+      signal: AbortSignal.timeout(30000)
+    });
     if (!downloadRes.ok) throw new Error(`Failed to download binary: ${downloadRes.statusText}`);
     const arrayBuffer = await downloadRes.arrayBuffer();
 
