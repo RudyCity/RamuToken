@@ -19,7 +19,9 @@ def get_serena_project(project_root):
         except ImportError:
             try:
                 import subprocess
+                import importlib
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "serena-agent"])
+                importlib.invalidate_caches()
                 from serena.config.serena_config import SerenaConfig
                 from serena.symbol import LanguageServerSymbolRetriever
             except Exception as e:
@@ -81,7 +83,9 @@ def handle_headroom(payload):
         except ImportError:
             try:
                 import subprocess
+                import importlib
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "headroom-ai"])
+                importlib.invalidate_caches()
                 from headroom import compress as headroom_compress
             except Exception as e:
                 raise Exception(f"headroom-ai package is not installed and auto-installation failed: {e}")
