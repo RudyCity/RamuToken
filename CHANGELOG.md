@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.22] - 2026-07-02
+
+### Fixed
+- **Vite WS Proxy Error Handling**: Configured Vite development server proxy options to catch and handle socket errors (like `ECONNRESET` and `ECONNABORTED`) gracefully, suppressing noisy console stack traces during dashboard client reconnections or server hot-reloads.
+
+---
+
 ## [1.3.21] - 2026-07-02
 
 ### Fixed

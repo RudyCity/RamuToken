@@ -21,11 +21,58 @@ export default defineConfig(({ }) => {
       port: 5173,
       // Proxy api calls to Bun backend during development
       proxy: {
-        "/api": backendUrl,
-        "/v1": backendUrl,
-        "/openai": backendUrl,
-        "/anthropic": backendUrl,
-        "/ws": { target: backendUrl.replace("http", "ws"), ws: true },
+        "/api": {
+          target: backendUrl,
+          configure: (proxy) => {
+            proxy.on("error", (err) => {
+              if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
+                console.warn(`[Vite Proxy Error][api]: ${err.message}`);
+              }
+            });
+          }
+        },
+        "/v1": {
+          target: backendUrl,
+          configure: (proxy) => {
+            proxy.on("error", (err) => {
+              if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
+                console.warn(`[Vite Proxy Error][v1]: ${err.message}`);
+              }
+            });
+          }
+        },
+        "/openai": {
+          target: backendUrl,
+          configure: (proxy) => {
+            proxy.on("error", (err) => {
+              if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
+                console.warn(`[Vite Proxy Error][openai]: ${err.message}`);
+              }
+            });
+          }
+        },
+        "/anthropic": {
+          target: backendUrl,
+          configure: (proxy) => {
+            proxy.on("error", (err) => {
+              if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
+                console.warn(`[Vite Proxy Error][anthropic]: ${err.message}`);
+              }
+            });
+          }
+        },
+        "/ws": {
+          target: backendUrl.replace("http", "ws"),
+          ws: true,
+          configure: (proxy) => {
+            proxy.on("error", (err) => {
+              // Silently capture socket resets/aborts when dashboard reconnects/disconnects
+              if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
+                console.warn(`[Vite WS Proxy Error]: ${err.message}`);
+              }
+            });
+          }
+        },
       },
     },
   };

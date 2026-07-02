@@ -1,6 +1,6 @@
 {
   "name": "ramu-token",
-  "version": "1.3.21",
+  "version": "1.3.22",
   "description": "Token Converter and Compressor Proxy with Dashboard",
   "author": "Rudy H. (Github: RudyCity <https://github.com/RudyCity/RamuToken>)",
   "main": "server/index.ts",
