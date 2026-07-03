@@ -66,7 +66,8 @@ export async function fetchUpstream(
  * Calls the user-configured upstream model directly to process custom prompts.
  */
 export async function callUpstreamLLM(prompt: string, system?: string, model?: string): Promise<string> {
-  const isAnthropic = !!settings.upstream.anthropicKey || (!settings.upstream.openaiKey && settings.upstream.preferBifrost);
+  const preferCustom = settings.upstream.preferCustom && settings.upstream.customUrl;
+  const isAnthropic = !preferCustom && (!!settings.upstream.anthropicKey || (!settings.upstream.openaiKey && settings.upstream.preferBifrost));
   const endpoint = isAnthropic ? "/v1/messages" : "/v1/chat/completions";
   const provider = isAnthropic ? "anthropic" : "openai";
 
