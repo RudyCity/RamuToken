@@ -340,111 +340,341 @@ export default function DashboardTab({
             )}
           </div>
 
-          {/* Request Log Table */}
-          <div className="glass-panel p-6 rounded-2xl">
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-slate-300 flex items-center justify-between">
-              <span>Proxy Activity Log</span>
-              <span className="text-xxs font-mono text-slate-500 font-normal">
-                Live — showing {logs.length > 0 ? startIndex + 1 : 0}-{endIndex} of {logs.length}
-              </span>
-            </h3>
+          {/* Unified Logs Panel with Tabs */}
+          <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4">
+            
+            {/* Tabs Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/5 pb-4">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-neon-purple" />
+                  Activity Logs
+                </h3>
+                <p className="text-[10px] text-slate-500 font-mono mt-1">
+                  View prompt transformations by overall request or per-feature step
+                </p>
+              </div>
+              
+              <div className="flex flex-wrap items-center bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-0.5 text-[10px] font-bold">
+                {[
+                  { id: "all", label: "📋 Requests" },
+                  { id: "rtk", label: "⚡ RTK" },
+                  { id: "serena", label: "🔍 Serena" },
+                  { id: "llmlingua", label: "🧠 LLMLingua" },
+                  { id: "headroom", label: "💾 Headroom" },
+                  { id: "caveman", label: "👹 Caveman" },
+                  { id: "llmlingua_direct", label: "🔌 LLMLingua Direct" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveLogTab(tab.id as any);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      activeLogTab === tab.id
+                        ? "bg-neon-purple/20 text-neon-purple border border-neon-purple/35 shadow-[0_0_8px_rgba(168,85,247,0.15)]"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
+            {/* Table Container */}
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3">Provider</th>
-                    <th className="py-3 px-3">Model</th>
-                    <th className="py-3 px-3">Original</th>
-                    <th className="py-3 px-3">Compressed</th>
-                    <th className="py-3 px-3">Savings</th>
-                    <th className="py-3 px-3">CCR</th>
-                    <th className="py-3 px-3">Time</th>
-                    <th className="py-3 px-3 text-right">Detail</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-10 text-center text-xs font-mono text-slate-600">
-                        No requests yet. Send traffic through the proxy to see logs here.
-                      </td>
-                    </tr>
-                  ) : (
-                    paginatedLogs.map((log) => (
-                      <tr
-                        key={log.id}
-                        className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
-                        onClick={() => setSelectedLog(log)}
-                      >
-                        <td className="py-3 px-3">
-                          {log.status === "success" ? (
-                            <span className="flex items-center gap-1.5 text-neon-green">
-                              <CheckCircle className="w-3.5 h-3.5" /> OK
-                            </span>
-                          ) : (
-                            <div className="flex flex-col gap-0.5">
-                              <span
-                                className="flex items-center gap-1.5 text-neon-pink"
-                                title={log.errorMessage || "Unknown error"}
-                              >
-                                <XCircle className="w-3.5 h-3.5" /> ERR
-                              </span>
-                              {log.errorMessage && (
-                                <span className="text-[9px] text-neon-pink/70 max-w-[140px] truncate" title={log.errorMessage}>
-                                  {log.errorMessage}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 font-bold text-slate-300">{log.provider === "openai" ? "OpenAI" : "Anthropic"}</td>
-                        <td className="py-3 px-3 text-slate-400 max-w-[130px] truncate" title={log.model}>{log.model}</td>
-                        <td className="py-3 px-3 text-slate-400">{log.originalTokens.toLocaleString()}</td>
-                        <td className="py-3 px-3 text-slate-300">
-                          {log.cached ? (
-                            <span className="bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan px-1.5 py-0.5 rounded text-[10px] font-bold">CACHED</span>
-                          ) : (
-                            log.compressedTokens.toLocaleString()
-                          )}
-                        </td>
-                        <td className="py-3 px-3">
-                          <span
-                            className="savings-badge"
-                            style={{
-                              color: savingsColor(log.savingsPercent),
-                              background: savingsBg(log.savingsPercent),
-                              border: `1px solid ${savingsColor(log.savingsPercent)}30`,
-                            }}
-                          >
-                            {log.savingsPercent.toFixed(0)}%
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-slate-500">{log.ccrMappingsCount}</td>
-                        <td className="py-3 px-3 text-slate-500">{log.durationMs}ms</td>
-                        <td className="py-3 px-3 text-right">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setSelectedLog(log); }}
-                            className="text-neon-purple hover:text-neon-cyan flex items-center gap-0.5 ml-auto transition-colors cursor-pointer"
-                          >
-                            View <ChevronRight className="w-3 h-3" />
-                          </button>
-                        </td>
+                {activeLogTab === "all" ? (
+                  <>
+                    <thead>
+                      <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
+                        <th className="py-3 px-3">Status</th>
+                        <th className="py-3 px-3">Provider</th>
+                        <th className="py-3 px-3">Model</th>
+                        <th className="py-3 px-3">Original</th>
+                        <th className="py-3 px-3">Compressed</th>
+                        <th className="py-3 px-3">Savings</th>
+                        <th className="py-3 px-3">CCR</th>
+                        <th className="py-3 px-3">Time</th>
+                        <th className="py-3 px-3 text-right">Detail</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
+                    </thead>
+                    <tbody>
+                      {displayLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} className="py-10 text-center text-xs font-mono text-slate-600">
+                            No requests yet. Send traffic through the proxy to see logs here.
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedLogs.map((log) => {
+                          const item = log as RequestLog;
+                          return (
+                            <tr
+                              key={item.id}
+                              className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
+                              onClick={() => setSelectedLog(item)}
+                            >
+                              <td className="py-3 px-3">
+                                {item.status === "success" ? (
+                                  <span className="flex items-center gap-1.5 text-neon-green">
+                                    <CheckCircle className="w-3.5 h-3.5" /> OK
+                                  </span>
+                                ) : (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span
+                                      className="flex items-center gap-1.5 text-neon-pink"
+                                      title={item.errorMessage || "Unknown error"}
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" /> ERR
+                                    </span>
+                                    {item.errorMessage && (
+                                      <span className="text-[9px] text-neon-pink/70 max-w-[140px] truncate" title={item.errorMessage}>
+                                        {item.errorMessage}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 font-bold text-slate-300">{item.provider === "openai" ? "OpenAI" : "Anthropic"}</td>
+                              <td className="py-3 px-3 text-slate-400 max-w-[130px] truncate" title={item.model}>{item.model}</td>
+                              <td className="py-3 px-3 text-slate-400">{item.originalTokens.toLocaleString()}</td>
+                              <td className="py-3 px-3 text-slate-300">
+                                {item.cached ? (
+                                  <span className="bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan px-1.5 py-0.5 rounded text-[10px] font-bold">CACHED</span>
+                                ) : (
+                                  item.compressedTokens.toLocaleString()
+                                )}
+                              </td>
+                              <td className="py-3 px-3">
+                                <span
+                                  className="savings-badge"
+                                  style={{
+                                    color: savingsColor(item.savingsPercent),
+                                    background: savingsBg(item.savingsPercent),
+                                    border: `1px solid ${savingsColor(item.savingsPercent)}30`,
+                                  }}
+                                >
+                                  {item.savingsPercent.toFixed(0)}%
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-slate-500">{item.ccrMappingsCount}</td>
+                              <td className="py-3 px-3 text-slate-500">{item.durationMs}ms</td>
+                              <td className="py-3 px-3 text-right">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedLog(item); }}
+                                  className="text-neon-purple hover:text-neon-cyan flex items-center gap-0.5 ml-auto transition-colors cursor-pointer"
+                                >
+                                  View <ChevronRight className="w-3 h-3" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </>
+                ) : activeLogTab === "llmlingua_direct" ? (
+                  <>
+                    <thead>
+                      <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
+                        <th className="py-3 px-3">Time</th>
+                        <th className="py-3 px-3">Method</th>
+                        <th className="py-3 px-3">Model</th>
+                        <th className="py-3 px-3 text-right">Original</th>
+                        <th className="py-3 px-3 text-right">Compressed</th>
+                        <th className="py-3 px-3 text-right">Savings</th>
+                        <th className="py-3 px-3 text-right">Duration</th>
+                        <th className="py-3 px-3 text-right">Status</th>
+                        <th className="py-3 px-3 text-right">Detail</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} className="py-10 text-center text-xs font-mono text-slate-600">
+                            No direct LLMLingua activity recorded.
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedLogs.map((log) => {
+                          const item = log as LLMLinguaLog;
+                          return (
+                            <tr
+                              key={item.id}
+                              className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
+                              onClick={() => setSelectedLog(item)}
+                            >
+                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
+                                {new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                              </td>
+                              <td className="py-3 px-3">
+                                {item.method === "local" ? (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">LOCAL</span>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan">API</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-slate-400 max-w-[120px] truncate" title={item.model}>
+                                {item.model}
+                              </td>
+                              <td className="py-3 px-3 text-right text-slate-400">{item.originalTokens.toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right text-slate-400">
+                                {item.status === "error" ? (
+                                  <span className="text-red-400">—</span>
+                                ) : (
+                                  item.compressedTokens.toLocaleString()
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-right">
+                                {item.status === "error" ? (
+                                  <span className="text-red-400 text-[10px] font-bold">ERR</span>
+                                ) : (
+                                  <span
+                                    className="savings-badge"
+                                    style={{
+                                      color: savingsColor(item.savingsPercent),
+                                      background: savingsBg(item.savingsPercent),
+                                      border: `1px solid ${savingsColor(item.savingsPercent)}30`,
+                                    }}
+                                  >
+                                    {item.savingsPercent.toFixed(0)}%
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-right text-slate-500">{item.durationMs}ms</td>
+                              <td className="py-3 px-3 text-right">
+                                {item.status === "success" ? (
+                                  <span className="flex items-center justify-end gap-1 text-neon-green">
+                                    <CheckCircle className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] font-bold">OK</span>
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center justify-end gap-1 text-red-400" title={item.errorMessage}>
+                                    <XCircle className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] font-bold">ERR</span>
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-right">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedLog(item); }}
+                                  className="text-neon-cyan hover:text-neon-purple flex items-center gap-0.5 ml-auto transition-colors cursor-pointer"
+                                >
+                                  View <ChevronRight className="w-3 h-3" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </>
+                ) : (
+                  <>
+                    <thead>
+                      <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
+                        <th className="py-3 px-3">Status</th>
+                        <th className="py-3 px-3">Request ID</th>
+                        <th className="py-3 px-3">Model</th>
+                        <th className="py-3 px-3 text-right">Before Step</th>
+                        <th className="py-3 px-3 text-right">After Step</th>
+                        <th className="py-3 px-3 text-right">Savings</th>
+                        <th className="py-3 px-3">Time</th>
+                        <th className="py-3 px-3 text-right">Detail</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-10 text-center text-xs font-mono text-slate-600">
+                            No requests used this compression feature step yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedLogs.map((log) => {
+                          const item = log as RequestLog;
+                          const stepNameMap: Record<string, string> = {
+                            rtk: "RTK",
+                            serena: "Serena",
+                            llmlingua: "LLMLingua",
+                            headroom: "Headroom",
+                            caveman: "Caveman",
+                          };
+                          const targetStepName = stepNameMap[activeLogTab];
+                          const stepObj = (item.pipelineSteps || []).find((s) => s.name === targetStepName);
+                          if (!stepObj) return null;
+                          const savings = stepObj.inputTokens > 0 ? ((stepObj.inputTokens - stepObj.outputTokens) / stepObj.inputTokens) * 100 : 0;
+                          return (
+                            <tr
+                              key={item.id}
+                              className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
+                              onClick={() => {
+                                setSelectedLog(item);
+                                setSelectedStep(targetStepName);
+                              }}
+                            >
+                              <td className="py-3 px-3">
+                                {item.status === "success" ? (
+                                  <span className="flex items-center gap-1.5 text-neon-green">
+                                    <CheckCircle className="w-3.5 h-3.5" /> OK
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1.5 text-neon-pink">
+                                    <XCircle className="w-3.5 h-3.5" /> ERR
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 font-bold text-slate-300">#{item.id}</td>
+                              <td className="py-3 px-3 text-slate-400 max-w-[130px] truncate" title={item.model}>{item.model}</td>
+                              <td className="py-3 px-3 text-right text-slate-400">{stepObj.inputTokens.toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right text-slate-300">{stepObj.outputTokens.toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right">
+                                <span
+                                  className="savings-badge"
+                                  style={{
+                                    color: savingsColor(savings),
+                                    background: savingsBg(savings),
+                                    border: `1px solid ${savingsColor(savings)}30`,
+                                  }}
+                                >
+                                  {savings.toFixed(0)}%
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-slate-500">
+                                {new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                              </td>
+                              <td className="py-3 px-3 text-right">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedLog(item);
+                                    setSelectedStep(targetStepName);
+                                  }}
+                                  className="text-neon-cyan hover:text-neon-purple flex items-center gap-0.5 ml-auto transition-colors cursor-pointer"
+                                >
+                                  View <ChevronRight className="w-3 h-3" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </>
+                )}
               </table>
             </div>
 
             {/* Pagination Controls */}
-            {logs.length > 0 && (
+            {displayLogs.length > 0 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-white/5 text-xxs font-mono text-slate-400">
                 <div>
-                  Showing <span className="text-slate-200">{logs.length > 0 ? startIndex + 1 : 0}</span> to{" "}
+                  Showing <span className="text-slate-200">{displayLogs.length > 0 ? startIndex + 1 : 0}</span> to{" "}
                   <span className="text-slate-200">{endIndex}</span> of{" "}
-                  <span className="text-slate-200">{logs.length}</span> entries
+                  <span className="text-slate-200">{displayLogs.length}</span> entries
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -532,144 +762,6 @@ export default function DashboardTab({
                   <span className="text-slate-500">entries</span>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* ── LLMLingua Activity Log ─────────────────────────────── */}
-          <div className="glass-panel p-6 rounded-2xl">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                <Brain className="w-4 h-4 text-neon-cyan" />
-                LLMLingua Activity
-              </h3>
-              <span className="text-xxs font-mono text-slate-500">
-                {llmLinguaLogs.length} record{llmLinguaLogs.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {llmLinguaLogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <Brain className="w-8 h-8 text-slate-700 mb-3" />
-                <p className="text-sm font-bold text-slate-500">No LLMLingua activity yet</p>
-                <p className="text-xxs text-slate-600 font-mono mt-1">Enable LLMLingua in Settings and send a request</p>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-x-auto rounded-xl border border-white/5">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-white/5 text-slate-500 text-xxs font-bold uppercase tracking-wider">
-                        <th className="py-2.5 px-3 text-left">Time</th>
-                        <th className="py-2.5 px-3 text-left">Method</th>
-                        <th className="py-2.5 px-3 text-left">Model</th>
-                        <th className="py-2.5 px-3 text-right">Orig</th>
-                        <th className="py-2.5 px-3 text-right">Comp</th>
-                        <th className="py-2.5 px-3 text-right">Savings</th>
-                        <th className="py-2.5 px-3 text-right">Duration</th>
-                        <th className="py-2.5 px-3 text-right">Status</th>
-                        <th className="py-2.5 px-3 text-right"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/[0.04]">
-                      {llmLinguaLogs
-                        .slice((llmLinguaPage - 1) * LLMLINGUA_PAGE_SIZE, llmLinguaPage * LLMLINGUA_PAGE_SIZE)
-                        .map((entry) => (
-                          <tr
-                            key={entry.id}
-                            className="hover:bg-white/[0.025] transition-colors"
-                          >
-                            <td className="py-2.5 px-3 font-mono text-slate-500 whitespace-nowrap">
-                              {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                            </td>
-                            <td className="py-2.5 px-3">
-                              {entry.method === "local" ? (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">LOCAL</span>
-                              ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan">API</span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 font-mono text-slate-400 max-w-[120px] truncate" title={entry.model}>
-                              {entry.model}
-                            </td>
-                            <td className="py-2.5 px-3 text-right text-slate-400">{entry.originalTokens.toLocaleString()}</td>
-                            <td className="py-2.5 px-3 text-right text-slate-400">
-                              {entry.status === "error" ? (
-                                <span className="text-red-400">—</span>
-                              ) : (
-                                entry.compressedTokens.toLocaleString()
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-right">
-                              {entry.status === "error" ? (
-                                <span className="text-red-400 text-[10px] font-bold">ERR</span>
-                              ) : (
-                                <span
-                                  className="savings-badge"
-                                  style={{
-                                    color: savingsColor(entry.savingsPercent),
-                                    background: savingsBg(entry.savingsPercent),
-                                    border: `1px solid ${savingsColor(entry.savingsPercent)}30`,
-                                  }}
-                                >
-                                  {entry.savingsPercent.toFixed(0)}%
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-right text-slate-500">{entry.durationMs}ms</td>
-                            <td className="py-2.5 px-3 text-right">
-                              {entry.status === "success" ? (
-                                <span className="flex items-center justify-end gap-1 text-neon-green">
-                                  <CheckCircle className="w-3 h-3" />
-                                  <span className="text-[10px] font-bold">OK</span>
-                                </span>
-                              ) : (
-                                <span className="flex items-center justify-end gap-1 text-red-400" title={entry.errorMessage}>
-                                  <XCircle className="w-3 h-3" />
-                                  <span className="text-[10px] font-bold">ERR</span>
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-right">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setSelectedLog(entry); }}
-                                className="text-neon-cyan hover:text-neon-purple flex items-center gap-0.5 ml-auto transition-colors cursor-pointer"
-                              >
-                                View <ChevronRight className="w-3 h-3" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* LLMLingua pagination */}
-                {llmLinguaLogs.length > LLMLINGUA_PAGE_SIZE && (
-                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5 text-xxs font-mono text-slate-400">
-                    <span>
-                      Showing <span className="text-slate-200">{(llmLinguaPage - 1) * LLMLINGUA_PAGE_SIZE + 1}</span> –{" "}
-                      <span className="text-slate-200">{Math.min(llmLinguaPage * LLMLINGUA_PAGE_SIZE, llmLinguaLogs.length)}</span>{" "}
-                      of <span className="text-slate-200">{llmLinguaLogs.length}</span>
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setLlmLinguaPage((p) => Math.max(1, p - 1))}
-                        disabled={llmLinguaPage === 1}
-                        className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setLlmLinguaPage((p) => Math.min(Math.ceil(llmLinguaLogs.length / LLMLINGUA_PAGE_SIZE), p + 1))}
-                        disabled={llmLinguaPage === Math.ceil(llmLinguaLogs.length / LLMLINGUA_PAGE_SIZE)}
-                        className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
             )}
           </div>
 
