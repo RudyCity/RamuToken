@@ -8,9 +8,10 @@ import { callUpstreamLLM } from "./pipelines/upstream";
 // @ts-ignore
 import { compress } from "caveman-shrink/compress";
 import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
-import { join } from "path";
+import { join, resolve } from "path";
 import { pythonDaemon } from "./pipelines/python_daemon";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { scanProjects } from "./utils/scanProjects";
 
 const PORT = process.env.PORT || settings.server?.port || 6875;
 const DIST_DIR = join(import.meta.dirname, "../dist");
@@ -226,11 +227,43 @@ const server = Bun.serve({
       });
     }
 
+    // Scan local filesystem for project directories
+    if (path === "/api/scan-projects" && req.method === "GET") {
+      try {
+        const detected = scanProjects(process.cwd());
+        // Merge with existing profiles: keep user-added ones, add newly detected ones
+        const existingPaths = new Set(
+          (settings.serena.projectProfiles || []).map(p => p.path.toLowerCase())
+        );
+        const newProfiles = detected.filter(p => !existingPaths.has(p.path.toLowerCase()));
+        const merged = [...(settings.serena.projectProfiles || []), ...newProfiles];
+        const updated = updateSettings({
+          serena: { ...settings.serena, projectProfiles: merged }
+        });
+        broadcastSettingsUpdate();
+        return new Response(JSON.stringify({
+          success: true,
+          detected: detected.length,
+          added: newProfiles.length,
+          profiles: updated.serena.projectProfiles
+        }), { headers: { "Content-Type": "application/json", ...corsHeaders } });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        });
+      }
+    }
+
     if (path === "/api/semantic-search" && req.method === "POST") {
       return req.json()
         .then(async body => {
           const query = body.query || "";
-          const projectRoot = body.projectRoot || settings.serena.projectRoot || process.cwd();
+          // Priority: per-request override → active profile → global default → cwd
+          const activeProfile = (settings.serena.projectProfiles || []).find(
+            p => p.id === settings.serena.activeProfileId
+          );
+          const projectRoot = body.projectRoot || activeProfile?.path || settings.serena.projectRoot || process.cwd();
           
           if (!query) {
             return new Response(JSON.stringify({ error: "Missing query parameter" }), {
@@ -280,7 +313,11 @@ const server = Bun.serve({
         .then(async body => {
           const filePath = body.filePath || "";
           const code = body.code || "";
-          const projectRoot = body.projectRoot || settings.serena.projectRoot || process.cwd();
+          // Priority: per-request override → active profile → global default → cwd
+          const activeProfile = (settings.serena.projectProfiles || []).find(
+            p => p.id === settings.serena.activeProfileId
+          );
+          const projectRoot = body.projectRoot || activeProfile?.path || settings.serena.projectRoot || process.cwd();
 
           if (!filePath || !code) {
             return new Response(JSON.stringify({ error: "Missing filePath or code" }), {

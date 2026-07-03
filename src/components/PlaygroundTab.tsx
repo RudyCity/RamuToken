@@ -12,6 +12,7 @@ interface PlaygroundTabProps {
   testQuery: string;
   setTestQuery: (query: string) => void;
   backendCwd: string;
+  onSettingsUpdate: (updated: CompressorSettings) => void;
 }
 
 function savingsHsl(pct: number) {
@@ -25,7 +26,8 @@ export default function PlaygroundTab({
   setTestText,
   testQuery,
   setTestQuery,
-  backendCwd
+  backendCwd,
+  onSettingsUpdate
 }: PlaygroundTabProps) {
   const [playgroundSettings, setPlaygroundSettings] = useState<CompressorSettings>(() =>
     JSON.parse(JSON.stringify(globalSettings))
@@ -873,6 +875,7 @@ export default function PlaygroundTab({
             searchResults={searchResults}
             backendCwd={backendCwd}
             globalSettings={globalSettings}
+            onSettingsUpdate={onSettingsUpdate}
           />
         )}
 
@@ -889,6 +892,7 @@ export default function PlaygroundTab({
             verifyResult={verifyResult}
             backendCwd={backendCwd}
             globalSettings={globalSettings}
+            onSettingsUpdate={onSettingsUpdate}
           />
         )}
 

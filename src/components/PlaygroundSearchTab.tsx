@@ -1,5 +1,6 @@
 import { Search, RefreshCw } from "lucide-react";
 import { CompressorSettings } from "../types";
+import ProjectProfileSelector from "./ProjectProfileSelector";
 
 interface PlaygroundSearchTabProps {
   searchQuery: string;
@@ -11,6 +12,7 @@ interface PlaygroundSearchTabProps {
   searchResults: any[];
   backendCwd: string;
   globalSettings: CompressorSettings;
+  onSettingsUpdate: (updated: CompressorSettings) => void;
 }
 
 export default function PlaygroundSearchTab({
@@ -23,13 +25,8 @@ export default function PlaygroundSearchTab({
   searchResults,
   backendCwd,
   globalSettings,
+  onSettingsUpdate,
 }: PlaygroundSearchTabProps) {
-  const defaultRootPlaceholder = globalSettings.serena.projectRoot 
-    ? `Default: ${globalSettings.serena.projectRoot}`
-    : backendCwd 
-    ? `Default (auto): ${backendCwd}`
-    : "Leave empty for default";
-
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3">
@@ -47,14 +44,18 @@ export default function PlaygroundSearchTab({
         </div>
         <div className="flex-1">
           <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-mono">
-            Project Root Dir (Optional Override)
+            Project Root (Profile or Override)
           </label>
-          <input
-            type="text"
-            value={searchProjectRoot}
-            onChange={(e) => setSearchProjectRoot(e.target.value)}
-            placeholder={defaultRootPlaceholder}
-            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-purple transition-colors"
+          <ProjectProfileSelector
+            profiles={globalSettings.serena.projectProfiles || []}
+            activeProfileId={globalSettings.serena.activeProfileId || ""}
+            onSelect={(id) => onSettingsUpdate({ ...globalSettings, serena: { ...globalSettings.serena, activeProfileId: id } })}
+            onScanComplete={onSettingsUpdate}
+            globalSettings={globalSettings}
+            manualPath={searchProjectRoot}
+            onManualPathChange={setSearchProjectRoot}
+            backendCwd={backendCwd}
+            accentColor="neon-purple"
           />
         </div>
         <div className="flex items-end">
@@ -68,6 +69,7 @@ export default function PlaygroundSearchTab({
           </button>
         </div>
       </div>
+
 
       <div className="border border-white/5 bg-slate-950/40 rounded-2xl p-4">
         <h3 className="text-xs font-mono font-bold text-slate-400 mb-3 uppercase tracking-wider">Search Results</h3>

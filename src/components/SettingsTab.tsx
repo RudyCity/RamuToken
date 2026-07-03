@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw } from "lucide-react";
-import { CompressorSettings } from "../types";
+import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw, Plus, X } from "lucide-react";
+import { CompressorSettings, ProjectProfile } from "../types";
 import { Section, SectionTitle, PipelineSection, CheckOption, Toggle } from "./SettingsHelpers";
 import LLMLinguaSettings from "./LLMLinguaSettings";
+import ProjectProfileSelector from "./ProjectProfileSelector";
 
 interface SettingsTabProps {
   settings: CompressorSettings;
@@ -748,29 +749,112 @@ export default function SettingsTab({
               />
             </div>
 
-            <div className="pt-2 border-t border-white/5 space-y-3">
-              <CheckOption 
-                label="Reference Graph Pruning" 
-                sub="Prunes based on symbol call graph references" 
-                checked={settings.serena.referenceGraphPruning} 
-                onChange={() => toggleSettingsField("serena", "referenceGraphPruning")} 
-                color="#06b6d4" 
-              />
-              
-              <div>
-                <label className="block text-xxs font-mono text-slate-400 mb-1">
-                  Default Project Root Dir:
-                </label>
-                <input
-                  type="text"
-                  value={settings.serena.projectRoot || ""}
-                  placeholder={backendCwd ? `Auto-detected: ${backendCwd}` : "e.g. D:/projects/my-app"}
-                  onChange={(e) => handleSerenaProjectRootChange(e.target.value)}
-                  onBlur={() => handleSaveSettings(settings)}
-                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-cyan"
+              <div className="pt-2 border-t border-white/5 space-y-4">
+                <CheckOption 
+                  label="Reference Graph Pruning" 
+                  sub="Prunes based on symbol call graph references" 
+                  checked={settings.serena.referenceGraphPruning} 
+                  onChange={() => toggleSettingsField("serena", "referenceGraphPruning")} 
+                  color="#06b6d4" 
                 />
+
+                {/* ── Project Profiles Manager ─────────────────────────── */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xxs font-mono font-bold uppercase tracking-wider text-slate-400">
+                      Project Profiles
+                    </label>
+                    <span className="text-[10px] font-mono text-slate-600">
+                      {(settings.serena.projectProfiles || []).length} saved
+                    </span>
+                  </div>
+
+                  {/* Saved profiles list */}
+                  {(settings.serena.projectProfiles || []).length > 0 && (
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                      {(settings.serena.projectProfiles || []).map((profile: ProjectProfile) => (
+                        <div
+                          key={profile.id}
+                          onClick={() => {
+                            const updated = { ...settings, serena: { ...settings.serena, activeProfileId: settings.serena.activeProfileId === profile.id ? "" : profile.id } };
+                            handleSaveSettings(updated);
+                          }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all group ${
+                            settings.serena.activeProfileId === profile.id
+                              ? "border-neon-cyan/30 bg-neon-cyan/5"
+                              : "border-white/5 bg-slate-950/60 hover:border-white/10"
+                          }`}
+                        >
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                            profile.type === "Node/Bun" ? "bg-emerald-500/20 text-emerald-400" :
+                            profile.type === "Python"   ? "bg-yellow-500/20 text-yellow-400" :
+                            profile.type === "Rust"     ? "bg-orange-500/20 text-orange-400" :
+                            profile.type === "Go"       ? "bg-cyan-500/20 text-cyan-400" :
+                            profile.type === "Java"     ? "bg-red-500/20 text-red-400" :
+                            "bg-slate-500/20 text-slate-400"
+                          }`}>{profile.type}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-mono font-semibold text-slate-200 truncate">{profile.name}</p>
+                            <p className="text-[10px] font-mono text-slate-600 truncate">{profile.path}</p>
+                          </div>
+                          {settings.serena.activeProfileId === profile.id && (
+                            <span className="text-[9px] font-mono font-bold text-neon-cyan shrink-0">ACTIVE</span>
+                          )}
+                          {profile.autoDetected && (
+                            <span className="text-[9px] font-mono text-slate-600 shrink-0">auto</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const updated = {
+                                ...settings,
+                                serena: {
+                                  ...settings.serena,
+                                  projectProfiles: settings.serena.projectProfiles.filter(p => p.id !== profile.id),
+                                  activeProfileId: settings.serena.activeProfileId === profile.id ? "" : settings.serena.activeProfileId,
+                                }
+                              };
+                              handleSaveSettings(updated);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-600 hover:text-neon-pink transition-all shrink-0"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Auto-scan button */}
+                  <ProjectProfileSelector
+                    profiles={settings.serena.projectProfiles || []}
+                    activeProfileId={settings.serena.activeProfileId || ""}
+                    onSelect={(id) => {
+                      const updated = { ...settings, serena: { ...settings.serena, activeProfileId: id } };
+                      handleSaveSettings(updated);
+                    }}
+                    onScanComplete={(updatedSettings) => handleSaveSettings(updatedSettings)}
+                    globalSettings={settings}
+                    backendCwd={backendCwd}
+                  />
+
+                  {/* Fallback: global default root override */}
+                  <div>
+                    <label className="block text-xxs font-mono text-slate-500 mb-1">
+                      Global Default Root Override (if no profile is active):
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.serena.projectRoot || ""}
+                      placeholder={backendCwd ? `Auto-detected: ${backendCwd}` : "e.g. D:/projects/my-app"}
+                      onChange={(e) => handleSerenaProjectRootChange(e.target.value)}
+                      onBlur={() => handleSaveSettings(settings)}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-cyan"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
           </div>
         </PipelineSection>
 

@@ -1,3 +1,12 @@
+/** A saved project root entry — can be user-created or auto-detected. */
+export interface ProjectProfile {
+  id: string;
+  name: string;
+  path: string;
+  type: string;
+  autoDetected: boolean;
+}
+
 export interface CompressorSettings {
   rtk: {
     enabled: boolean;
@@ -10,6 +19,8 @@ export interface CompressorSettings {
     minLines: number;
     referenceGraphPruning: boolean;
     projectRoot: string;
+    projectProfiles: ProjectProfile[];
+    activeProfileId: string;
   };
   verification: {
     enabled: boolean;

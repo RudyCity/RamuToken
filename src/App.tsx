@@ -60,7 +60,7 @@ export default function App() {
   const [backendCwd, setBackendCwd] = useState<string>("");
   const [settings, setSettings] = useState<CompressorSettings>({
     rtk: { enabled: true, logs: true, paths: true, stacks: true },
-    serena: { enabled: true, minLines: 8, referenceGraphPruning: true, projectRoot: "" },
+    serena: { enabled: true, minLines: 8, referenceGraphPruning: true, projectRoot: "", projectProfiles: [], activeProfileId: "" },
     verification: { enabled: false, testCommand: "npm test", maxRetries: 3 },
     headroom: { enabled: true, minify: true, prune: true, ccr: true, minCcrLength: 200, blacklist: [] },
     caveman: { enabled: false, level: "medium", compressMcpDescriptions: false },
@@ -411,6 +411,7 @@ export default function App() {
             testQuery={testQuery}
             setTestQuery={setTestQuery}
             backendCwd={backendCwd}
+            onSettingsUpdate={handleSaveSettings}
           />
         )}
         {activeTab === "settings" && (

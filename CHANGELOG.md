@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.36] - 2026-07-03
+
+### Added
+- **Project Profiles & Filesystem Auto-Detection**: Added support for configuring and managing multiple project profiles (name + path + type) instead of a single global root override.
+- **Project Auto-Scan Utility**: Implemented a scanning mechanism (`server/utils/scanProjects.ts`) that walks the directories near the server's working directory to detect software projects by looking for marker files (like `.git`, `package.json`, `pyproject.toml`, `Cargo.toml`).
+- **Reusable Project Selector Component**: Created `ProjectProfileSelector.tsx` dropdown featuring color-coded type badges (Node/Bun, Python, Rust, Go, Java, C/C++), automatic directory scan triggers, and manual path inputs.
+- **Playground Integration**: Integrated the Project Profile Selector directly into both the semantic search playground and code verification playground tabs.
+
+### Changed
+- **Unified Settings Resolution**: Updated backend endpoint handlers to resolve the active project root using a strict fallback chain: request override → active profile path → global default root → server CWD.
+
+---
+
 ## [1.3.35] - 2026-07-03
 
 ### Changed

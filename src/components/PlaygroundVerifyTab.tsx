@@ -1,5 +1,6 @@
 import { Terminal, RefreshCw, ShieldCheck, AlertCircle, CheckCircle } from "lucide-react";
 import { CompressorSettings } from "../types";
+import ProjectProfileSelector from "./ProjectProfileSelector";
 
 interface PlaygroundVerifyTabProps {
   verifyFilePath: string;
@@ -13,6 +14,7 @@ interface PlaygroundVerifyTabProps {
   verifyResult: any;
   backendCwd: string;
   globalSettings: CompressorSettings;
+  onSettingsUpdate: (updated: CompressorSettings) => void;
 }
 
 export default function PlaygroundVerifyTab({
@@ -27,13 +29,8 @@ export default function PlaygroundVerifyTab({
   verifyResult,
   backendCwd,
   globalSettings,
+  onSettingsUpdate,
 }: PlaygroundVerifyTabProps) {
-  const defaultRootPlaceholder = globalSettings.serena.projectRoot 
-    ? `Default: ${globalSettings.serena.projectRoot}`
-    : backendCwd 
-    ? `Default (auto): ${backendCwd}`
-    : "Leave empty for default";
-
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -51,14 +48,18 @@ export default function PlaygroundVerifyTab({
         </div>
         <div>
           <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-mono">
-            Project Root Dir (Optional)
+            Project Root (Profile or Override)
           </label>
-          <input
-            type="text"
-            value={verifyProjectRoot}
-            onChange={(e) => setVerifyProjectRoot(e.target.value)}
-            placeholder={defaultRootPlaceholder}
-            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+          <ProjectProfileSelector
+            profiles={globalSettings.serena.projectProfiles || []}
+            activeProfileId={globalSettings.serena.activeProfileId || ""}
+            onSelect={(id) => onSettingsUpdate({ ...globalSettings, serena: { ...globalSettings.serena, activeProfileId: id } })}
+            onScanComplete={onSettingsUpdate}
+            globalSettings={globalSettings}
+            manualPath={verifyProjectRoot}
+            onManualPathChange={setVerifyProjectRoot}
+            backendCwd={backendCwd}
+            accentColor="neon-green"
           />
         </div>
       </div>
