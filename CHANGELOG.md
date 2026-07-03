@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.48] - 2026-07-03
+
+### Added
+- **Pipeline Steps Progression Comparison**: Added a detailed breakdown table within the request log detail modal showing the step-by-step transformation of the prompt.
+- **Interactive Step Inspection**: Clicking any active step in the progression table (e.g. `RTK`, `Serena`, `LLMLingua`, `Headroom`, `Caveman`) dynamically updates the prompt diff panels below to show the specific text transition ("Before [Step]" vs "After [Step]") and token counts for that module alone.
+- **`PipelineStep` interface**: Added to both `server/config.ts` and `src/types.ts` containing the step name, enabled status, input/output token counts, and input/output text representations.
+
+### Changed
+- **`server/proxy.ts`**: Refactored the core `compressMessageList` pipeline to execute sequentially across all messages and capture intermediate state transitions as structured `PipelineStep` objects. Added `pipelineSteps` to request logs saved in cache hits and upstream results.
+
 ## [1.3.47] - 2026-07-03
 
 ### Added

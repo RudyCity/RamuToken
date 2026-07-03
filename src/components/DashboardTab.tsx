@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Zap,
   Sliders,
@@ -130,6 +130,28 @@ export default function DashboardTab({
   const [tweetCopied, setTweetCopied] = useState(false);
   const [llmLinguaPage, setLlmLinguaPage] = useState(1);
   const LLMLINGUA_PAGE_SIZE = 10;
+
+  const [selectedStep, setSelectedStep] = useState<string>("all");
+
+  useEffect(() => {
+    setSelectedStep("all");
+  }, [selectedLog]);
+
+  // Get active step details for request modal
+  const steps = (selectedLog && "pipelineSteps" in selectedLog ? selectedLog.pipelineSteps : []) || [];
+  const activeStepObj = selectedStep !== "all" ? steps.find(s => s.name === selectedStep) : null;
+
+  const originalTextToShow = activeStepObj ? activeStepObj.inputText : (selectedLog?.originalPrompt || "");
+  const compressedTextToShow = activeStepObj ? activeStepObj.outputText : (selectedLog?.compressedPrompt || "");
+  const originalTokensToShow = activeStepObj ? activeStepObj.inputTokens : (selectedLog?.originalTokens || 0);
+  const compressedTokensToShow = activeStepObj ? activeStepObj.outputTokens : (selectedLog?.compressedTokens || 0);
+  
+  const stepSavings = activeStepObj 
+    ? (activeStepObj.inputTokens > 0 ? ((activeStepObj.inputTokens - activeStepObj.outputTokens) / activeStepObj.inputTokens) * 100 : 0)
+    : (selectedLog?.savingsPercent || 0);
+
+  const leftLabel = activeStepObj ? `Before ${activeStepObj.name}` : "Original Prompt";
+  const rightLabel = activeStepObj ? `After ${activeStepObj.name}` : "Compressed Prompt";
 
   const totalPages = Math.ceil(logs.length / itemsPerPage);
   const activePage = Math.min(currentPage, Math.max(1, totalPages));
@@ -916,43 +938,134 @@ export default function DashboardTab({
               </div>
             )}
 
+            {/* Pipeline Steps Progression Table */}
+            {selectedLog && "pipelineSteps" in selectedLog && steps.length > 0 && (
+              <div className="px-5 pt-5 pb-0">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
+                    Pipeline Steps Progression
+                  </h4>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    Click a step below to inspect its specific input and output
+                  </span>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-950/40">
+                  <table className="w-full text-xxs font-mono text-left">
+                    <thead>
+                      <tr className="border-b border-white/5 text-slate-500 text-xxs font-bold uppercase tracking-wider">
+                        <th className="py-2.5 px-3 text-left">Step</th>
+                        <th className="py-2.5 px-3 text-center">Status</th>
+                        <th className="py-2.5 px-3 text-right">Input Tokens</th>
+                        <th className="py-2.5 px-3 text-right">Output Tokens</th>
+                        <th className="py-2.5 px-3 text-right">Savings</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.03]">
+                      {/* Overall summary row */}
+                      <tr
+                        onClick={() => setSelectedStep("all")}
+                        className={`cursor-pointer transition-all hover:bg-white/[0.04] ${
+                          selectedStep === "all" ? "bg-neon-purple/10 text-neon-purple font-bold border-l-2 border-neon-purple" : ""
+                        }`}
+                      >
+                        <td className="py-2 px-3 font-sans font-bold">ALL (Original → Final)</td>
+                        <td className="py-2 px-3 text-center">
+                          <span className="bg-neon-green/10 text-neon-green border border-neon-green/20 px-1 py-0.5 rounded text-[9px] font-bold">ACTIVE</span>
+                        </td>
+                        <td className="py-2 px-3 text-right">{selectedLog.originalTokens.toLocaleString()}</td>
+                        <td className="py-2 px-3 text-right">{selectedLog.compressedTokens.toLocaleString()}</td>
+                        <td className="py-2 px-3 text-right">
+                          <span className="font-bold" style={{ color: savingsColor(selectedLog.savingsPercent) }}>
+                            {selectedLog.savingsPercent.toFixed(1)}%
+                          </span>
+                        </td>
+                      </tr>
+
+                      {/* Individual steps */}
+                      {steps.map((step) => {
+                        const savings = step.inputTokens > 0 ? ((step.inputTokens - step.outputTokens) / step.inputTokens) * 100 : 0;
+                        return (
+                          <tr
+                            key={step.name}
+                            onClick={() => step.enabled && setSelectedStep(step.name)}
+                            className={`transition-all ${
+                              !step.enabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:bg-white/[0.04]"
+                            } ${
+                              selectedStep === step.name ? "bg-neon-cyan/10 text-neon-cyan font-bold border-l-2 border-neon-cyan" : ""
+                            }`}
+                          >
+                            <td className="py-2 px-3 font-sans font-bold flex items-center gap-1.5">
+                              {step.name === "RTK" && <Terminal className="w-3.5 h-3.5 text-neon-purple" />}
+                              {step.name === "Serena" && <FileCode className="w-3.5 h-3.5 text-neon-green" />}
+                              {step.name === "LLMLingua" && <Brain className="w-3.5 h-3.5 text-neon-cyan" />}
+                              {step.name === "Headroom" && <Database className="w-3.5 h-3.5 text-neon-cyan" />}
+                              {step.name === "Caveman" && <Cpu className="w-3.5 h-3.5 text-neon-pink" />}
+                              {step.name}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {step.enabled ? (
+                                <span className="bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20 px-1 py-0.5 rounded text-[9px] font-bold">ENABLED</span>
+                              ) : (
+                                <span className="bg-slate-800 text-slate-500 border border-white/5 px-1 py-0.5 rounded text-[9px] font-bold">DISABLED</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-right">{step.inputTokens.toLocaleString()}</td>
+                            <td className="py-2 px-3 text-right">{step.outputTokens.toLocaleString()}</td>
+                            <td className="py-2 px-3 text-right">
+                              {step.enabled ? (
+                                <span style={{ color: savingsColor(savings) }}>
+                                  {savings.toFixed(1)}%
+                                </span>
+                              ) : (
+                                <span className="text-slate-600">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Prompt diff — no nested scroll; outer overlay scrolls */}
             <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Original Prompt */}
+              {/* Original Prompt / Before text */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">Original Prompt</h4>
+                  <h4 className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">{leftLabel}</h4>
                   <div className="flex items-center gap-2">
                     <span className="text-xxs font-mono text-slate-500 bg-white/5 px-2 py-0.5 rounded">
-                      {selectedLog.originalTokens.toLocaleString()} tok
+                      {originalTokensToShow.toLocaleString()} tok
                     </span>
-                    <CopyButton text={selectedLog.originalPrompt || ""} />
+                    <CopyButton text={originalTextToShow} />
                   </div>
                 </div>
-                <pre className="bg-slate-950/90 border border-white/5 p-4 rounded-2xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-words">
-                  {selectedLog.originalPrompt || "[No original prompt recorded]"}
+                <pre className="bg-slate-950/90 border border-white/5 p-4 rounded-2xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-words min-h-[150px]">
+                  {originalTextToShow || "[No content recorded]"}
                 </pre>
               </div>
 
-              {/* Compressed Prompt */}
+              {/* Compressed Prompt / After text */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xxs font-bold uppercase tracking-wider text-neon-cyan font-mono">Compressed Prompt</h4>
+                  <h4 className="text-xxs font-bold uppercase tracking-wider text-neon-cyan font-mono">{rightLabel}</h4>
                   <div className="flex items-center gap-2">
                     <span
                       className="text-xxs font-mono font-bold px-2 py-0.5 rounded"
-                      style={{ color: savingsColor(selectedLog.savingsPercent), background: savingsBg(selectedLog.savingsPercent) }}
+                      style={{ color: savingsColor(stepSavings), background: savingsBg(stepSavings) }}
                     >
-                      {selectedLog.compressedTokens.toLocaleString()} tok
+                      {compressedTokensToShow.toLocaleString()} tok
                     </span>
-                    <CopyButton text={selectedLog.compressedPrompt || ""} />
+                    <CopyButton text={compressedTextToShow} />
                   </div>
                 </div>
                 <pre
-                  className="bg-slate-950/90 border p-4 rounded-2xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-words"
-                  style={{ borderColor: savingsColor(selectedLog.savingsPercent) + "30" }}
+                  className="bg-slate-950/90 border p-4 rounded-2xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-words min-h-[150px]"
+                  style={{ borderColor: savingsColor(stepSavings) + "30" }}
                 >
-                  {selectedLog.compressedPrompt || "[No compressed prompt recorded]"}
+                  {compressedTextToShow || "[No content recorded]"}
                 </pre>
               </div>
             </div>

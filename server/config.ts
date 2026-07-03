@@ -80,6 +80,15 @@ export interface CompressorSettings {
   };
 }
 
+export interface PipelineStep {
+  name: string; // "RTK" | "Serena" | "LLMLingua" | "Headroom" | "Caveman"
+  enabled: boolean;
+  inputTokens: number;
+  outputTokens: number;
+  inputText: string;
+  outputText: string;
+}
+
 export interface RequestLog {
   id: string;
   timestamp: number;
@@ -96,6 +105,7 @@ export interface RequestLog {
   ccrMappingsCount: number;
   originalPrompt: string;
   compressedPrompt: string;
+  pipelineSteps?: PipelineStep[];
 }
 
 /** A single LLMLingua compression activity entry. */

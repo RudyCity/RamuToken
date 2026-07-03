@@ -4,7 +4,7 @@
  * relays requests to Bifrost or direct providers, and tracks token usage.
  */
 import { getEncoding } from "js-tiktoken";
-import { settings, addLog, CompressorSettings } from "./config";
+import { settings, addLog, CompressorSettings, PipelineStep } from "./config";
 import { fetchUpstream } from "./pipelines/upstream";
 import { compressRTK } from "./pipelines/rtk";
 import { compressSerena } from "./pipelines/serena";
@@ -37,47 +37,108 @@ export function countPayloadTokens(messages: Message[], system?: string): number
 }
 
 // Core compression orchestrator for a set of messages
+function messagesToText(messages: Message[]): string {
+  return messages.map(m => `[${m.role}]: ${m.content || ""}`).join("\n\n");
+}
+
+// Core compression orchestrator for a set of messages
 export async function compressMessageList(
   messages: Message[],
   userQuery: string,
   overrideSettings?: CompressorSettings,
   requestedModel?: string
-): Promise<{ compressedMessages: Message[]; originalPrompt: string; compressedPrompt: string; ccrCount: number }> {
+): Promise<{
+  compressedMessages: Message[];
+  originalPrompt: string;
+  compressedPrompt: string;
+  ccrCount: number;
+  pipelineSteps: PipelineStep[];
+}> {
   const activeSettings = overrideSettings || settings;
-  let originalAccumulated = "";
-  let compressedAccumulated = "";
+  const pipelineSteps: PipelineStep[] = [];
   let ccrCount = 0;
 
-  // Process message contents asynchronously
-  const processed: Message[] = [];
-  for (const msg of messages) {
-    let content = msg.content || "";
-    originalAccumulated += content + "\n";
+  let currentMessages = messages.map(m => ({ ...m }));
 
-    if (msg.role !== "system") {
-      // 1. RTK Compression (logs, CLI output, paths) - only run if content is long enough to warrant it (> 150 chars)
-      if (activeSettings.rtk.enabled && content.length > 150) {
+  const runStep = async (
+    name: "RTK" | "Serena" | "LLMLingua" | "Headroom" | "Caveman",
+    enabled: boolean,
+    transformFn: (msgs: Message[]) => Promise<Message[]>
+  ) => {
+    const inputText = messagesToText(currentMessages);
+    const inputTokens = countPayloadTokens(currentMessages);
+
+    let nextMessages = currentMessages;
+    if (enabled) {
+      nextMessages = await transformFn(currentMessages);
+    }
+
+    const outputText = messagesToText(nextMessages);
+    const outputTokens = countPayloadTokens(nextMessages);
+
+    pipelineSteps.push({
+      name,
+      enabled,
+      inputTokens,
+      outputTokens,
+      inputText,
+      outputText
+    });
+
+    currentMessages = nextMessages;
+  };
+
+  // 1. RTK Compression (logs, CLI output, paths)
+  await runStep("RTK", activeSettings.rtk.enabled, async (msgs) => {
+    const result: Message[] = [];
+    for (const m of msgs) {
+      let content = m.content || "";
+      if (m.role !== "system" && content.length > 150) {
         content = await compressRTK(content, {
           logs: activeSettings.rtk.logs,
           paths: activeSettings.rtk.paths,
           stacks: activeSettings.rtk.stacks
         });
       }
+      result.push({ ...m, content });
+    }
+    return result;
+  });
 
-      // 2. Serena Compression (code AST-like pruning based on query keywords)
-      if (activeSettings.serena.enabled) {
-        content = await compressSerena(content, userQuery, { 
+  // 2. Serena Compression (code AST-like pruning)
+  await runStep("Serena", activeSettings.serena.enabled, async (msgs) => {
+    const result: Message[] = [];
+    for (const m of msgs) {
+      let content = m.content || "";
+      if (m.role !== "system") {
+        content = await compressSerena(content, userQuery, {
           minLines: activeSettings.serena.minLines
         });
       }
+      result.push({ ...m, content });
+    }
+    return result;
+  });
 
-      // 3. LLMLingua / AI Context Compression (only for user/tool messages with content > 300 characters)
-      if (activeSettings.llmlingua?.enabled && (msg.role === "user" || msg.role === "tool") && content.length > 300) {
+  // 3. LLMLingua / AI Context Compression
+  await runStep("LLMLingua", !!activeSettings.llmlingua?.enabled, async (msgs) => {
+    const result: Message[] = [];
+    for (const m of msgs) {
+      let content = m.content || "";
+      if (m.role !== "system" && (m.role === "user" || m.role === "tool") && content.length > 300) {
         content = await compressLLMLingua(content, requestedModel);
       }
+      result.push({ ...m, content });
+    }
+    return result;
+  });
 
-      // 4. Headroom Compression (JSON minifying and CCR reversible substitution)
-      if (activeSettings.headroom.enabled) {
+  // 4. Headroom Compression (JSON minifying & CCR)
+  await runStep("Headroom", activeSettings.headroom.enabled, async (msgs) => {
+    const result: Message[] = [];
+    for (const m of msgs) {
+      let content = m.content || "";
+      if (m.role !== "system") {
         const hrResult = await compressHeadroom(content, {
           minify: activeSettings.headroom.minify,
           prune: activeSettings.headroom.prune,
@@ -88,25 +149,30 @@ export async function compressMessageList(
         content = hrResult.text;
         ccrCount += Object.keys(hrResult.mapping).length;
       }
+      // Preserve cache control logic
+      const originalMsg = messages.find(orig => orig.role === m.role);
+      const compressedMsg: Message = { ...m, content };
+      result.push(preserveCacheControl(originalMsg || m, compressedMsg));
     }
+    return result;
+  });
 
-    compressedAccumulated += content + "\n";
+  // Caveman Compression (inject system instruction) - run on final list
+  const preCavemanMessages = currentMessages.map(m => ({ ...m }));
+  await runStep("Caveman", activeSettings.caveman.enabled, async (msgs) => {
+    return injectCavemanPrompt(msgs, activeSettings.caveman.level);
+  });
 
-    const compressedMsg: Message = { ...msg, content };
-    processed.push(preserveCacheControl(msg, compressedMsg));
-  }
-
-  // 4. Caveman Compression (append system prompt instruction)
-  let finalProcessed = processed;
-  if (activeSettings.caveman.enabled) {
-    finalProcessed = injectCavemanPrompt(processed, activeSettings.caveman.level);
-  }
+  // Form original and compressed accumulated prompts for compatibility
+  const originalPrompt = messages.map(m => m.content || "").join("\n");
+  const compressedPrompt = preCavemanMessages.map(m => m.content || "").join("\n");
 
   return {
-    compressedMessages: finalProcessed,
-    originalPrompt: originalAccumulated,
-    compressedPrompt: compressedAccumulated,
-    ccrCount
+    compressedMessages: currentMessages,
+    originalPrompt,
+    compressedPrompt,
+    ccrCount,
+    pipelineSteps
   };
 }
 
@@ -213,7 +279,7 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
   const originalTokens = countPayloadTokens(originalMessages);
 
   // Apply Compression
-  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery, undefined, model);
+  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount, pipelineSteps } = await compressMessageList(originalMessages, userQuery, undefined, model);
   const compressedTokens = countPayloadTokens(compressedMessages);
   const savingsPercent = originalTokens > 0 ? ((originalTokens - compressedTokens) / originalTokens) * 100 : 0;
 
@@ -240,7 +306,8 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
         status: "success",
         ccrMappingsCount: 0,
         originalPrompt,
-        compressedPrompt: "[Served from Cache]"
+        compressedPrompt: "[Served from Cache]",
+        pipelineSteps
       });
       return new Response(JSON.stringify(cached), {
         headers: { "Content-Type": "application/json" }
@@ -266,7 +333,8 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
         errorMessage: `HTTP ${response.status}: ${errText.slice(0, 300)}`,
         ccrMappingsCount: ccrCount,
         originalPrompt,
-        compressedPrompt
+        compressedPrompt,
+        pipelineSteps
       });
       return new Response(errText, { status: response.status, headers: response.headers });
     }
@@ -285,7 +353,8 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
         status: "success",
         ccrMappingsCount: ccrCount,
         originalPrompt,
-        compressedPrompt
+        compressedPrompt,
+        pipelineSteps
       });
 
       const reconstructStream = makeReconstructStream(response.body!, "openai");
@@ -322,7 +391,8 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
       status: "success",
       ccrMappingsCount: ccrCount,
       originalPrompt,
-      compressedPrompt
+      compressedPrompt,
+      pipelineSteps
     });
 
     return new Response(JSON.stringify(responseJson), {
@@ -341,7 +411,8 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
       errorMessage: err.message,
       ccrMappingsCount: 0,
       originalPrompt,
-      compressedPrompt
+      compressedPrompt,
+      pipelineSteps
     });
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
@@ -372,7 +443,7 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
   const originalTokens = countPayloadTokens(originalMessages, systemPrompt);
 
   // Apply Compression
-  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery, undefined, model);
+  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount, pipelineSteps } = await compressMessageList(originalMessages, userQuery, undefined, model);
   
   // Compress system prompt if enabled
   let compressedSystem = systemPrompt;
@@ -407,7 +478,8 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
         status: "success",
         ccrMappingsCount: 0,
         originalPrompt,
-        compressedPrompt: "[Served from Cache]"
+        compressedPrompt: "[Served from Cache]",
+        pipelineSteps
       });
       return new Response(JSON.stringify(cached), {
         headers: { "Content-Type": "application/json" }
@@ -433,7 +505,8 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
         errorMessage: `HTTP ${response.status}: ${errText.slice(0, 300)}`,
         ccrMappingsCount: ccrCount,
         originalPrompt,
-        compressedPrompt
+        compressedPrompt,
+        pipelineSteps
       });
       return new Response(errText, { status: response.status, headers: response.headers });
     }
@@ -452,7 +525,8 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
         status: "success",
         ccrMappingsCount: ccrCount,
         originalPrompt,
-        compressedPrompt
+        compressedPrompt,
+        pipelineSteps
       });
 
       const reconstructStream = makeReconstructStream(response.body!, "anthropic");
@@ -494,7 +568,8 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
       status: "success",
       ccrMappingsCount: ccrCount,
       originalPrompt,
-      compressedPrompt
+      compressedPrompt,
+      pipelineSteps
     });
 
     return new Response(JSON.stringify(responseJson), {
@@ -513,7 +588,8 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
       errorMessage: err.message,
       ccrMappingsCount: 0,
       originalPrompt,
-      compressedPrompt
+      compressedPrompt,
+      pipelineSteps
     });
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
@@ -696,7 +772,7 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
   
   const originalTokens = countPayloadTokens(originalMessages);
 
-  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery);
+  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount, pipelineSteps } = await compressMessageList(originalMessages, userQuery);
   const compressedTokens = countPayloadTokens(compressedMessages);
   const savingsPercent = originalTokens > 0 ? ((originalTokens - compressedTokens) / originalTokens) * 100 : 0;
 
@@ -723,7 +799,8 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
         status: "success",
         ccrMappingsCount: 0,
         originalPrompt,
-        compressedPrompt: "[Served from Cache]"
+        compressedPrompt: "[Served from Cache]",
+        pipelineSteps
       });
       return new Response(JSON.stringify(cached), {
         headers: { "Content-Type": "application/json" }
@@ -749,7 +826,8 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
         errorMessage: `HTTP ${response.status}: ${errText.slice(0, 300)}`,
         ccrMappingsCount: ccrCount,
         originalPrompt,
-        compressedPrompt
+        compressedPrompt,
+        pipelineSteps
       });
       return new Response(errText, { status: response.status, headers: response.headers });
     }
@@ -767,7 +845,8 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
         status: "success",
         ccrMappingsCount: ccrCount,
         originalPrompt,
-        compressedPrompt
+        compressedPrompt,
+        pipelineSteps
       });
 
       const openAiStream = makeAnthropicToOpenAIStream(response.body!, model);
@@ -807,7 +886,8 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
       status: "success",
       ccrMappingsCount: ccrCount,
       originalPrompt,
-      compressedPrompt
+      compressedPrompt,
+      pipelineSteps
     });
 
     return new Response(JSON.stringify(openAiResponse), {
@@ -826,7 +906,8 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
       errorMessage: err.message,
       ccrMappingsCount: 0,
       originalPrompt,
-      compressedPrompt
+      compressedPrompt,
+      pipelineSteps
     });
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
