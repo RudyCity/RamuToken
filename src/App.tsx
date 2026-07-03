@@ -462,11 +462,11 @@ export default function App() {
               {isPipelineDropdownOpen && (
                 <>
                   <div
-                    className="fixed inset-0 z-40"
+                    className="fixed inset-0 z-[9998]"
                     onClick={() => setIsPipelineDropdownOpen(false)}
                   />
                   <div
-                    className="absolute right-0 mt-2 w-80 border border-slate-700 p-4 rounded-2xl shadow-2xl z-50 animate-in flex flex-col gap-3"
+                    className="absolute right-0 mt-2 w-80 border border-slate-700 p-4 rounded-2xl shadow-2xl z-[9999] animate-in flex flex-col gap-3"
                     style={{ background: "rgb(8,10,18)", boxShadow: "0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(168,85,247,0.12)" }}
                   >
                     <div className="flex items-center justify-between pb-2 border-b border-white/5">
