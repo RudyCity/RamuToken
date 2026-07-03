@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.51] - 2026-07-03
+
+### Changed
+- **Full-Width Layout for Pipeline Activity Explorer**: Relocated the Activity Explorer outside of the 2-column dashboard layout to give it full screen width. Changed the split-panel column allocation to `4/12` (for list) and `8/12` (for inspector) to provide maximum horizontal width for the side-by-side prompt diff panels, dramatically improving readability of code changes.
+
 ## [1.3.50] - 2026-07-03
 
 ### Changed
