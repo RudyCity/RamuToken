@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.35] - 2026-07-03
+
+### Changed
+- **Pipeline Status Card Updated**: Added 3 missing pipeline rows to the Dashboard's Pipeline Status card — **LLMLingua** (AI prompt compressor), **Request Cache** (zero-token identical replay), and **Verification Loop** (compiler & test self-correction). All 7 active pipelines are now reflected with live ACTIVE/IDLE status badges.
+
+---
+
 ## [1.3.34] - 2026-07-03
 
 ### Added

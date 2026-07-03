@@ -15,6 +15,9 @@ import {
   TrendingDown,
   Copy,
   Check,
+  Brain,
+  HardDrive,
+  ShieldCheck,
 } from "lucide-react";
 import { Metrics, RequestLog, CompressorSettings } from "../types";
 
@@ -264,6 +267,27 @@ export default function DashboardTab({
                 sub="Output instruction injection"
                 active={settings.caveman.enabled}
                 dotColor="#ec4899"
+              />
+              <PipelineRow
+                icon={<Brain className="w-4 h-4 text-violet-400" />}
+                name="LLMLingua"
+                sub="AI prompt compressor"
+                active={settings.llmlingua?.enabled ?? false}
+                dotColor="#a78bfa"
+              />
+              <PipelineRow
+                icon={<HardDrive className="w-4 h-4 text-neon-cyan" />}
+                name="Request Cache"
+                sub="Zero-token identical replay"
+                active={settings.cache.enabled}
+                dotColor="#06b6d4"
+              />
+              <PipelineRow
+                icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />}
+                name="Verification Loop"
+                sub="Compiler & test self-correction"
+                active={settings.verification.enabled}
+                dotColor="#34d399"
               />
             </div>
             <div className="mt-4 pt-4 border-t border-white/5 space-y-1.5">
