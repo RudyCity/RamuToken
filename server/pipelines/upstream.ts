@@ -7,7 +7,14 @@ export async function fetchUpstream(
   body: any, 
   provider: "openai" | "anthropic"
 ): Promise<Response> {
-  const preferCustom = settings.upstream.preferCustom && settings.upstream.customUrl;
+  // Resolve active custom provider from the list
+  const activeProvider = settings.upstream.preferCustom
+    ? settings.upstream.customProviders.find(
+        (p) => p.id === settings.upstream.activeCustomProviderId
+      )
+    : undefined;
+
+  const preferCustom = settings.upstream.preferCustom && !!activeProvider;
   const preferBifrost = !preferCustom && settings.upstream.preferBifrost && settings.upstream.bifrostUrl;
   let targetUrl = "";
   const requestHeaders = new Headers();
@@ -19,14 +26,13 @@ export async function fetchUpstream(
     }
   });
 
-  if (preferCustom) {
-    // Route to custom upstream URL
-    // Strip trailing slash if present
-    const baseUrl = settings.upstream.customUrl.replace(/\/$/, "");
+  if (preferCustom && activeProvider) {
+    // Route to active custom upstream provider
+    const baseUrl = activeProvider.url.replace(/\/$/, "");
     targetUrl = `${baseUrl}${endpoint}`;
-    
-    const headerName = settings.upstream.customHeader || "Authorization";
-    const headerVal = settings.upstream.customKey || headers.get(headerName) || "";
+
+    const headerName = activeProvider.header || "Authorization";
+    const headerVal = activeProvider.key || headers.get(headerName) || "";
     if (headerVal) {
       if (headerName.toLowerCase() === "authorization" && !headerVal.toLowerCase().startsWith("bearer ")) {
         requestHeaders.set(headerName, `Bearer ${headerVal}`);
@@ -34,7 +40,7 @@ export async function fetchUpstream(
         requestHeaders.set(headerName, headerVal);
       }
     }
-    console.log(`[Proxy] Routing Custom Upstream: ${targetUrl}`);
+    console.log(`[Proxy] Routing Custom Upstream (${activeProvider.name}): ${targetUrl}`);
   } else if (preferBifrost) {
     // Route to local Bifrost gateway
     // Bifrost maps routes as OpenAI endpoints. OpenAI or Anthropic targets are mapped internally.
@@ -66,11 +72,17 @@ export async function fetchUpstream(
   });
 }
 
+
 /**
  * Calls the user-configured upstream model directly to process custom prompts.
  */
 export async function callUpstreamLLM(prompt: string, system?: string, model?: string): Promise<string> {
-  const preferCustom = settings.upstream.preferCustom && settings.upstream.customUrl;
+  const activeProvider = settings.upstream.preferCustom
+    ? settings.upstream.customProviders.find(
+        (p) => p.id === settings.upstream.activeCustomProviderId
+      )
+    : undefined;
+  const preferCustom = settings.upstream.preferCustom && !!activeProvider;
   const isAnthropic = !preferCustom && (!!settings.upstream.anthropicKey || (!settings.upstream.openaiKey && settings.upstream.preferBifrost));
   const endpoint = isAnthropic ? "/v1/messages" : "/v1/chat/completions";
   const provider = isAnthropic ? "anthropic" : "openai";

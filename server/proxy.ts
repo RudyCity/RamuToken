@@ -836,7 +836,12 @@ async function buildGetHeaders(
   incomingHeaders: Headers,
   provider: "openai" | "anthropic"
 ): Promise<{ targetBase: string; headers: Headers }> {
-  const preferCustom = settings.upstream.preferCustom && settings.upstream.customUrl;
+  const activeProvider = settings.upstream.preferCustom
+    ? settings.upstream.customProviders.find(
+        (p) => p.id === settings.upstream.activeCustomProviderId
+      )
+    : undefined;
+  const preferCustom = settings.upstream.preferCustom && !!activeProvider;
   const preferBifrost = !preferCustom && settings.upstream.preferBifrost && settings.upstream.bifrostUrl;
 
   const requestHeaders = new Headers();
@@ -849,10 +854,10 @@ async function buildGetHeaders(
 
   let targetBase = "";
 
-  if (preferCustom) {
-    targetBase = settings.upstream.customUrl.replace(/\/$/, "");
-    const headerName = settings.upstream.customHeader || "Authorization";
-    const headerVal = settings.upstream.customKey || incomingHeaders.get(headerName) || "";
+  if (preferCustom && activeProvider) {
+    targetBase = activeProvider.url.replace(/\/$/, "");
+    const headerName = activeProvider.header || "Authorization";
+    const headerVal = activeProvider.key || incomingHeaders.get(headerName) || "";
     if (headerVal) {
       if (headerName.toLowerCase() === "authorization" && !headerVal.toLowerCase().startsWith("bearer ")) {
         requestHeaders.set(headerName, `Bearer ${headerVal}`);
@@ -860,7 +865,7 @@ async function buildGetHeaders(
         requestHeaders.set(headerName, headerVal);
       }
     }
-    console.log(`[Proxy] Models → Custom Upstream: ${targetBase}`);
+    console.log(`[Proxy] Models → Custom Upstream (${activeProvider.name}): ${targetBase}`);
   } else if (preferBifrost) {
     targetBase = settings.upstream.bifrostUrl.replace(/\/$/, "");
     console.log(`[Proxy] Models → Bifrost: ${targetBase}`);

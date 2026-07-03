@@ -603,12 +603,22 @@ export default function DashboardTab({
               </div>
 
               <div className="space-y-1.5">
-                {settings.upstream.preferCustom && (
-                  <div className="flex justify-between text-xxs font-mono text-slate-500">
-                    <span>Endpoint:</span>
-                    <span className="truncate max-w-[170px] text-slate-400 font-bold">{settings.upstream.customUrl || "—"}</span>
-                  </div>
-                )}
+                {settings.upstream.preferCustom && (() => {
+                  const active = (settings.upstream.customProviders || []).find(
+                    (p) => p.id === settings.upstream.activeCustomProviderId
+                  );
+                  return active ? (
+                    <div className="flex justify-between text-xxs font-mono text-slate-500">
+                      <span>Provider:</span>
+                      <span className="truncate max-w-[170px] text-slate-400 font-bold">{active.name || active.url || "—"}</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-xxs font-mono text-slate-500">
+                      <span>Provider:</span>
+                      <span className="text-amber-400 font-bold">None selected</span>
+                    </div>
+                  );
+                })()}
                 {!settings.upstream.preferCustom && settings.upstream.preferBifrost && (
                   <div className="flex justify-between text-xxs font-mono text-slate-500">
                     <span>Endpoint:</span>

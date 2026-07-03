@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw, X } from "lucide-react";
-import { CompressorSettings, ProjectProfile } from "../types";
+import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw, X, Plus, Pencil, Trash2, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { CompressorSettings, ProjectProfile, CustomProvider } from "../types";
 import { Section, SectionTitle, PipelineSection, CheckOption, Toggle } from "./SettingsHelpers";
 import LLMLinguaSettings from "./LLMLinguaSettings";
 import ProjectProfileSelector from "./ProjectProfileSelector";
@@ -44,11 +44,29 @@ export default function SettingsTab({
 }: SettingsTabProps) {
   const [bifrostStatus, setBifrostStatus] = useState<BifrostStatus>("idle");
   const [bifrostLatency, setBifrostLatency] = useState<number | null>(null);
-  const [customStatus, setCustomStatus] = useState<BifrostStatus>("idle");
-  const [customLatency, setCustomLatency] = useState<number | null>(null);
   const [copiedOpenAI, setCopiedOpenAI] = useState(false);
   const [copiedAnthropic, setCopiedAnthropic] = useState(false);
   const [showToken, setShowToken] = useState(false);
+
+  // ── Multi-provider custom upstream state ──────────────────────────────────
+  /** Per-provider connectivity test state keyed by provider ID. */
+  const [providerTestStatus, setProviderTestStatus] = useState<Record<string, BifrostStatus>>({});
+  const [providerTestLatency, setProviderTestLatency] = useState<Record<string, number | null>>({});
+  /** Tracks which provider card is expanded for editing (ID or null). */
+  const [editingProviderId, setEditingProviderId] = useState<string | null>(null);
+  /** Local draft for the provider being edited. */
+  const [editDraft, setEditDraft] = useState<CustomProvider | null>(null);
+  /** Controls the "Add Provider" form visibility. */
+  const [showAddForm, setShowAddForm] = useState(false);
+  /** Draft for a new provider being created. */
+  const [newProviderDraft, setNewProviderDraft] = useState<Omit<CustomProvider, "id">>({
+    name: "",
+    url: "",
+    key: "",
+    header: "Authorization",
+  });
+  /** Provider ID pending deletion confirmation. */
+  const [deletingProviderId, setDeletingProviderId] = useState<string | null>(null);
 
   // Background Python Daemon monitoring state
   const [daemonStatus, setDaemonStatus] = useState<{
@@ -125,27 +143,93 @@ export default function SettingsTab({
     }
   };
 
-  // Test Custom Upstream connectivity
-  const testCustomUpstream = async () => {
-    const rawUrl = settings.upstream.customUrl.replace(/\/$/, "");
+  // Test a specific provider's connectivity
+  const testProvider = async (provider: CustomProvider) => {
+    setProviderTestStatus((s) => ({ ...s, [provider.id]: "checking" }));
+    setProviderTestLatency((s) => ({ ...s, [provider.id]: null }));
+    const rawUrl = provider.url.replace(/\/$/, "");
     if (!rawUrl) return;
-    setCustomStatus("checking");
-    setCustomLatency(null);
     const start = Date.now();
     try {
-      // Try /health first, then root
       await fetch(`${rawUrl}/health`, { signal: AbortSignal.timeout(5000), mode: "no-cors" });
-      setCustomLatency(Date.now() - start);
-      setCustomStatus("online");
+      setProviderTestLatency((s) => ({ ...s, [provider.id]: Date.now() - start }));
+      setProviderTestStatus((s) => ({ ...s, [provider.id]: "online" }));
     } catch {
       try {
         await fetch(rawUrl, { signal: AbortSignal.timeout(5000), mode: "no-cors" });
-        setCustomLatency(Date.now() - start);
-        setCustomStatus("online");
+        setProviderTestLatency((s) => ({ ...s, [provider.id]: Date.now() - start }));
+        setProviderTestStatus((s) => ({ ...s, [provider.id]: "online" }));
       } catch {
-        setCustomStatus("offline");
+        setProviderTestStatus((s) => ({ ...s, [provider.id]: "offline" }));
       }
     }
+  };
+
+  // Add a new provider to the list
+  const handleAddProvider = () => {
+    if (!newProviderDraft.url.trim()) return;
+    const id = Math.random().toString(36).substring(2, 10);
+    const provider: CustomProvider = { id, ...newProviderDraft };
+    const updated: CompressorSettings = {
+      ...settings,
+      upstream: {
+        ...settings.upstream,
+        customProviders: [...(settings.upstream.customProviders || []), provider],
+        // Auto-set as active if it's the first provider
+        activeCustomProviderId:
+          (settings.upstream.customProviders || []).length === 0
+            ? id
+            : settings.upstream.activeCustomProviderId,
+      },
+    };
+    handleSaveSettings(updated);
+    setNewProviderDraft({ name: "", url: "", key: "", header: "Authorization" });
+    setShowAddForm(false);
+  };
+
+  // Delete a provider by ID
+  const handleDeleteProvider = (id: string) => {
+    const remaining = (settings.upstream.customProviders || []).filter((p) => p.id !== id);
+    const updated: CompressorSettings = {
+      ...settings,
+      upstream: {
+        ...settings.upstream,
+        customProviders: remaining,
+        activeCustomProviderId:
+          settings.upstream.activeCustomProviderId === id
+            ? remaining[0]?.id || ""
+            : settings.upstream.activeCustomProviderId,
+      },
+    };
+    handleSaveSettings(updated);
+    setDeletingProviderId(null);
+    if (editingProviderId === id) setEditingProviderId(null);
+  };
+
+  // Save an edited provider draft
+  const handleSaveEdit = () => {
+    if (!editDraft) return;
+    const updated: CompressorSettings = {
+      ...settings,
+      upstream: {
+        ...settings.upstream,
+        customProviders: (settings.upstream.customProviders || []).map((p) =>
+          p.id === editDraft.id ? editDraft : p
+        ),
+      },
+    };
+    handleSaveSettings(updated);
+    setEditingProviderId(null);
+    setEditDraft(null);
+  };
+
+  // Set a provider as the active custom upstream
+  const handleSetActive = (id: string) => {
+    const updated: CompressorSettings = {
+      ...settings,
+      upstream: { ...settings.upstream, activeCustomProviderId: id },
+    };
+    handleSaveSettings(updated);
   };
 
   const [fetchedModels, setFetchedModels] = useState<string[]>([]);
@@ -175,8 +259,9 @@ export default function SettingsTab({
     settings.upstream.preferBifrost,
     settings.upstream.openaiKey,
     settings.upstream.anthropicKey,
-    settings.upstream.customUrl,
-    settings.upstream.customKey
+    settings.upstream.activeCustomProviderId,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    JSON.stringify(settings.upstream.customProviders),
   ]);
 
   const localModelPresets = [
@@ -434,104 +519,300 @@ export default function SettingsTab({
           />
         </div>
 
-        {/* ── Custom Upstream inputs (visible when custom is enabled) ─ */}
+        {/* ── Custom Upstream provider list (visible when custom is enabled) ─ */}
         {settings.upstream.preferCustom && (
-          <div className="space-y-4 p-4 rounded-xl border border-neon-green/20 bg-neon-green/5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2 space-y-2">
-                <label className="block text-xxs font-bold uppercase tracking-wider text-emerald-400 font-mono">
-                  Custom Endpoint URL
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="input-custom-url"
-                    type="text"
-                    value={settings.upstream.customUrl}
-                    onChange={(e) => {
-                      handleInputChange("customUrl", e.target.value);
-                      setCustomStatus("idle");
-                    }}
-                    onBlur={() => handleSaveSettings(settings)}
-                    placeholder="https://api.together.xyz  or  http://localhost:11434"
-                    className="flex-1 bg-slate-950 border border-neon-green/25 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
-                  />
+          <div className="space-y-3">
+            {/* Header row */}
+            <div className="flex items-center justify-between">
+              <span className="text-xxs font-bold uppercase tracking-wider text-emerald-400 font-mono">
+                Custom Providers
+              </span>
+              <button
+                id="btn-add-provider"
+                onClick={() => { setShowAddForm((v) => !v); setEditingProviderId(null); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-neon-green/30 text-emerald-400 bg-neon-green/8 hover:bg-neon-green/15 transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Provider
+              </button>
+            </div>
+
+            {/* Add Provider inline form */}
+            {showAddForm && (
+              <div className="p-4 rounded-xl border border-neon-green/30 bg-neon-green/5 space-y-3">
+                <p className="text-xxs font-bold text-emerald-400 font-mono uppercase tracking-wider">New Provider</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] text-slate-400 font-mono mb-1">Name</label>
+                    <input
+                      id="input-new-provider-name"
+                      type="text"
+                      placeholder="e.g. OpenRouter, Ollama Local, Together AI"
+                      value={newProviderDraft.name}
+                      onChange={(e) => setNewProviderDraft((d) => ({ ...d, name: e.target.value }))}
+                      className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-3 py-2 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] text-slate-400 font-mono mb-1">Endpoint URL</label>
+                    <input
+                      id="input-new-provider-url"
+                      type="text"
+                      placeholder="https://openrouter.ai/api  or  http://localhost:11434"
+                      value={newProviderDraft.url}
+                      onChange={(e) => setNewProviderDraft((d) => ({ ...d, url: e.target.value }))}
+                      className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-3 py-2 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-mono mb-1">Auth Header</label>
+                    <input
+                      id="input-new-provider-header"
+                      type="text"
+                      placeholder="Authorization"
+                      value={newProviderDraft.header}
+                      onChange={(e) => setNewProviderDraft((d) => ({ ...d, header: e.target.value }))}
+                      className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-3 py-2 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-mono mb-1">API Key</label>
+                    <input
+                      id="input-new-provider-key"
+                      type="password"
+                      placeholder="sk-... or any token"
+                      value={newProviderDraft.key}
+                      onChange={(e) => setNewProviderDraft((d) => ({ ...d, key: e.target.value }))}
+                      className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-3 py-2 text-sm font-mono text-slate-400 focus:outline-none focus:border-neon-green transition-colors"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end pt-1">
                   <button
-                    id="btn-test-custom"
-                    onClick={testCustomUpstream}
-                    disabled={customStatus === "checking" || !settings.upstream.customUrl}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-40 shrink-0"
-                    style={{
-                      background: customStatus === "online"
-                        ? "rgba(16,185,129,0.12)"
-                        : customStatus === "offline"
-                        ? "rgba(236,72,153,0.12)"
-                        : "rgba(16,185,129,0.08)",
-                      borderColor: customStatus === "online"
-                        ? "rgba(16,185,129,0.4)"
-                        : customStatus === "offline"
-                        ? "rgba(236,72,153,0.35)"
-                        : "rgba(16,185,129,0.25)",
-                      color: customStatus === "online"
-                        ? "#10b981"
-                        : customStatus === "offline"
-                        ? "#ec4899"
-                        : "#34d399",
-                    }}
+                    onClick={() => { setShowAddForm(false); setNewProviderDraft({ name: "", url: "", key: "", header: "Authorization" }); }}
+                    className="px-4 py-2 rounded-xl text-xs font-bold border border-white/10 text-slate-400 hover:border-white/20 transition-all cursor-pointer"
                   >
-                    {customStatus === "checking" ? (
-                      <Loader className="w-3.5 h-3.5 animate-spin" />
-                    ) : customStatus === "online" ? (
-                      <Wifi className="w-3.5 h-3.5" />
-                    ) : customStatus === "offline" ? (
-                      <WifiOff className="w-3.5 h-3.5" />
-                    ) : (
-                      <Wifi className="w-3.5 h-3.5" />
-                    )}
-                    {customStatus === "checking"
-                      ? "Checking…"
-                      : customStatus === "online"
-                      ? `Online${customLatency ? ` (${customLatency}ms)` : ""}`
-                      : customStatus === "offline"
-                      ? "Offline"
-                      : "Test"}
+                    Cancel
+                  </button>
+                  <button
+                    id="btn-confirm-add-provider"
+                    onClick={handleAddProvider}
+                    disabled={!newProviderDraft.url.trim()}
+                    className="px-4 py-2 rounded-xl text-xs font-bold border border-neon-green/40 text-emerald-400 bg-neon-green/10 hover:bg-neon-green/20 disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 inline mr-1" />
+                    Add
                   </button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="block text-xxs font-bold uppercase tracking-wider text-emerald-400 font-mono">
-                  Auth Header Name
-                </label>
-                <input
-                  id="input-custom-header"
-                  type="text"
-                  value={settings.upstream.customHeader}
-                  onChange={(e) => handleInputChange("customHeader", e.target.value)}
-                  onBlur={() => handleSaveSettings(settings)}
-                  placeholder="Authorization"
-                  className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
-                />
-                <p className="text-[10px] text-slate-500 font-mono">
-                  e.g. <code className="text-emerald-400">Authorization</code>, <code className="text-emerald-400">x-api-key</code>
-                </p>
-              </div>
-              <div className="space-y-2">
-                <label className="block text-xxs font-bold uppercase tracking-wider text-emerald-400 font-mono">
-                  Custom API Key
-                </label>
-                <input
-                  id="input-custom-key"
-                  type="password"
-                  value={settings.upstream.customKey}
-                  onChange={(e) => handleInputChange("customKey", e.target.value)}
-                  onBlur={() => handleSaveSettings(settings)}
-                  placeholder="sk-... or any token"
-                  className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-400 focus:outline-none focus:border-neon-green transition-colors"
-                />
-                <p className="text-[10px] text-slate-500 font-mono">
-                  For <code className="text-emerald-400">Authorization</code> headers, <code className="text-emerald-400">Bearer</code> is auto-prepended.
-                </p>
-              </div>
-            </div>
+            )}
+
+            {/* Provider cards */}
+            {(settings.upstream.customProviders || []).length === 0 && !showAddForm && (
+              <p className="text-xs text-slate-500 font-mono text-center py-4 border border-dashed border-white/10 rounded-xl">
+                No providers yet. Click <strong className="text-emerald-400">+ Add Provider</strong> to get started.
+              </p>
+            )}
+
+            {(settings.upstream.customProviders || []).map((provider) => {
+              const isActive = settings.upstream.activeCustomProviderId === provider.id;
+              const testStatus = providerTestStatus[provider.id] || "idle";
+              const testLatency = providerTestLatency[provider.id];
+              const isEditing = editingProviderId === provider.id;
+              const isDeletePending = deletingProviderId === provider.id;
+
+              return (
+                <div
+                  key={provider.id}
+                  className="rounded-xl border transition-all overflow-hidden"
+                  style={{
+                    borderColor: isActive ? "rgba(16,185,129,0.4)" : "rgba(255,255,255,0.06)",
+                    background: isActive ? "rgba(16,185,129,0.05)" : "rgba(15,23,42,0.5)",
+                  }}
+                >
+                  {/* Card header */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    {/* Active indicator dot */}
+                    <button
+                      id={`btn-set-active-${provider.id}`}
+                      onClick={() => handleSetActive(provider.id)}
+                      title={isActive ? "Active provider" : "Set as active"}
+                      className="shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer"
+                      style={{
+                        borderColor: isActive ? "#10b981" : "#334155",
+                        background: isActive ? "#10b981" : "transparent",
+                        boxShadow: isActive ? "0 0 6px #10b981" : "none",
+                      }}
+                    >
+                      {isActive && <Check className="w-2.5 h-2.5 text-slate-950" strokeWidth={3} />}
+                    </button>
+
+                    {/* Name + URL */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-100 truncate">
+                        {provider.name || <span className="text-slate-500 italic">Unnamed</span>}
+                        {isActive && (
+                          <span className="ml-2 text-[10px] font-mono text-emerald-400 bg-neon-green/10 px-1.5 py-0.5 rounded">
+                            ACTIVE
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-slate-500 font-mono truncate">{provider.url || "—"}</p>
+                    </div>
+
+                    {/* Test button */}
+                    <button
+                      id={`btn-test-provider-${provider.id}`}
+                      onClick={() => testProvider(provider)}
+                      disabled={testStatus === "checking" || !provider.url}
+                      title="Test connectivity"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer disabled:opacity-40 shrink-0"
+                      style={{
+                        background: testStatus === "online"
+                          ? "rgba(16,185,129,0.12)"
+                          : testStatus === "offline"
+                          ? "rgba(236,72,153,0.12)"
+                          : "rgba(16,185,129,0.07)",
+                        borderColor: testStatus === "online"
+                          ? "rgba(16,185,129,0.4)"
+                          : testStatus === "offline"
+                          ? "rgba(236,72,153,0.35)"
+                          : "rgba(16,185,129,0.2)",
+                        color: testStatus === "online"
+                          ? "#10b981"
+                          : testStatus === "offline"
+                          ? "#ec4899"
+                          : "#34d399",
+                      }}
+                    >
+                      {testStatus === "checking" ? (
+                        <Loader className="w-3 h-3 animate-spin" />
+                      ) : testStatus === "online" ? (
+                        <Wifi className="w-3 h-3" />
+                      ) : testStatus === "offline" ? (
+                        <WifiOff className="w-3 h-3" />
+                      ) : (
+                        <Wifi className="w-3 h-3" />
+                      )}
+                      {testStatus === "checking"
+                        ? "..."
+                        : testStatus === "online"
+                        ? testLatency ? `${testLatency}ms` : "OK"
+                        : testStatus === "offline"
+                        ? "Fail"
+                        : "Test"}
+                    </button>
+
+                    {/* Edit toggle */}
+                    <button
+                      id={`btn-edit-provider-${provider.id}`}
+                      onClick={() => {
+                        if (isEditing) {
+                          setEditingProviderId(null);
+                          setEditDraft(null);
+                        } else {
+                          setEditingProviderId(provider.id);
+                          setEditDraft({ ...provider });
+                          setShowAddForm(false);
+                        }
+                      }}
+                      title={isEditing ? "Collapse" : "Edit"}
+                      className="p-1.5 rounded-lg border border-white/8 text-slate-400 hover:text-slate-200 hover:border-white/20 transition-all cursor-pointer"
+                    >
+                      {isEditing ? <ChevronUp className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {/* Delete button */}
+                    {isDeletePending ? (
+                      <div className="flex gap-1 items-center">
+                        <button
+                          id={`btn-confirm-delete-${provider.id}`}
+                          onClick={() => handleDeleteProvider(provider.id)}
+                          className="px-2 py-1 rounded-lg text-xs font-bold border border-red-500/40 text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all cursor-pointer"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setDeletingProviderId(null)}
+                          className="px-2 py-1 rounded-lg text-xs border border-white/10 text-slate-400 hover:border-white/20 transition-all cursor-pointer"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        id={`btn-delete-provider-${provider.id}`}
+                        onClick={() => setDeletingProviderId(provider.id)}
+                        title="Delete provider"
+                        className="p-1.5 rounded-lg border border-white/8 text-slate-500 hover:text-red-400 hover:border-red-500/30 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Inline edit form */}
+                  {isEditing && editDraft && (
+                    <div className="px-4 pb-4 pt-1 border-t border-white/5 space-y-3 bg-black/20">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="md:col-span-2">
+                          <label className="block text-[10px] text-slate-400 font-mono mb-1">Name</label>
+                          <input
+                            type="text"
+                            value={editDraft.name}
+                            onChange={(e) => setEditDraft((d) => d ? { ...d, name: e.target.value } : d)}
+                            className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-3 py-2 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[10px] text-slate-400 font-mono mb-1">Endpoint URL</label>
+                          <input
+                            type="text"
+                            value={editDraft.url}
+                            onChange={(e) => setEditDraft((d) => d ? { ...d, url: e.target.value } : d)}
+                            className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-3 py-2 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-mono mb-1">Auth Header</label>
+                          <input
+                            type="text"
+                            value={editDraft.header}
+                            onChange={(e) => setEditDraft((d) => d ? { ...d, header: e.target.value } : d)}
+                            className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-3 py-2 text-sm font-mono text-slate-200 focus:outline-none focus:border-neon-green transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-mono mb-1">API Key</label>
+                          <input
+                            type="password"
+                            value={editDraft.key}
+                            onChange={(e) => setEditDraft((d) => d ? { ...d, key: e.target.value } : d)}
+                            className="w-full bg-slate-950 border border-neon-green/25 rounded-xl px-3 py-2 text-sm font-mono text-slate-400 focus:outline-none focus:border-neon-green transition-colors"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => { setEditingProviderId(null); setEditDraft(null); }}
+                          className="px-4 py-2 rounded-xl text-xs font-bold border border-white/10 text-slate-400 hover:border-white/20 transition-all cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          id={`btn-save-edit-${provider.id}`}
+                          onClick={handleSaveEdit}
+                          className="px-4 py-2 rounded-xl text-xs font-bold border border-neon-green/40 text-emerald-400 bg-neon-green/10 hover:bg-neon-green/20 transition-all cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5 inline mr-1" />
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

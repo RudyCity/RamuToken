@@ -7,6 +7,15 @@ export interface ProjectProfile {
   autoDetected: boolean;
 }
 
+/** A single custom upstream provider entry (e.g. OpenRouter, Ollama, Together AI). */
+export interface CustomProvider {
+  id: string;
+  name: string;
+  url: string;
+  key: string;
+  header: string;
+}
+
 export interface CompressorSettings {
   rtk: {
     enabled: boolean;
@@ -49,9 +58,10 @@ export interface CompressorSettings {
     anthropicKey: string;
     preferBifrost: boolean;
     preferCustom: boolean;
-    customUrl: string;
-    customKey: string;
-    customHeader: string;
+    /** Active custom provider ID (references an entry in customProviders). */
+    activeCustomProviderId: string;
+    /** List of all defined custom upstream providers. */
+    customProviders: CustomProvider[];
   };
   server: {
     port: number;

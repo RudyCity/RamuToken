@@ -71,9 +71,8 @@ export default function App() {
       anthropicKey: "",
       preferBifrost: true,
       preferCustom: false,
-      customUrl: "",
-      customKey: "",
-      customHeader: "Authorization"
+      activeCustomProviderId: "",
+      customProviders: [],
     },
     server: {
       port: 6875,

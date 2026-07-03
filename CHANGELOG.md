@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.45] - 2026-07-03
+
+### Added
+- **Multiple Custom Upstream Providers**: Replaced the single "Route via Custom Upstream Endpoint" configuration with a fully-featured multi-provider management system. Users can now define, name, edit, delete, and switch between multiple custom upstream providers (e.g. OpenRouter, Together AI, Ollama, LiteLLM) directly from the Settings UI. Each provider entry stores its own URL, API key, and auth header. A radio-style "Set Active" control selects which provider handles live requests. Per-provider connectivity **Test** buttons show latency inline on each card.
+- **Backward-Compatible Migration**: On first start after upgrade, any existing `customUrl`/`customKey`/`customHeader` config in `db.json` is automatically migrated into the new `customProviders` array format with the provider set as active — no data loss.
+
+### Changed
+- **Dashboard Active Provider Display**: The upstream routing card in the Dashboard now shows the **name** of the active custom provider instead of a raw URL.
+- **Server Proxy Routing** (`proxy.ts`, `upstream.ts`): All upstream routing logic now resolves the active provider via `activeCustomProviderId` → `customProviders` lookup instead of the retired single-field approach.
+
+---
+
 ## [1.3.44] - 2026-07-03
 
 ### Added

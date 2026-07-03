@@ -10,6 +10,15 @@ export interface ProjectProfile {
   autoDetected: boolean;
 }
 
+/** A single custom upstream provider entry (e.g. OpenRouter, Ollama, Together AI). */
+export interface CustomProvider {
+  id: string;
+  name: string;
+  url: string;
+  key: string;
+  header: string;
+}
+
 export interface CompressorSettings {
   rtk: {
     enabled: boolean;
@@ -52,9 +61,10 @@ export interface CompressorSettings {
     anthropicKey: string;
     preferBifrost: boolean;
     preferCustom: boolean;
-    customUrl: string;
-    customKey: string;
-    customHeader: string;
+    /** Active custom provider ID (references an entry in customProviders). */
+    activeCustomProviderId: string;
+    /** List of all defined custom upstream providers. */
+    customProviders: CustomProvider[];
   };
   server: {
     port: number;
@@ -129,9 +139,8 @@ export let settings: CompressorSettings = {
     anthropicKey: process.env.ANTHROPIC_API_KEY || "",
     preferBifrost: true,
     preferCustom: false,
-    customUrl: "",
-    customKey: "",
-    customHeader: "Authorization",
+    activeCustomProviderId: "",
+    customProviders: [],
   },
   server: {
     port: 6875,
@@ -306,6 +315,27 @@ export function loadFromDisk() {
       console.log(`[Persistence] Loaded settings, metrics, and ${logsHistory.length} logs from disk.`);
       if (db.settings?.server?.port) {
         console.log(`[Persistence] Restored server port: ${db.settings.server.port}`);
+      }
+
+      // ── Backward-compat migration: single customUrl → customProviders array ──
+      const u = settings.upstream as any;
+      if (u.customUrl && (!u.customProviders || u.customProviders.length === 0)) {
+        const migratedId = Math.random().toString(36).substring(2, 10);
+        const migratedProvider: CustomProvider = {
+          id: migratedId,
+          name: "Custom Upstream",
+          url: u.customUrl || "",
+          key: u.customKey || "",
+          header: u.customHeader || "Authorization",
+        };
+        settings.upstream.customProviders = [migratedProvider];
+        settings.upstream.activeCustomProviderId = migratedId;
+        // Remove legacy fields
+        delete u.customUrl;
+        delete u.customKey;
+        delete u.customHeader;
+        console.log("[Persistence] Migrated legacy customUrl to customProviders array.");
+        saveToDisk();
       }
     }
   } catch (err) {
