@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw, X, Plus, Pencil, Trash2, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw, X, Plus, Pencil, Trash2, Check, ChevronUp } from "lucide-react";
 import { CompressorSettings, ProjectProfile, CustomProvider } from "../types";
 import { Section, SectionTitle, PipelineSection, CheckOption, Toggle } from "./SettingsHelpers";
 import LLMLinguaSettings from "./LLMLinguaSettings";

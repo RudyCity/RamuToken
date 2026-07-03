@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.56] - 2026-07-03
+
+### Fixed
+- **`server/index.ts`**: Cast `error.code` via `Number()` to resolve `TS2322` — Node's exec callback types `error.code` as `string | number | undefined`, which was incompatible with the `number` return slot.
+- **`server/pipelines/rtk.ts`**: Added missing `unlinkSync` to the `fs` import — it was used on line 148 for temp zip cleanup but was never imported, causing `TS2304 Cannot find name 'unlinkSync'`.
+- **`server/pipelines/serena.ts`**: Removed unused `mkdirSync` from `fs` import (`TS6133`).
+- **`src/components/DashboardTab.tsx`**: Removed unused lucide-react imports (`ChevronsLeft`, `ChevronsRight`, `HardDrive`, `ShieldCheck`); replaced unused state declarations (`tweetCopied`, `llmLinguaPage`, `LLMLINGUA_PAGE_SIZE`) with removals; converted `itemsPerPage` from `useState` to a plain `const` since the setter was never used; prefixed unused destructured props (`settings`, `backendPort`) with `_` to suppress `TS6133`.
+- **`src/components/SettingsTab.tsx`**: Removed unused `ChevronDown` from lucide-react import (`TS6133`).
+
 ## [1.3.55] - 2026-07-03
 
 ### Fixed

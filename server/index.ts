@@ -375,7 +375,7 @@ Bun.serve({
                   resolve({
                     stdout: stdout || "",
                     stderr: stderr || "",
-                    code: error ? (error.code ?? 1) : 0
+                    code: error ? (Number(error.code) || 1) : 0
                   });
                 });
               });

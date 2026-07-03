@@ -10,14 +10,10 @@ import {
   XCircle,
   ChevronRight,
   ChevronLeft,
-  ChevronsLeft,
-  ChevronsRight,
   TrendingDown,
   Copy,
   Check,
   Brain,
-  HardDrive,
-  ShieldCheck,
 } from "lucide-react";
 import { Metrics, RequestLog, CompressorSettings, LLMLinguaLog } from "../types";
 
@@ -91,16 +87,13 @@ export default function DashboardTab({
   metrics,
   logs,
   llmLinguaLogs,
-  settings,
+  settings: _settings,
   selectedLog,
   setSelectedLog,
-  backendPort,
+  backendPort: _backendPort,
 }: DashboardTabProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [tweetCopied, setTweetCopied] = useState(false);
-  const [llmLinguaPage, setLlmLinguaPage] = useState(1);
-  const LLMLINGUA_PAGE_SIZE = 10;
+  const itemsPerPage = 10; // fixed page size — no setter needed
 
   const [now, setNow] = useState(Date.now());
 

@@ -3,7 +3,7 @@
  * Parses TS/JS and Python files to extract signatures and collapse function/method bodies.
  */
 
-import { existsSync, mkdirSync, promises as fsPromises } from "fs";
+import { existsSync, promises as fsPromises } from "fs";
 import { join } from "path";
 import { pythonDaemon } from "./python_daemon";
 import { settings } from "../config";

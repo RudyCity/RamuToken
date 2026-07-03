@@ -5,7 +5,7 @@
  */
 
 import { spawn, spawnSync } from "child_process";
-import { existsSync, mkdirSync, promises as fsPromises } from "fs";
+import { existsSync, mkdirSync, unlinkSync, promises as fsPromises } from "fs";
 import { join } from "path";
 
 // Stubs for functions previously implemented in TypeScript
