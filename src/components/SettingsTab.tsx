@@ -138,6 +138,19 @@ export default function SettingsTab({
     }
   };
 
+  const localModelPresets = [
+    { value: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank", label: "LLMLingua-2 BERT Multilingual (Default - 500MB)" },
+    { value: "microsoft/llmlingua-2-xlm-roberta-large-meetingbank", label: "LLMLingua-2 XLM-RoBERTa Large (2GB)" },
+    { value: "gpt2", label: "GPT-2 (Classic - 124M params)" }
+  ];
+
+  const apiModelPresets = [
+    { value: "auto", label: "Auto (cheaper dynamic detection)" },
+    { value: "gpt-4o-mini", label: "OpenAI GPT-4o-Mini" },
+    { value: "claude-3-5-haiku-20241022", label: "Anthropic Claude 3.5 Haiku" },
+    { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" }
+  ];
+
   // Nested components moved outside SettingsTab to prevent unmounting & scroll resets
 
   return (
@@ -746,14 +759,38 @@ export default function SettingsTab({
                   <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
                     HuggingFace Local Model
                   </label>
-                  <input
-                    type="text"
-                    value={settings.llmlingua?.localModel || ""}
-                    placeholder="e.g. microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank"
-                    onChange={(e) => handleLlmlinguaInputChange("localModel", e.target.value)}
-                    onBlur={() => handleSaveSettings(settings)}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple"
-                  />
+                  <select
+                    value={localModelPresets.some(p => p.value === settings.llmlingua?.localModel) ? settings.llmlingua?.localModel : "custom"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val !== "custom") {
+                        handleLlmlinguaInputChange("localModel", val);
+                        handleSaveSettings({
+                          ...settings,
+                          llmlingua: { ...settings.llmlingua, localModel: val }
+                        });
+                      } else {
+                        handleLlmlinguaInputChange("localModel", "");
+                      }
+                    }}
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple cursor-pointer mb-2 font-mono"
+                  >
+                    {localModelPresets.map(p => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                    <option value="custom">Custom Model Path...</option>
+                  </select>
+
+                  {(!settings.llmlingua?.localModel || !localModelPresets.some(p => p.value === settings.llmlingua?.localModel)) && (
+                    <input
+                      type="text"
+                      value={settings.llmlingua?.localModel || ""}
+                      placeholder="e.g. microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank"
+                      onChange={(e) => handleLlmlinguaInputChange("localModel", e.target.value)}
+                      onBlur={() => handleSaveSettings(settings)}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple font-mono"
+                    />
+                  )}
                   <p className="text-[10px] text-slate-500 mt-1">
                     Loads locally using python background daemon. Default is extremely fast and light.
                   </p>
@@ -784,14 +821,38 @@ export default function SettingsTab({
                   <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
                     Compression Target Model
                   </label>
-                  <input
-                    type="text"
-                    value={settings.llmlingua?.apiModel || ""}
-                    placeholder="auto"
-                    onChange={(e) => handleLlmlinguaInputChange("apiModel", e.target.value)}
-                    onBlur={() => handleSaveSettings(settings)}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple"
-                  />
+                  <select
+                    value={apiModelPresets.some(p => p.value === settings.llmlingua?.apiModel) ? settings.llmlingua?.apiModel : "custom"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val !== "custom") {
+                        handleLlmlinguaInputChange("apiModel", val);
+                        handleSaveSettings({
+                          ...settings,
+                          llmlingua: { ...settings.llmlingua, apiModel: val }
+                        });
+                      } else {
+                        handleLlmlinguaInputChange("apiModel", "");
+                      }
+                    }}
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple cursor-pointer mb-2 font-mono"
+                  >
+                    {apiModelPresets.map(p => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                    <option value="custom">Custom Model ID...</option>
+                  </select>
+
+                  {(!settings.llmlingua?.apiModel || !apiModelPresets.some(p => p.value === settings.llmlingua?.apiModel)) && (
+                    <input
+                      type="text"
+                      value={settings.llmlingua?.apiModel || ""}
+                      placeholder="auto"
+                      onChange={(e) => handleLlmlinguaInputChange("apiModel", e.target.value)}
+                      onBlur={() => handleSaveSettings(settings)}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple font-mono"
+                    />
+                  )}
                   <p className="text-[10px] text-slate-500 mt-1">
                     Set model name (e.g. <code className="text-neon-purple">gpt-4o-mini</code> or <code className="text-neon-purple">claude-3-5-haiku-20241022</code>) or keep <code className="text-neon-purple">auto</code> to select a cheap model dynamically.
                   </p>
