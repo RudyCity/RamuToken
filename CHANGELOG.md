@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.34] - 2026-07-03
+
+### Added
+- **URL Hash-Based Tab Routing**: Tab navigation now syncs with the URL hash (`#dashboard`, `#testbench`, `#settings`). Refreshing the page or sharing a URL preserves the active tab. Browser back/forward navigation also works correctly. Tab links changed from `<button>` to `<a href="#tabId">` elements for proper URL semantics.
+
+---
+
 ## [1.3.33] - 2026-07-03
 
 ### Added

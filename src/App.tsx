@@ -14,7 +14,7 @@ import DashboardTab from "./components/DashboardTab";
 import PlaygroundTab from "./components/PlaygroundTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.3.32";
+const APP_VERSION = "1.3.34";
 
 interface Toast {
   id: string;
@@ -23,7 +23,15 @@ interface Toast {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");
+  type TabId = "dashboard" | "testbench" | "settings";
+  const VALID_TABS: TabId[] = ["dashboard", "testbench", "settings"];
+
+  const getTabFromHash = (): TabId => {
+    const hash = window.location.hash.replace("#", "") as TabId;
+    return VALID_TABS.includes(hash) ? hash : "dashboard";
+  };
+
+  const [activeTab, setActiveTab] = useState<TabId>(getTabFromHash);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = (message: string, type: "success" | "error" | "info" = "success") => {
@@ -313,6 +321,19 @@ export default function App() {
     setSettings(updated);
   };
 
+  // Sync tab → URL hash
+  const handleTabChange = (id: TabId) => {
+    setActiveTab(id);
+    window.location.hash = id;
+  };
+
+  // Listen for browser back/forward navigation
+  useEffect(() => {
+    const onHashChange = () => setActiveTab(getTabFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   const navItems = [
     { id: "dashboard" as const, label: "Dashboard", icon: Activity, activeColor: "bg-neon-purple text-white shadow-[0_0_18px_rgba(168,85,247,0.35)]" },
     { id: "testbench" as const, label: "Playground", icon: Terminal, activeColor: "bg-neon-cyan text-slate-950 shadow-[0_0_18px_rgba(6,182,212,0.35)] font-extrabold" },
@@ -341,17 +362,18 @@ export default function App() {
           {/* Nav Tabs — center */}
           <nav className="flex items-center bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-0.5">
             {navItems.map(({ id, label, icon: Icon, activeColor }) => (
-              <button
+              <a
                 key={id}
                 id={`tab-${id}`}
-                onClick={() => setActiveTab(id)}
+                href={`#${id}`}
+                onClick={(e) => { e.preventDefault(); handleTabChange(id); }}
                 className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all duration-300 cursor-pointer ${
                   activeTab === id ? activeColor : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 <span className="hidden sm:inline">{label}</span>
-              </button>
+              </a>
             ))}
           </nav>
 
