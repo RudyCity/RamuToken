@@ -38,7 +38,11 @@ export async function fetchUpstream(
   } else if (preferBifrost) {
     // Route to local Bifrost gateway
     // Bifrost maps routes as OpenAI endpoints. OpenAI or Anthropic targets are mapped internally.
-    targetUrl = `${settings.upstream.bifrostUrl}${endpoint}`;
+    let targetEndpoint = endpoint;
+    if (provider === "anthropic" && endpoint.startsWith("/v1/")) {
+      targetEndpoint = `/anthropic${endpoint}`;
+    }
+    targetUrl = `${settings.upstream.bifrostUrl}${targetEndpoint}`;
     console.log(`[Proxy] Routing via Bifrost: ${targetUrl}`);
   } else {
     // Route directly to official provider APIs
