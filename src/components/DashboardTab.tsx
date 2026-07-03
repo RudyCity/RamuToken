@@ -115,6 +115,16 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+function formatRelativeTime(timestamp: number, now: number): string {
+  const diffSec = Math.floor((now - timestamp) / 1000);
+  if (diffSec < 5) return "Just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  return `${diffHr}h ago`;
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function DashboardTab({
   metrics,
@@ -130,6 +140,15 @@ export default function DashboardTab({
   const [tweetCopied, setTweetCopied] = useState(false);
   const [llmLinguaPage, setLlmLinguaPage] = useState(1);
   const LLMLINGUA_PAGE_SIZE = 10;
+
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [activeLogTab, setActiveLogTab] = useState<"all" | "rtk" | "serena" | "llmlingua" | "headroom" | "caveman" | "llmlingua_direct">("all");
 
@@ -411,6 +430,7 @@ export default function DashboardTab({
                   <>
                     <thead>
                       <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
+                        <th className="py-3 px-3">Age</th>
                         <th className="py-3 px-3">Status</th>
                         <th className="py-3 px-3">Provider</th>
                         <th className="py-3 px-3">Model</th>
@@ -418,14 +438,14 @@ export default function DashboardTab({
                         <th className="py-3 px-3">Compressed</th>
                         <th className="py-3 px-3">Savings</th>
                         <th className="py-3 px-3">CCR</th>
-                        <th className="py-3 px-3">Time</th>
+                        <th className="py-3 px-3">Latency</th>
                         <th className="py-3 px-3 text-right">Detail</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayLogs.length === 0 ? (
                         <tr>
-                          <td colSpan={9} className="py-10 text-center text-xs font-mono text-slate-600">
+                          <td colSpan={10} className="py-10 text-center text-xs font-mono text-slate-600">
                             No requests yet. Send traffic through the proxy to see logs here.
                           </td>
                         </tr>
@@ -438,6 +458,9 @@ export default function DashboardTab({
                               className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
                               onClick={() => setSelectedLog(item)}
                             >
+                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap" title={new Date(item.timestamp).toLocaleString()}>
+                                {formatRelativeTime(item.timestamp, now)}
+                              </td>
                               <td className="py-3 px-3">
                                 {item.status === "success" ? (
                                   <span className="flex items-center gap-1.5 text-neon-green">
@@ -501,13 +524,13 @@ export default function DashboardTab({
                   <>
                     <thead>
                       <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
-                        <th className="py-3 px-3">Time</th>
+                        <th className="py-3 px-3">Age</th>
                         <th className="py-3 px-3">Method</th>
                         <th className="py-3 px-3">Model</th>
                         <th className="py-3 px-3 text-right">Original</th>
                         <th className="py-3 px-3 text-right">Compressed</th>
                         <th className="py-3 px-3 text-right">Savings</th>
-                        <th className="py-3 px-3 text-right">Duration</th>
+                        <th className="py-3 px-3 text-right">Latency</th>
                         <th className="py-3 px-3 text-right">Status</th>
                         <th className="py-3 px-3 text-right">Detail</th>
                       </tr>
@@ -528,8 +551,8 @@ export default function DashboardTab({
                               className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
                               onClick={() => setSelectedLog(item)}
                             >
-                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
-                                {new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap" title={new Date(item.timestamp).toLocaleString()}>
+                                {formatRelativeTime(item.timestamp, now)}
                               </td>
                               <td className="py-3 px-3">
                                 {item.method === "local" ? (
@@ -597,20 +620,21 @@ export default function DashboardTab({
                   <>
                     <thead>
                       <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
+                        <th className="py-3 px-3">Age</th>
                         <th className="py-3 px-3">Status</th>
                         <th className="py-3 px-3">Request ID</th>
                         <th className="py-3 px-3">Model</th>
                         <th className="py-3 px-3 text-right">Before Step</th>
                         <th className="py-3 px-3 text-right">After Step</th>
                         <th className="py-3 px-3 text-right">Savings</th>
-                        <th className="py-3 px-3">Time</th>
+                        <th className="py-3 px-3 text-right">Latency</th>
                         <th className="py-3 px-3 text-right">Detail</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayLogs.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="py-10 text-center text-xs font-mono text-slate-600">
+                          <td colSpan={9} className="py-10 text-center text-xs font-mono text-slate-600">
                             No requests used this compression feature step yet.
                           </td>
                         </tr>
@@ -637,6 +661,9 @@ export default function DashboardTab({
                                 setSelectedStep(targetStepName);
                               }}
                             >
+                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap" title={new Date(item.timestamp).toLocaleString()}>
+                                {formatRelativeTime(item.timestamp, now)}
+                              </td>
                               <td className="py-3 px-3">
                                 {item.status === "success" ? (
                                   <span className="flex items-center gap-1.5 text-neon-green">
@@ -664,9 +691,7 @@ export default function DashboardTab({
                                   {savings.toFixed(0)}%
                                 </span>
                               </td>
-                              <td className="py-3 px-3 text-slate-500">
-                                {new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                              </td>
+                              <td className="py-3 px-3 text-right text-slate-500">{item.durationMs}ms</td>
                               <td className="py-3 px-3 text-right">
                                 <button
                                   onClick={(e) => {

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.49] - 2026-07-03
+
+### Added
+- **Unified Tabbed logs**: Combined the request logs, individual compression module progression steps (RTK, Serena, LLMLingua, Headroom, Caveman), and direct LLMLingua activity into a unified tabbed logs panel with inline pagination.
+- **Relative Time (Age) Ticker**: Added a live relative age counter (`Age` column) for all logs, updating every 5 seconds (e.g. "Just now", "10s ago", "2m ago") with full timestamp tooltips.
+- **Latency Column**: Changed Duration/Time column headers to `Latency` across all tabbed views to accurately represent request round-trip times.
+
 ## [1.3.48] - 2026-07-03
 
 ### Added

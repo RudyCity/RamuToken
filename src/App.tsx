@@ -14,7 +14,7 @@ import DashboardTab from "./components/DashboardTab";
 import PlaygroundTab from "./components/PlaygroundTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.3.48";
+const APP_VERSION = "1.3.49";
 
 interface Toast {
   id: string;
