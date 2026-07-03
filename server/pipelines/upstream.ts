@@ -65,7 +65,7 @@ export async function fetchUpstream(
 /**
  * Calls the user-configured upstream model directly to process custom prompts.
  */
-export async function callUpstreamLLM(prompt: string, system?: string): Promise<string> {
+export async function callUpstreamLLM(prompt: string, system?: string, model?: string): Promise<string> {
   const isAnthropic = !!settings.upstream.anthropicKey || (!settings.upstream.openaiKey && settings.upstream.preferBifrost);
   const endpoint = isAnthropic ? "/v1/messages" : "/v1/chat/completions";
   const provider = isAnthropic ? "anthropic" : "openai";
@@ -78,15 +78,18 @@ export async function callUpstreamLLM(prompt: string, system?: string): Promise<
     headers.set("Authorization", `Bearer ${settings.upstream.openaiKey}`);
   }
 
-  const model = isAnthropic ? "claude-3-5-sonnet-20241022" : "gpt-4o-mini"; // Default fallback models
+  let targetModel = model;
+  if (!targetModel || targetModel === "auto") {
+    targetModel = isAnthropic ? "claude-3-5-sonnet-20241022" : "gpt-4o-mini"; // Default fallback models
+  }
   
   const body = isAnthropic ? {
-    model,
+    model: targetModel,
     max_tokens: 1024,
     system,
     messages: [{ role: "user", content: prompt }]
   } : {
-    model,
+    model: targetModel,
     messages: [
       ...(system ? [{ role: "system", content: system }] : []),
       { role: "user", content: prompt }

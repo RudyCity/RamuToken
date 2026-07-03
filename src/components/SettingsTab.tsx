@@ -4,9 +4,10 @@ import { CompressorSettings } from "../types";
 
 interface SettingsTabProps {
   settings: CompressorSettings;
-  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification", field: string) => void;
-  handleSliderChange: (pipeline: "serena" | "headroom", field: string, val: number) => void;
+  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification" | "llmlingua", field: string) => void;
+  handleSliderChange: (pipeline: "serena" | "headroom" | "llmlingua", field: string, val: number) => void;
   handleInputChange: (field: string, val: string) => void;
+  handleLlmlinguaInputChange: (field: string, val: string) => void;
   handleSaveSettings: (updatedSettings: CompressorSettings) => void;
   handleCavemanLevelChange: (level: "low" | "medium" | "high" | "wenyan") => void;
   backendPort: number;
@@ -63,7 +64,7 @@ interface PipelineSectionProps {
   color: string;
   activeGradient: string;
   children?: React.ReactNode;
-  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification", field: string) => void;
+  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification" | "llmlingua", field: string) => void;
 }
 
 function PipelineSection({
@@ -141,6 +142,7 @@ export default function SettingsTab({
   toggleSettingsField,
   handleSliderChange,
   handleInputChange,
+  handleLlmlinguaInputChange,
   handleSaveSettings,
   handleCavemanLevelChange,
   backendPort,
@@ -826,7 +828,111 @@ export default function SettingsTab({
           </div>
         </PipelineSection>
 
-        {/* 3. Headroom */}
+        {/* 3. LLMLingua & AI Prompt Compressor */}
+        <PipelineSection
+          id="llmlingua.enabled"
+          icon={<Cpu className="w-4 h-4 text-neon-purple shrink-0" />}
+          name="LLMLingua — AI & LLM Context Compressor"
+          desc="Compresses prompts using local small LLMs (LLMLingua) or upstream API models."
+          active={settings.llmlingua?.enabled || false}
+          color="#a855f7"
+          activeGradient="from-neon-purple to-neon-cyan"
+          toggleSettingsField={toggleSettingsField}
+        >
+          <div className="space-y-4 max-w-lg font-mono">
+            {/* Method selection */}
+            <div className="max-w-xs">
+              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Compression Method
+              </label>
+              <select
+                id="select-llmlingua-method"
+                value={settings.llmlingua?.method || "api"}
+                onChange={() => toggleSettingsField("llmlingua", "method")}
+                className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple cursor-pointer"
+              >
+                <option value="api">Upstream API Model (Claude/GPT)</option>
+                <option value="local">Local LLMLingua-2 Model (Offline)</option>
+              </select>
+            </div>
+
+            {/* Local Method Settings */}
+            {(settings.llmlingua?.method || "api") === "local" && (
+              <div className="space-y-4 pt-2 border-t border-white/5">
+                <div>
+                  <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    HuggingFace Local Model
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.llmlingua?.localModel || ""}
+                    placeholder="e.g. microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank"
+                    onChange={(e) => handleLlmlinguaInputChange("localModel", e.target.value)}
+                    onBlur={() => handleSaveSettings(settings)}
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Loads locally using python background daemon. Default is extremely fast and light.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xxs text-slate-400 mb-2">
+                    <span>Target Compression Rate (percentage of prompt to keep):</span>
+                    <span className="text-neon-purple font-bold">{Math.round((settings.llmlingua?.rate || 0.5) * 100)}%</span>
+                  </div>
+                  <input
+                    id="slider-llmlingua-rate"
+                    type="range" min={0.1} max={0.9} step={0.05}
+                    value={settings.llmlingua?.rate || 0.5}
+                    onChange={(e) => handleSliderChange("llmlingua", "rate", parseFloat(e.target.value))}
+                    onMouseUp={() => handleSaveSettings(settings)}
+                    onTouchEnd={() => handleSaveSettings(settings)}
+                    className="w-full accent-purple-400"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* API Method Settings */}
+            {(settings.llmlingua?.method || "api") === "api" && (
+              <div className="space-y-4 pt-2 border-t border-white/5">
+                <div>
+                  <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Compression Target Model
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.llmlingua?.apiModel || ""}
+                    placeholder="auto"
+                    onChange={(e) => handleLlmlinguaInputChange("apiModel", e.target.value)}
+                    onBlur={() => handleSaveSettings(settings)}
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Set model name (e.g. <code className="text-neon-purple">gpt-4o-mini</code> or <code className="text-neon-purple">claude-3-5-haiku-20241022</code>) or keep <code className="text-neon-purple">auto</code> to select a cheap model dynamically.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Compression System Prompt Instructions
+                  </label>
+                  <textarea
+                    value={settings.llmlingua?.apiPrompt || ""}
+                    onChange={(e) => handleLlmlinguaInputChange("apiPrompt", e.target.value)}
+                    onBlur={() => handleSaveSettings(settings)}
+                    rows={4}
+                    placeholder="Instructions for the AI to compress the text..."
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-neon-purple font-mono"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </PipelineSection>
+
+        {/* 4. Headroom */}
         <PipelineSection
           id="headroom.enabled"
           icon={<Database className="w-4 h-4 text-neon-green shrink-0" />}

@@ -11,6 +11,7 @@ import { compressSerena } from "./pipelines/serena";
 import { compressHeadroom, restoreCCR } from "./pipelines/headroom";
 import { injectCavemanPrompt, Message, compressToolDescriptions } from "./pipelines/caveman";
 import { generateRequestKey, getCachedResponse, setCachedResponse, preserveCacheControl } from "./pipelines/cache";
+import { compressLLMLingua } from "./pipelines/llmlingua";
 
 // Initialize local tokenizer for token calculations (GPT-4 / Claude compatible base)
 const tokenizer = getEncoding("cl100k_base");
@@ -39,7 +40,8 @@ export function countPayloadTokens(messages: Message[], system?: string): number
 export async function compressMessageList(
   messages: Message[],
   userQuery: string,
-  overrideSettings?: CompressorSettings
+  overrideSettings?: CompressorSettings,
+  requestedModel?: string
 ): Promise<{ compressedMessages: Message[]; originalPrompt: string; compressedPrompt: string; ccrCount: number }> {
   const activeSettings = overrideSettings || settings;
   let originalAccumulated = "";
@@ -69,7 +71,12 @@ export async function compressMessageList(
         });
       }
 
-      // 3. Headroom Compression (JSON minifying and CCR reversible substitution)
+      // 3. LLMLingua / AI Context Compression
+      if (activeSettings.llmlingua?.enabled) {
+        content = await compressLLMLingua(content, requestedModel);
+      }
+
+      // 4. Headroom Compression (JSON minifying and CCR reversible substitution)
       if (activeSettings.headroom.enabled) {
         const hrResult = await compressHeadroom(content, {
           minify: activeSettings.headroom.minify,
@@ -206,7 +213,7 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
   const originalTokens = countPayloadTokens(originalMessages);
 
   // Apply Compression
-  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery);
+  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery, undefined, model);
   const compressedTokens = countPayloadTokens(compressedMessages);
   const savingsPercent = originalTokens > 0 ? ((originalTokens - compressedTokens) / originalTokens) * 100 : 0;
 
@@ -363,7 +370,7 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
   const originalTokens = countPayloadTokens(originalMessages, systemPrompt);
 
   // Apply Compression
-  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery);
+  const { compressedMessages, originalPrompt, compressedPrompt, ccrCount } = await compressMessageList(originalMessages, userQuery, undefined, model);
   
   // Compress system prompt if enabled
   let compressedSystem = systemPrompt;

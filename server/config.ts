@@ -49,6 +49,14 @@ export interface CompressorSettings {
     port: number;
     accessToken: string;
   };
+  llmlingua: {
+    enabled: boolean;
+    method: "local" | "api";
+    localModel: string;
+    rate: number;
+    apiModel: string;
+    apiPrompt: string;
+  };
 }
 
 export interface RequestLog {
@@ -116,6 +124,14 @@ export let settings: CompressorSettings = {
     port: 6875,
     accessToken: "",
   },
+  llmlingua: {
+    enabled: false,
+    method: "api",
+    localModel: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+    rate: 0.5,
+    apiModel: "auto",
+    apiPrompt: "You are an expert context compressor. Your task is to compress the provided text, code, or context to reduce token count while preserving all critical code blocks, semantics, file paths, variables, instructions, and query context. Strip redundant log lines, repetitive details, and conversational fluff. Keep all JSON structures intact. Output ONLY the compressed content, with absolutely no preamble, explanation, or markdown backticks wrapper.",
+  },
 };
 
 // In-memory logs history (keep last 200 logs)
@@ -144,6 +160,7 @@ export function updateSettings(newSettings: Partial<CompressorSettings>) {
     upstream: { ...settings.upstream, ...newSettings.upstream },
     server: { ...settings.server, ...newSettings.server },
     verification: { ...settings.verification, ...newSettings.verification },
+    llmlingua: { ...settings.llmlingua, ...newSettings.llmlingua },
   };
   saveToDisk();
   return settings;

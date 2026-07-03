@@ -146,7 +146,7 @@ export default function App() {
   };
 
   const toggleSettingsField = (
-    pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification",
+    pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification" | "llmlingua",
     field: string
   ) => {
     const updated = { ...settings };
@@ -154,6 +154,25 @@ export default function App() {
     else if (pipeline === "serena") (updated.serena as any)[field] = !(updated.serena as any)[field];
     else if (pipeline === "verification") (updated.verification as any)[field] = !(updated.verification as any)[field];
     else if (pipeline === "headroom") (updated.headroom as any)[field] = !(updated.headroom as any)[field];
+    else if (pipeline === "llmlingua") {
+      if (!updated.llmlingua) {
+        updated.llmlingua = {
+          enabled: false,
+          method: "api",
+          localModel: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+          rate: 0.5,
+          apiModel: "auto",
+          apiPrompt: ""
+        };
+      }
+      if (field === "enabled") {
+        updated.llmlingua.enabled = !updated.llmlingua.enabled;
+      } else if (field === "method") {
+        updated.llmlingua.method = updated.llmlingua.method === "api" ? "local" : "api";
+      } else {
+        (updated.llmlingua as any)[field] = !(updated.llmlingua as any)[field];
+      }
+    }
     else if (pipeline === "caveman") {
       if (field === "compressMcpDescriptions") {
         updated.caveman.compressMcpDescriptions = !updated.caveman.compressMcpDescriptions;
@@ -181,16 +200,45 @@ export default function App() {
     handleSaveSettings(updated);
   };
 
-  const handleSliderChange = (pipeline: "serena" | "headroom", field: string, val: number) => {
+  const handleSliderChange = (pipeline: "serena" | "headroom" | "llmlingua", field: string, val: number) => {
     const updated = { ...settings };
     if (pipeline === "serena") (updated.serena as any)[field] = val;
     else if (pipeline === "headroom") (updated.headroom as any)[field] = val;
+    else if (pipeline === "llmlingua") {
+      if (!updated.llmlingua) {
+        updated.llmlingua = {
+          enabled: false,
+          method: "api",
+          localModel: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+          rate: 0.5,
+          apiModel: "auto",
+          apiPrompt: ""
+        };
+      }
+      (updated.llmlingua as any)[field] = val;
+    }
     setSettings(updated);
   };
 
   const handleInputChange = (field: string, val: string) => {
     const updated = { ...settings };
     (updated.upstream as any)[field] = val;
+    setSettings(updated);
+  };
+
+  const handleLlmlinguaInputChange = (field: string, val: string) => {
+    const updated = { ...settings };
+    if (!updated.llmlingua) {
+      updated.llmlingua = {
+        enabled: false,
+        method: "api",
+        localModel: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+        rate: 0.5,
+        apiModel: "auto",
+        apiPrompt: ""
+      };
+    }
+    (updated.llmlingua as any)[field] = val;
     setSettings(updated);
   };
 
@@ -298,6 +346,7 @@ export default function App() {
             toggleSettingsField={toggleSettingsField}
             handleSliderChange={handleSliderChange}
             handleInputChange={handleInputChange}
+            handleLlmlinguaInputChange={handleLlmlinguaInputChange}
             handleSaveSettings={handleSaveSettings}
             handleCavemanLevelChange={handleCavemanLevelChange}
             backendPort={backendPort}

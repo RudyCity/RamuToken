@@ -46,6 +46,14 @@ export interface CompressorSettings {
     port: number;
     accessToken: string;
   };
+  llmlingua: {
+    enabled: boolean;
+    method: "local" | "api";
+    localModel: string;
+    rate: number;
+    apiModel: string;
+    apiPrompt: string;
+  };
 }
 
 export interface RequestLog {

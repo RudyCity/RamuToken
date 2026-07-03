@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.31] - 2026-07-03
+
+### Added
+- **AI Context Compression & Microsoft LLMLingua**: Integrated a new pipeline allowing prompt compression using Microsoft's LLMLingua framework locally via the background Python daemon or using the configured upstream API (OpenAI/Anthropic) to compress long prompts dynamically before sending requests.
+- **Dashboard UI & Playground Controls**: Added configuration controls for method selection, HuggingFace model names, keep rate, target model, and custom compression prompt instructions.
+
+---
+
 ## [1.3.30] - 2026-07-02
 
 ### Fixed

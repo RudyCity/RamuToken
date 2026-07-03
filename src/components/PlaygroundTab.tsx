@@ -162,10 +162,20 @@ export default function PlaygroundTab({
   };
 
   const toggleLocalField = (
-    pipeline: "rtk" | "serena" | "headroom" | "caveman",
+    pipeline: "rtk" | "serena" | "headroom" | "caveman" | "llmlingua",
     field: string
   ) => {
     const updated = { ...playgroundSettings };
+    if (!updated.llmlingua) {
+      updated.llmlingua = {
+        enabled: false,
+        method: "api",
+        localModel: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+        rate: 0.5,
+        apiModel: "auto",
+        apiPrompt: ""
+      };
+    }
     if (pipeline === "rtk") {
       (updated.rtk as any)[field] = !(updated.rtk as any)[field];
     } else if (pipeline === "serena") {
@@ -174,14 +184,35 @@ export default function PlaygroundTab({
       (updated.headroom as any)[field] = !(updated.headroom as any)[field];
     } else if (pipeline === "caveman") {
       (updated.caveman as any)[field] = !(updated.caveman as any)[field];
+    } else if (pipeline === "llmlingua") {
+      if (field === "enabled") {
+        updated.llmlingua.enabled = !updated.llmlingua.enabled;
+      } else if (field === "method") {
+        updated.llmlingua.method = updated.llmlingua.method === "api" ? "local" : "api";
+      } else {
+        (updated.llmlingua as any)[field] = !(updated.llmlingua as any)[field];
+      }
     }
     setPlaygroundSettings(updated);
   };
 
-  const handleLocalSlider = (pipeline: "serena" | "headroom", field: string, val: number) => {
+  const handleLocalSlider = (pipeline: "serena" | "headroom" | "llmlingua", field: string, val: number) => {
     const updated = { ...playgroundSettings };
     if (pipeline === "serena") (updated.serena as any)[field] = val;
     else if (pipeline === "headroom") (updated.headroom as any)[field] = val;
+    else if (pipeline === "llmlingua") {
+      if (!updated.llmlingua) {
+        updated.llmlingua = {
+          enabled: false,
+          method: "api",
+          localModel: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+          rate: 0.5,
+          apiModel: "auto",
+          apiPrompt: ""
+        };
+      }
+      (updated.llmlingua as any)[field] = val;
+    }
     setPlaygroundSettings(updated);
   };
 
@@ -438,6 +469,79 @@ export default function PlaygroundTab({
                     />
                     Ref Graph Pruning
                   </label>
+                </div>
+              )}
+            </div>
+
+            {/* LLMLingua / AI configuration */}
+            <div className="p-3 border border-white/5 bg-slate-950/50 rounded-xl space-y-2">
+              <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
+                <span className="text-xs font-black tracking-wide text-neon-purple font-mono">LLMLingua (AI)</span>
+                <button onClick={() => toggleLocalField("llmlingua", "enabled")} className="cursor-pointer">
+                  {playgroundSettings.llmlingua?.enabled ? (
+                    <ToggleRight className="w-6 h-6 text-neon-purple" />
+                  ) : (
+                    <ToggleLeft className="w-6 h-6 text-slate-600" />
+                  )}
+                </button>
+              </div>
+              {playgroundSettings.llmlingua?.enabled && (
+                <div className="space-y-2 pt-1 font-mono">
+                  <div className="flex justify-between text-xxs text-slate-400">
+                    <span>Method:</span>
+                    <button
+                      onClick={() => toggleLocalField("llmlingua", "method")}
+                      className="text-neon-purple font-bold text-xxs underline cursor-pointer"
+                    >
+                      {(playgroundSettings.llmlingua?.method || "api").toUpperCase()}
+                    </button>
+                  </div>
+                  
+                  {(playgroundSettings.llmlingua?.method || "api") === "local" ? (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xxs text-slate-400">
+                        <span>Keep Rate:</span>
+                        <span className="text-neon-purple font-bold">{Math.round((playgroundSettings.llmlingua?.rate || 0.5) * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.1"
+                        max="0.9"
+                        step="0.05"
+                        value={playgroundSettings.llmlingua?.rate || 0.5}
+                        onChange={(e) => handleLocalSlider("llmlingua", "rate", parseFloat(e.target.value))}
+                        className="w-full accent-neon-purple"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xxs text-slate-400">
+                        <span>Target Model:</span>
+                        <span className="text-neon-purple font-bold truncate max-w-[100px]">{playgroundSettings.llmlingua?.apiModel || "auto"}</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={playgroundSettings.llmlingua?.apiModel || ""}
+                        placeholder="auto"
+                        onChange={(e) => {
+                          const updated = { ...playgroundSettings };
+                          if (!updated.llmlingua) {
+                            updated.llmlingua = {
+                              enabled: false,
+                              method: "api",
+                              localModel: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+                              rate: 0.5,
+                              apiModel: "auto",
+                              apiPrompt: ""
+                            };
+                          }
+                          updated.llmlingua.apiModel = e.target.value;
+                          setPlaygroundSettings(updated);
+                        }}
+                        className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-[10px] text-slate-200 focus:outline-none"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

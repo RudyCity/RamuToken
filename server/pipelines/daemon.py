@@ -97,6 +97,51 @@ def handle_headroom(payload):
         return result.messages[0]["content"]
     return text
 
+llmlingua_compressor = None
+current_llmlingua_model = None
+
+def handle_llmlingua(payload):
+    global llmlingua_compressor, current_llmlingua_model
+    text = payload["text"]
+    model_name = payload.get("model_name", "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank")
+    rate = payload.get("rate", 0.5)
+
+    if llmlingua_compressor is None or current_llmlingua_model != model_name:
+        try:
+            from llmlingua import PromptCompressor
+            use_ll2 = "llmlingua-2" in model_name.lower() or "meetingbank" in model_name.lower()
+            llmlingua_compressor = PromptCompressor(model_name=model_name, use_llmlingua2=use_ll2)
+            current_llmlingua_model = model_name
+        except ImportError:
+            try:
+                import subprocess
+                import importlib
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "llmlingua"], stdout=sys.stderr)
+                importlib.invalidate_caches()
+                from llmlingua import PromptCompressor
+                use_ll2 = "llmlingua-2" in model_name.lower() or "meetingbank" in model_name.lower()
+                llmlingua_compressor = PromptCompressor(model_name=model_name, use_llmlingua2=use_ll2)
+                current_llmlingua_model = model_name
+            except Exception as e:
+                raise Exception(f"llmlingua package is not installed and auto-installation failed: {e}")
+
+    try:
+        if hasattr(llmlingua_compressor, "use_llmlingua2") and llmlingua_compressor.use_llmlingua2:
+            result = llmlingua_compressor.compress_prompt(
+                [text],
+                rate=rate,
+                force_tokens=["\n", "?", "!", ".", ","],
+                drop_consecutive=True
+            )
+        else:
+            result = llmlingua_compressor.compress_prompt(
+                [text],
+                rate=rate
+            )
+        return result.get("compressed_prompt", text)
+    except Exception as e:
+        raise Exception(f"LLMLingua compression failed: {e}")
+
 def handle_serena_references(payload):
     project_root = os.path.abspath(payload["project_root"])
     file_path = os.path.abspath(payload["file_path"])
@@ -247,6 +292,12 @@ def main():
                     pass
             elif action == "headroom":
                 res = handle_headroom(payload)
+                try:
+                    print(json.dumps({"id": req_id, "status": "success", "result": res}))
+                except:
+                    pass
+            elif action == "llmlingua":
+                res = handle_llmlingua(payload)
                 try:
                     print(json.dumps({"id": req_id, "status": "success", "result": res}))
                 except:
