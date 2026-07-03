@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.55] - 2026-07-03
+
+### Fixed
+- **Caveman: `compressedPrompt` snapshot bug**: `compressedPrompt` in `proxy.ts` was incorrectly captured from a pre-Caveman snapshot (`preCavemanMessages`), causing the logged/displayed compressed prompt to be missing Caveman instruction content. Now correctly reflects the final post-pipeline output from `currentMessages`.
+- **Caveman: Anthropic array-content crash**: `injectCavemanPrompt` called `.includes()` directly on `message.content`, which would fail silently or behave incorrectly when `content` is an Anthropic-format array of blocks (`[{type: "text", text: "..."}]`). Added `extractTextContent()` helper to safely normalize content to a plain string before processing.
+- **Caveman: `cavemanCompressProse` ignored `level` param**: The `level` parameter was prefixed with `_` and completely unused. Now `level === 'low'` correctly skips prose restructuring (since low mode only strips filler phrases via system instruction, not by restructuring prose). Medium/high/wenyan continue to use caveman-shrink.
+- **Caveman: Removed unnecessary `preCavemanMessages` snapshot** in `compressMessageList`; the variable was only used to feed the now-fixed `compressedPrompt`.
+
 ## [1.3.54] - 2026-07-03
 
 ### Fixed

@@ -157,15 +157,16 @@ export async function compressMessageList(
     return result;
   });
 
-  // Caveman Compression (inject system instruction) - run on final list
-  const preCavemanMessages = currentMessages.map(m => ({ ...m }));
+  // 5. Caveman Compression (inject system instruction) - run on final list
   await runStep("Caveman", activeSettings.caveman.enabled, async (msgs) => {
     return injectCavemanPrompt(msgs, activeSettings.caveman.level);
   });
 
-  // Form original and compressed accumulated prompts for compatibility
+  // Form original and compressed accumulated prompts.
+  // compressedPrompt reflects the full post-pipeline output (including Caveman injection)
+  // so that token savings logs and UI are accurate.
   const originalPrompt = messages.map(m => m.content || "").join("\n");
-  const compressedPrompt = preCavemanMessages.map(m => m.content || "").join("\n");
+  const compressedPrompt = currentMessages.map(m => (typeof m.content === "string" ? m.content : "")).join("\n");
 
   return {
     compressedMessages: currentMessages,

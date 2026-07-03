@@ -61,6 +61,21 @@ function cavemanShrink(text: string): string | null {
   }
 }
 
+/**
+ * Safely extract plain string from a message content field.
+ * Anthropic may send content as an array of blocks, e.g. [{type: "text", text: "..."}].
+ */
+function extractTextContent(content: string | any[]): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .filter((b: any) => b?.type === "text")
+      .map((b: any) => b.text ?? "")
+      .join("\n");
+  }
+  return "";
+}
+
 
 // Injects the caveman instruction into the request messages
 export function injectCavemanPrompt(messages: Message[], level: "low" | "medium" | "high" | "wenyan" = "medium"): Message[] {
@@ -69,17 +84,21 @@ export function injectCavemanPrompt(messages: Message[], level: "low" | "medium"
   const instruction = CAVEMAN_INSTRUCTIONS[level] ?? CAVEMAN_INSTRUCTIONS.medium;
 
   if (systemMsgIdx !== -1) {
-    const originalContent = result[systemMsgIdx].content;
+    const rawContent = result[systemMsgIdx].content;
+
+    // Safely extract plain text — Anthropic may supply content as an array of blocks
+    const originalText = extractTextContent(rawContent);
 
     // Don't double-inject
-    if (originalContent.includes("[CAVEMAN")) return result;
+    if (originalText.includes("[CAVEMAN")) return result;
 
     // Deep integration: try to compress the entire existing system prompt via caveman-shrink
-    const shrunkContent = cavemanShrink(originalContent);
-    const finalContent = shrunkContent ?? originalContent;
+    const shrunkContent = cavemanShrink(originalText);
+    const finalContent = shrunkContent ?? originalText;
 
     result[systemMsgIdx] = {
       ...result[systemMsgIdx],
+      // Always write back as plain string so downstream handling is uniform
       content: `${finalContent}\n\n${instruction}`
     };
   } else {
@@ -93,8 +112,11 @@ export function injectCavemanPrompt(messages: Message[], level: "low" | "medium"
   return result;
 }
 
-// Compresses any arbitrary prose string using caveman-shrink (useful for compressing assistant content)
-export function cavemanCompressProse(text: string, _level: "low" | "medium" | "high" | "wenyan" = "medium"): string {
+// Compresses any arbitrary prose string using caveman-shrink (useful for compressing assistant content).
+// For 'low' mode, skipping aggressive shrink is intentional — low mode only strips filler phrases
+// via the system instruction, not by restructuring prose.
+export function cavemanCompressProse(text: string, level: "low" | "medium" | "high" | "wenyan" = "medium"): string {
+  if (level === "low") return text; // low mode: no prose restructuring, only filler-phrase injection
   return cavemanShrink(text) ?? text;
 }
 
