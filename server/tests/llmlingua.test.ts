@@ -11,17 +11,25 @@ describe("LLMLingua & AI Prompt Compressor Pipeline", () => {
     globalThis.fetch = async (url: any, init: any) => {
       try {
         const body = JSON.parse(init.body);
+        const messages = body.messages || [];
+        const contentText = messages.length > 1 ? messages[1].content : (messages[0]?.content || "");
+        const sub = typeof contentText === "string" ? contentText.substring(0, 10) : "";
+        
         if (body.model === "mock-llm") {
+          const textVal = "Compressed prompt text: " + sub;
           return new Response(JSON.stringify({
-            choices: [{ message: { content: "Compressed prompt text: " + body.messages[1].content.substring(0, 10) } }]
+            choices: [{ message: { content: textVal } }],
+            content: [{ type: "text", text: textVal }]
           }), { status: 200, headers: { "Content-Type": "application/json" } });
         }
         return new Response(JSON.stringify({
-          choices: [{ message: { content: "Default compressed prompt" } }]
+          choices: [{ message: { content: "Default compressed prompt" } }],
+          content: [{ type: "text", text: "Default compressed prompt" }]
         }), { status: 200, headers: { "Content-Type": "application/json" } });
       } catch {
         return new Response(JSON.stringify({
-          choices: [{ message: { content: "Default compressed prompt" } }]
+          choices: [{ message: { content: "Default compressed prompt" } }],
+          content: [{ type: "text", text: "Default compressed prompt" }]
         }), { status: 200, headers: { "Content-Type": "application/json" } });
       }
     };
