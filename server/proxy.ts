@@ -71,8 +71,8 @@ export async function compressMessageList(
         });
       }
 
-      // 3. LLMLingua / AI Context Compression
-      if (activeSettings.llmlingua?.enabled) {
+      // 3. LLMLingua / AI Context Compression (only for user/tool messages with content > 300 characters)
+      if (activeSettings.llmlingua?.enabled && (msg.role === "user" || msg.role === "tool") && content.length > 300) {
         content = await compressLLMLingua(content, requestedModel);
       }
 
