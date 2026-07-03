@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Zap,
   Sliders,
@@ -138,15 +138,21 @@ export default function DashboardTab({
     setSelectedStep("all");
   }, [selectedLog]);
 
+  const prevFirstLogIdRef = useRef<string | null>(null);
+
   useEffect(() => {
+    const currentFirstLogId = displayLogs[0]?.id || null;
     const isStillPresent = selectedLog ? displayLogs.some(l => l.id === selectedLog.id) : false;
-    if (!isStillPresent) {
-      if (displayLogs.length > 0) {
-        setSelectedLog(displayLogs[0]);
-      } else {
-        setSelectedLog(null);
-      }
+
+    if (!selectedLog && displayLogs.length > 0) {
+      setSelectedLog(displayLogs[0]);
+    } else if (isStillPresent && prevFirstLogIdRef.current && selectedLog && selectedLog.id === prevFirstLogIdRef.current && currentFirstLogId !== prevFirstLogIdRef.current) {
+      setSelectedLog(displayLogs[0]);
+    } else if (!isStillPresent) {
+      setSelectedLog(displayLogs[0] || null);
     }
+
+    prevFirstLogIdRef.current = currentFirstLogId;
   }, [activeLogTab, displayLogs, selectedLog, setSelectedLog]);
 
   // Get active step details for request modal

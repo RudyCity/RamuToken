@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.54] - 2026-07-03
+
+### Fixed
+- **Pipeline Inspector Auto-select & Steps Timeline Sync**: Implemented smart reactive auto-selection in `DashboardTab.tsx`. When a new request arrives, if the user was previously viewing the latest request (or had no request selected yet), it automatically shifts focus to the newly arrived active request. This ensures that the interactive **Pipeline Steps Timeline** and the side-by-side prompt diff panels update in real time with the active request's structure instead of remaining stuck on older requests.
+
 ## [1.3.53] - 2026-07-03
 
 ### Changed
