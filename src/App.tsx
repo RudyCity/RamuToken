@@ -8,13 +8,60 @@ import {
   AlertCircle,
   Info,
   X,
+  Sliders,
+  FileCode,
+  Database,
+  Cpu,
+  Brain,
+  HardDrive,
+  ShieldCheck,
+  ChevronDown,
 } from "lucide-react";
 import { CompressorSettings, RequestLog, Metrics, LLMLinguaLog } from "./types";
 import DashboardTab from "./components/DashboardTab";
 import PlaygroundTab from "./components/PlaygroundTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.3.52";
+const APP_VERSION = "1.3.53";
+
+interface PipelineRowProps {
+  icon: React.ReactNode;
+  name: string;
+  sub: string;
+  active: boolean;
+  dotColor: string;
+}
+
+function PipelineRow({ icon, name, sub, active, dotColor }: PipelineRowProps) {
+  return (
+    <div className="flex justify-between items-center bg-slate-900/40 p-2 rounded-xl border border-white/5">
+      <div className="flex items-center gap-2.5 min-w-0">
+        {icon}
+        <div className="min-w-0">
+          <p className="text-xs font-bold leading-none truncate">{name}</p>
+          <p className="text-[9px] text-slate-500 font-mono mt-0.5 truncate">{sub}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+        <span
+          className="pipeline-dot"
+          style={{ background: active ? dotColor : "#334155", color: dotColor }}
+          data-active={active}
+        />
+        <span
+          className="text-[9px] font-black font-mono px-1.5 py-0.5 rounded"
+          style={
+            active
+              ? { color: dotColor, background: dotColor + "18" }
+              : { color: "#64748b", background: "rgba(255,255,255,0.04)" }
+          }
+        >
+          {active ? "ACTIVE" : "IDLE"}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 interface Toast {
   id: string;
@@ -33,6 +80,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<TabId>(getTabFromHash);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isPipelineDropdownOpen, setIsPipelineDropdownOpen] = useState(false);
 
   const addToast = (message: string, type: "success" | "error" | "info" = "success") => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -396,16 +444,140 @@ export default function App() {
             ))}
           </nav>
 
-          {/* Status badge — right */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span
-              className={`w-2 h-2 rounded-full status-dot-pulse ${
-                wsConnected ? "bg-neon-green text-neon-green" : "bg-neon-pink text-neon-pink"
-              }`}
-            />
-            <span className="text-xxs font-black font-mono text-slate-400 tracking-wider hidden sm:inline">
-              {wsConnected ? "ONLINE" : "OFFLINE"}
-            </span>
+          {/* Status badge & Pipeline Dropdown — right */}
+          <div className="flex items-center gap-4 shrink-0">
+            {/* Pipeline Status Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsPipelineDropdownOpen(!isPipelineDropdownOpen)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xxs font-bold transition-all bg-white/5 border hover:bg-white/10 text-slate-300 cursor-pointer ${
+                  isPipelineDropdownOpen ? "border-neon-purple/50 bg-neon-purple/5 text-neon-purple" : "border-white/10"
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5 text-neon-purple" />
+                <span className="hidden md:inline">Pipeline Status</span>
+                <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-300 ${isPipelineDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {isPipelineDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsPipelineDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-72 glass-panel border border-white/10 p-4 rounded-2xl shadow-2xl z-50 animate-in flex flex-col gap-3" style={{ background: "rgba(10,12,20,0.96)", backdropFilter: "blur(12px)" }}>
+                    <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Pipeline Status</span>
+                      <span className="text-[9px] font-mono text-slate-500">Live Config</span>
+                    </div>
+
+                    <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto pr-0.5">
+                      <PipelineRow
+                        icon={<Terminal className="w-3.5 h-3.5 text-neon-purple shrink-0" />}
+                        name="RTK Compressor"
+                        sub="CLI outputs & logs"
+                        active={settings.rtk.enabled}
+                        dotColor="#a855f7"
+                      />
+                      <PipelineRow
+                        icon={<FileCode className="w-3.5 h-3.5 text-neon-cyan shrink-0" />}
+                        name="Serena Pruner"
+                        sub="AST function collapse"
+                        active={settings.serena.enabled}
+                        dotColor="#06b6d4"
+                      />
+                      <PipelineRow
+                        icon={<Database className="w-3.5 h-3.5 text-neon-green shrink-0" />}
+                        name="Headroom Layer"
+                        sub="JSON & Reversible CCR"
+                        active={settings.headroom.enabled}
+                        dotColor="#10b981"
+                      />
+                      <PipelineRow
+                        icon={<Cpu className="w-3.5 h-3.5 text-neon-pink shrink-0" />}
+                        name="Caveman Prose"
+                        sub="Instruction injection"
+                        active={settings.caveman.enabled}
+                        dotColor="#ec4899"
+                      />
+                      <PipelineRow
+                        icon={<Brain className="w-3.5 h-3.5 text-violet-400 shrink-0" />}
+                        name="LLMLingua"
+                        sub="AI prompt compressor"
+                        active={settings.llmlingua?.enabled ?? false}
+                        dotColor="#a78bfa"
+                      />
+                      <PipelineRow
+                        icon={<HardDrive className="w-3.5 h-3.5 text-neon-cyan shrink-0" />}
+                        name="Request Cache"
+                        sub="Identical replay cache"
+                        active={settings.cache.enabled}
+                        dotColor="#06b6d4"
+                      />
+                      <PipelineRow
+                        icon={<ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                        name="Verification Loop"
+                        sub="Compiler correction"
+                        active={settings.verification.enabled}
+                        dotColor="#34d399"
+                      />
+                    </div>
+
+                    {/* Active routing flow visualization inside dropdown */}
+                    <div className="pt-2 border-t border-white/5">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 block mb-2 font-mono">Active Routing Path</span>
+                      
+                      <div className="bg-slate-950/60 border border-white/5 p-2 rounded-xl flex items-center justify-between font-mono text-[8px] relative overflow-hidden">
+                        <div className="flex flex-col items-center">
+                          <span className="text-slate-600 text-[7px] uppercase tracking-wider">Client</span>
+                          <span className="text-slate-300 font-bold">Agent</span>
+                        </div>
+                        
+                        <div className="flex-1 flex items-center justify-center px-1 relative">
+                          <div className="h-[1px] bg-white/10 w-full absolute top-1/2 -translate-y-1/2 left-0 right-0"></div>
+                          <div className="h-[1px] bg-gradient-to-r from-neon-purple to-neon-cyan w-1/2 absolute top-1/2 -translate-y-1/2 left-1/4 animate-pulse"></div>
+                          <span className="bg-slate-900 border border-white/10 text-slate-400 px-1 py-0.5 rounded text-[8px] font-bold z-10">
+                            Proxy
+                          </span>
+                        </div>
+                        
+                        <div className="flex flex-col items-center">
+                          <span className="text-slate-600 text-[7px] uppercase tracking-wider">Upstream</span>
+                          <span
+                            className="font-black"
+                            style={{
+                              color: settings.upstream.preferCustom
+                                ? "#10b981"
+                                : settings.upstream.preferBifrost
+                                ? "#06b6d4"
+                                : "#a855f7",
+                            }}
+                          >
+                            {settings.upstream.preferCustom
+                              ? "Custom"
+                              : settings.upstream.preferBifrost
+                              ? "Bifrost"
+                              : "Direct"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Offline/Online WS Indicator */}
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-2 h-2 rounded-full status-dot-pulse ${
+                  wsConnected ? "bg-neon-green text-neon-green" : "bg-neon-pink text-neon-pink"
+                }`}
+              />
+              <span className="text-xxs font-black font-mono text-slate-400 tracking-wider hidden sm:inline">
+                {wsConnected ? "ONLINE" : "OFFLINE"}
+              </span>
+            </div>
           </div>
         </div>
       </header>

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.53] - 2026-07-03
+
+### Changed
+- **Pipeline Status in Header Dropdown**: Moved the Pipeline Status card and the routing flow visualization from the dashboard right-hand column into an interactive dropdown menu in the app header. This makes pipeline statuses accessible at all times from any tab (Dashboard, Playground, Settings).
+- **Dashboard Layout Reorganization**: Removed the empty right-hand column layout completely. The Dashboard tab now consists of three clean, full-width blocks stacked vertically: the 4-column Metrics row, the high-detail Compression History chart, and the Pipeline Activity Explorer.
+
 ## [1.3.52] - 2026-07-03
 
 ### Removed

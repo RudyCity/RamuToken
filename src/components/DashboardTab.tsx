@@ -49,45 +49,6 @@ function savingsBg(pct: number): string {
   return "rgba(236,72,153,0.12)";
 }
 
-// ── Pipeline row component ────────────────────────────────────────────────────
-interface PipelineRowProps {
-  icon: React.ReactNode;
-  name: string;
-  sub: string;
-  active: boolean;
-  dotColor: string;
-}
-
-function PipelineRow({ icon, name, sub, active, dotColor }: PipelineRowProps) {
-  return (
-    <div className="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-white/5">
-      <div className="flex items-center gap-3">
-        {icon}
-        <div>
-          <p className="text-sm font-bold leading-none">{name}</p>
-          <p className="text-xxs text-slate-500 font-mono mt-0.5">{sub}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <span
-          className="pipeline-dot"
-          style={{ background: active ? dotColor : "#334155", color: dotColor }}
-          data-active={active}
-        />
-        <span
-          className="text-xs font-black font-mono px-2 py-0.5 rounded"
-          style={
-            active
-              ? { color: dotColor, background: dotColor + "18" }
-              : { color: "#64748b", background: "rgba(255,255,255,0.04)" }
-          }
-        >
-          {active ? "ACTIVE" : "IDLE"}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 // ── Copy button with transient ✓ feedback ────────────────────────────────────
 function CopyButton({ text }: { text: string }) {
@@ -222,14 +183,9 @@ export default function DashboardTab({
       : "0.0";
 
   return (
-    <div className="animate-in">
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-        
-        {/* ── Left Column (Metrics, Chart, Activity Log) ──────────────── */}
-        <div className="xl:col-span-2 space-y-6">
-          
-          {/* Metric Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="animate-in space-y-6">
+      {/* Metric Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {/* Saved tokens */}
             <div className="glass-panel glass-panel-glow-purple p-5 rounded-2xl relative overflow-hidden">
               <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-neon-purple/8 blur-2xl pointer-events-none" />
@@ -390,156 +346,7 @@ export default function DashboardTab({
               </>
             )}
           </div>
-        </div>
 
-        {/* ── Right Column (Sticky Status & Badge Panels) ─────────────── */}
-        <div className="xl:col-span-1 space-y-6 lg:sticky lg:top-6">
-          
-          {/* Pipeline status card */}
-          <div className="glass-panel p-6 rounded-2xl flex flex-col">
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-slate-300 flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-neon-purple" />
-              Pipeline Status
-            </h3>
-            <div className="space-y-2.5 flex-1">
-              <PipelineRow
-                icon={<Terminal className="w-4 h-4 text-neon-purple" />}
-                name="RTK Compressor"
-                sub="CLI outputs & logs"
-                active={settings.rtk.enabled}
-                dotColor="#a855f7"
-              />
-              <PipelineRow
-                icon={<FileCode className="w-4 h-4 text-neon-cyan" />}
-                name="Serena Pruner"
-                sub="AST function collapse"
-                active={settings.serena.enabled}
-                dotColor="#06b6d4"
-              />
-              <PipelineRow
-                icon={<Database className="w-4 h-4 text-neon-green" />}
-                name="Headroom Layer"
-                sub="JSON & Reversible CCR"
-                active={settings.headroom.enabled}
-                dotColor="#10b981"
-              />
-              <PipelineRow
-                icon={<Cpu className="w-4 h-4 text-neon-pink" />}
-                name="Caveman Prose"
-                sub="Output instruction injection"
-                active={settings.caveman.enabled}
-                dotColor="#ec4899"
-              />
-              <PipelineRow
-                icon={<Brain className="w-4 h-4 text-violet-400" />}
-                name="LLMLingua"
-                sub="AI prompt compressor"
-                active={settings.llmlingua?.enabled ?? false}
-                dotColor="#a78bfa"
-              />
-              <PipelineRow
-                icon={<HardDrive className="w-4 h-4 text-neon-cyan" />}
-                name="Request Cache"
-                sub="Zero-token identical replay"
-                active={settings.cache.enabled}
-                dotColor="#06b6d4"
-              />
-              <PipelineRow
-                icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />}
-                name="Verification Loop"
-                sub="Compiler & test self-correction"
-                active={settings.verification.enabled}
-                dotColor="#34d399"
-              />
-            </div>
-
-            {/* Visual routing flow */}
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-3 font-mono">Active Routing Path</span>
-              
-              <div className="bg-slate-950/60 border border-white/5 p-3 rounded-xl flex items-center justify-between font-mono text-[9px] relative overflow-hidden mb-3">
-                <div className="flex flex-col items-center">
-                  <span className="text-slate-500 text-[8px] uppercase tracking-wider">Client</span>
-                  <span className="text-slate-300 font-bold mt-0.5">Agent</span>
-                </div>
-                
-                <div className="flex-1 flex items-center justify-center px-1 relative">
-                  <div className="h-[1px] bg-white/10 w-full absolute top-1/2 -translate-y-1/2 left-0 right-0"></div>
-                  {/* Glowing animating pulse line */}
-                  <div className="h-[1px] bg-gradient-to-r from-neon-purple to-neon-cyan w-1/2 absolute top-1/2 -translate-y-1/2 left-1/4 animate-pulse"></div>
-                  <span className="bg-slate-900 border border-white/10 text-slate-300 px-2 py-0.5 rounded text-[9px] font-bold z-10 shadow-[0_0_10px_rgba(168,85,247,0.1)]">
-                    Proxy
-                  </span>
-                </div>
-                
-                <div className="flex flex-col items-center">
-                  <span className="text-slate-500 text-[8px] uppercase tracking-wider">Upstream</span>
-                  <span
-                    className="font-black mt-0.5"
-                    style={{
-                      color: settings.upstream.preferCustom
-                        ? "#10b981"
-                        : settings.upstream.preferBifrost
-                        ? "#06b6d4"
-                        : "#a855f7",
-                    }}
-                  >
-                    {settings.upstream.preferCustom
-                      ? "Custom"
-                      : settings.upstream.preferBifrost
-                      ? "Bifrost"
-                      : "Direct"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                {settings.upstream.preferCustom && (() => {
-                  const active = (settings.upstream.customProviders || []).find(
-                    (p) => p.id === settings.upstream.activeCustomProviderId
-                  );
-                  return active ? (
-                    <div className="flex justify-between text-xxs font-mono text-slate-500">
-                      <span>Provider:</span>
-                      <span className="truncate max-w-[170px] text-slate-400 font-bold">{active.name || active.url || "—"}</span>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between text-xxs font-mono text-slate-500">
-                      <span>Provider:</span>
-                      <span className="text-amber-400 font-bold">None selected</span>
-                    </div>
-                  );
-                })()}
-                {!settings.upstream.preferCustom && settings.upstream.preferBifrost && (
-                  <div className="flex justify-between text-xxs font-mono text-slate-500">
-                    <span>Endpoint:</span>
-                    <span className="truncate max-w-[170px] text-slate-400 font-bold">{settings.upstream.bifrostUrl}</span>
-                  </div>
-                )}
-                <div className="flex flex-col gap-1 pt-1 border-t border-white/5">
-                  <div className="flex justify-between text-xxs font-mono">
-                    <span className="text-slate-400 flex items-center gap-1">
-                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                      OpenAI Port:
-                    </span>
-                    <span className="text-neon-cyan font-bold">:{backendPort}/v1</span>
-                  </div>
-                  <div className="flex justify-between text-xxs font-mono">
-                    <span className="text-slate-400 flex items-center gap-1">
-                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-400"></span>
-                      Anthropic Port:
-                    </span>
-                    <span className="text-orange-300 font-bold">:{backendPort}/anthropic/v1</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-
-        </div>
-
-      </div>
 
       {/* Unified Pipeline Activity Explorer (Split-Panel Layout - Full Width) */}
       <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4">
