@@ -20,3 +20,11 @@ data/
 *.njsproj
 *.sln
 *.swp
+
+# Python Caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Serena Diagnostics
+.serena/
