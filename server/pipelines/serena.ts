@@ -200,14 +200,6 @@ function pruneBySerenaSymbols(
   return result.join("\n");
 }
 
-interface CodeBlock {
-  lang: string;
-  code: string;
-  isPython: boolean;
-  tempFile: string;
-  matchStr: string;
-}
-
 // Main Serena compressor
 export async function compressSerena(text: string, userQuery: string, options: { minLines?: number } = {}): Promise<string> {
   const minLines = options.minLines ?? 5;

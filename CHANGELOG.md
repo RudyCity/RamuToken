@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.38] - 2026-07-03
+
+### Fixed
+- **Duplicate CodeBlock Type shadowing**: Removed duplicate unused interface `CodeBlock` in `server/pipelines/serena.ts` which was shadowing the main one and causing AST block parsing type errors.
+- **Frontend State Initialization**: Added missing `server` and `llmlingua` settings to the default settings state in `src/App.tsx`.
+- **TypeScript Type Definitions**: Added `@types/node` and `@types/bun` to devDependencies and cast various process streams, mock fetch requests, and proxy errors to resolve backend type checking issues.
+
+---
+
 ## [1.3.37] - 2026-07-03
 
 ### Changed

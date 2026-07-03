@@ -8,7 +8,7 @@ describe("LLMLingua & AI Prompt Compressor Pipeline", () => {
   beforeAll(() => {
     originalFetch = globalThis.fetch;
     // Mock global fetch to intercept upstream LLM calls
-    globalThis.fetch = async (url: any, init: any) => {
+    globalThis.fetch = (async (url: any, init: any) => {
       try {
         const body = JSON.parse(init.body);
         const messages = body.messages || [];
@@ -32,7 +32,7 @@ describe("LLMLingua & AI Prompt Compressor Pipeline", () => {
           content: [{ type: "text", text: "Default compressed prompt" }]
         }), { status: 200, headers: { "Content-Type": "application/json" } });
       }
-    };
+    }) as any;
   });
 
   afterAll(() => {
@@ -65,7 +65,7 @@ describe("LLMLingua & AI Prompt Compressor Pipeline", () => {
     settings.llmlingua.apiModel = "auto";
     
     let lastRequestedModel = "";
-    globalThis.fetch = async (url: any, init: any) => {
+    globalThis.fetch = (async (url: any, init: any) => {
       try {
         const body = JSON.parse(init.body);
         lastRequestedModel = body.model;
@@ -77,7 +77,7 @@ describe("LLMLingua & AI Prompt Compressor Pipeline", () => {
           choices: [{ message: { content: "Compressed: error" } }]
         }), { status: 200, headers: { "Content-Type": "application/json" } });
       }
-    };
+    }) as any;
 
     // Case 1: requestedModel is gpt-4o, should resolve to gpt-4o-mini
     await compressLLMLingua("some prompt", "gpt-4o");

@@ -89,7 +89,7 @@ if (alreadyRunning) {
 
   // Pipe Bifrost stdout/stderr with prefix so it's distinguishable in console
   (async () => {
-    const reader = bifrostProcess!.stdout.getReader();
+    const reader = (bifrostProcess!.stdout as any).getReader();
     const decoder = new TextDecoder();
     while (true) {
       const { done, value } = await reader.read();
@@ -99,7 +99,7 @@ if (alreadyRunning) {
   })();
 
   (async () => {
-    const reader = bifrostProcess!.stderr.getReader();
+    const reader = (bifrostProcess!.stderr as any).getReader();
     const decoder = new TextDecoder();
     while (true) {
       const { done, value } = await reader.read();

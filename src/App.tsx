@@ -75,6 +75,18 @@ export default function App() {
       customKey: "",
       customHeader: "Authorization"
     },
+    server: {
+      port: 6875,
+      accessToken: ""
+    },
+    llmlingua: {
+      enabled: false,
+      method: "local",
+      localModel: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+      rate: 0.2,
+      apiModel: "auto",
+      apiPrompt: ""
+    }
   });
 
   // Test bench state

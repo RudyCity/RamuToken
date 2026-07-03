@@ -24,7 +24,7 @@ export default defineConfig(({ }) => {
         "/api": {
           target: backendUrl,
           configure: (proxy) => {
-            proxy.on("error", (err) => {
+            proxy.on("error", (err: any) => {
               if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
                 console.warn(`[Vite Proxy Error][api]: ${err.message}`);
               }
@@ -34,7 +34,7 @@ export default defineConfig(({ }) => {
         "/v1": {
           target: backendUrl,
           configure: (proxy) => {
-            proxy.on("error", (err) => {
+            proxy.on("error", (err: any) => {
               if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
                 console.warn(`[Vite Proxy Error][v1]: ${err.message}`);
               }
@@ -44,7 +44,7 @@ export default defineConfig(({ }) => {
         "/openai": {
           target: backendUrl,
           configure: (proxy) => {
-            proxy.on("error", (err) => {
+            proxy.on("error", (err: any) => {
               if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
                 console.warn(`[Vite Proxy Error][openai]: ${err.message}`);
               }
@@ -54,7 +54,7 @@ export default defineConfig(({ }) => {
         "/anthropic": {
           target: backendUrl,
           configure: (proxy) => {
-            proxy.on("error", (err) => {
+            proxy.on("error", (err: any) => {
               if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
                 console.warn(`[Vite Proxy Error][anthropic]: ${err.message}`);
               }
@@ -65,7 +65,7 @@ export default defineConfig(({ }) => {
           target: backendUrl.replace("http", "ws"),
           ws: true,
           configure: (proxy) => {
-            proxy.on("error", (err) => {
+            proxy.on("error", (err: any) => {
               // Silently capture socket resets/aborts when dashboard reconnects/disconnects
               if (err.code !== "ECONNRESET" && err.code !== "ECONNABORTED") {
                 console.warn(`[Vite WS Proxy Error]: ${err.message}`);

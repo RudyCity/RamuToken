@@ -124,9 +124,9 @@ export default function PlaygroundTab({
         const errData = await res.json();
         setVerifyResult({ error: errData.error || "Verification request failed" });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Code verification failed", err);
-      setVerifyResult({ error: err.message });
+      setVerifyResult({ error: err.message || "Unknown error occurred" });
     } finally {
       setVerifying(false);
     }
