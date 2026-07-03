@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.50] - 2026-07-03
+
+### Changed
+- **Split-Panel Pipeline Activity Explorer**: Replaced the confusing multi-tab log tables and popup modal detail views with a side-by-side split-panel explorer. The left side shows a clean list of requests with pagination, while the right side displays the selected request's latency, total savings, step-by-step interactive pipeline timeline, and side-by-side prompt diffs for each step.
+- **Auto-Selection**: Added reactive selection logic to auto-select the first log on page load or tab changes, preserving active selection when new proxy logs are appended.
+
 ## [1.3.49] - 2026-07-03
 
 ### Added

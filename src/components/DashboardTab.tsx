@@ -177,6 +177,17 @@ export default function DashboardTab({
     setSelectedStep("all");
   }, [selectedLog]);
 
+  useEffect(() => {
+    const isStillPresent = selectedLog ? displayLogs.some(l => l.id === selectedLog.id) : false;
+    if (!isStillPresent) {
+      if (displayLogs.length > 0) {
+        setSelectedLog(displayLogs[0]);
+      } else {
+        setSelectedLog(null);
+      }
+    }
+  }, [activeLogTab, displayLogs, selectedLog, setSelectedLog]);
+
   // Get active step details for request modal
   const steps = (selectedLog && "pipelineSteps" in selectedLog ? selectedLog.pipelineSteps : []) || [];
   const activeStepObj = selectedStep !== "all" ? steps.find(s => s.name === selectedStep) : null;
@@ -193,12 +204,12 @@ export default function DashboardTab({
   const leftLabel = activeStepObj ? `Before ${activeStepObj.name}` : "Original Prompt";
   const rightLabel = activeStepObj ? `After ${activeStepObj.name}` : "Compressed Prompt";
 
-  const totalPages = Math.ceil(logs.length / itemsPerPage);
+  const totalPages = Math.ceil(displayLogs.length / itemsPerPage);
   const activePage = Math.min(currentPage, Math.max(1, totalPages));
 
   const startIndex = (activePage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, logs.length);
-  const paginatedLogs = logs.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + itemsPerPage, displayLogs.length);
+  const paginatedLogs = displayLogs.slice(startIndex, endIndex);
 
   const avgSavingPercent =
     metrics.originalTokensSum > 0
@@ -380,7 +391,7 @@ export default function DashboardTab({
             )}
           </div>
 
-          {/* Unified Logs Panel with Tabs */}
+          {/* Unified Pipeline Activity Explorer (Split-Panel Layout) */}
           <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4">
             
             {/* Tabs Header */}
@@ -388,21 +399,16 @@ export default function DashboardTab({
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
                   <Sliders className="w-4 h-4 text-neon-purple" />
-                  Activity Logs
+                  Pipeline Activity Explorer
                 </h3>
                 <p className="text-[10px] text-slate-500 font-mono mt-1">
-                  View prompt transformations by overall request or per-feature step
+                  Explore prompt compression step transitions live side-by-side
                 </p>
               </div>
               
               <div className="flex flex-wrap items-center bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-0.5 text-[10px] font-bold">
                 {[
-                  { id: "all", label: "📋 Requests" },
-                  { id: "rtk", label: "⚡ RTK" },
-                  { id: "serena", label: "🔍 Serena" },
-                  { id: "llmlingua", label: "🧠 LLMLingua" },
-                  { id: "headroom", label: "💾 Headroom" },
-                  { id: "caveman", label: "👹 Caveman" },
+                  { id: "all", label: "📋 Proxy Requests" },
                   { id: "llmlingua_direct", label: "🔌 LLMLingua Direct" },
                 ].map((tab) => (
                   <button
@@ -411,7 +417,7 @@ export default function DashboardTab({
                       setActiveLogTab(tab.id as any);
                       setCurrentPage(1);
                     }}
-                    className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                       activeLogTab === tab.id
                         ? "bg-neon-purple/20 text-neon-purple border border-neon-purple/35 shadow-[0_0_8px_rgba(168,85,247,0.15)]"
                         : "text-slate-400 hover:text-slate-200"
@@ -423,392 +429,280 @@ export default function DashboardTab({
               </div>
             </div>
 
-            {/* Table Container */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                {activeLogTab === "all" ? (
-                  <>
-                    <thead>
-                      <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
-                        <th className="py-3 px-3">Age</th>
-                        <th className="py-3 px-3">Status</th>
-                        <th className="py-3 px-3">Provider</th>
-                        <th className="py-3 px-3">Model</th>
-                        <th className="py-3 px-3">Original</th>
-                        <th className="py-3 px-3">Compressed</th>
-                        <th className="py-3 px-3">Savings</th>
-                        <th className="py-3 px-3">CCR</th>
-                        <th className="py-3 px-3">Latency</th>
-                        <th className="py-3 px-3 text-right">Detail</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayLogs.length === 0 ? (
-                        <tr>
-                          <td colSpan={10} className="py-10 text-center text-xs font-mono text-slate-600">
-                            No requests yet. Send traffic through the proxy to see logs here.
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedLogs.map((log) => {
-                          const item = log as RequestLog;
-                          return (
-                            <tr
-                              key={item.id}
-                              className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
-                              onClick={() => setSelectedLog(item)}
-                            >
-                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap" title={new Date(item.timestamp).toLocaleString()}>
-                                {formatRelativeTime(item.timestamp, now)}
-                              </td>
-                              <td className="py-3 px-3">
-                                {item.status === "success" ? (
-                                  <span className="flex items-center gap-1.5 text-neon-green">
-                                    <CheckCircle className="w-3.5 h-3.5" /> OK
-                                  </span>
-                                ) : (
-                                  <div className="flex flex-col gap-0.5">
-                                    <span
-                                      className="flex items-center gap-1.5 text-neon-pink"
-                                      title={item.errorMessage || "Unknown error"}
-                                    >
-                                      <XCircle className="w-3.5 h-3.5" /> ERR
-                                    </span>
-                                    {item.errorMessage && (
-                                      <span className="text-[9px] text-neon-pink/70 max-w-[140px] truncate" title={item.errorMessage}>
-                                        {item.errorMessage}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="py-3 px-3 font-bold text-slate-300">{item.provider === "openai" ? "OpenAI" : "Anthropic"}</td>
-                              <td className="py-3 px-3 text-slate-400 max-w-[130px] truncate" title={item.model}>{item.model}</td>
-                              <td className="py-3 px-3 text-slate-400">{item.originalTokens.toLocaleString()}</td>
-                              <td className="py-3 px-3 text-slate-300">
-                                {item.cached ? (
-                                  <span className="bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan px-1.5 py-0.5 rounded text-[10px] font-bold">CACHED</span>
-                                ) : (
-                                  item.compressedTokens.toLocaleString()
-                                )}
-                              </td>
-                              <td className="py-3 px-3">
-                                <span
-                                  className="savings-badge"
-                                  style={{
-                                    color: savingsColor(item.savingsPercent),
-                                    background: savingsBg(item.savingsPercent),
-                                    border: `1px solid ${savingsColor(item.savingsPercent)}30`,
-                                  }}
-                                >
-                                  {item.savingsPercent.toFixed(0)}%
-                                </span>
-                              </td>
-                              <td className="py-3 px-3 text-slate-500">{item.ccrMappingsCount}</td>
-                              <td className="py-3 px-3 text-slate-500">{item.durationMs}ms</td>
-                              <td className="py-3 px-3 text-right">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedLog(item); }}
-                                  className="text-neon-purple hover:text-neon-cyan flex items-center gap-0.5 ml-auto transition-colors cursor-pointer"
-                                >
-                                  View <ChevronRight className="w-3 h-3" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </>
-                ) : activeLogTab === "llmlingua_direct" ? (
-                  <>
-                    <thead>
-                      <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
-                        <th className="py-3 px-3">Age</th>
-                        <th className="py-3 px-3">Method</th>
-                        <th className="py-3 px-3">Model</th>
-                        <th className="py-3 px-3 text-right">Original</th>
-                        <th className="py-3 px-3 text-right">Compressed</th>
-                        <th className="py-3 px-3 text-right">Savings</th>
-                        <th className="py-3 px-3 text-right">Latency</th>
-                        <th className="py-3 px-3 text-right">Status</th>
-                        <th className="py-3 px-3 text-right">Detail</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayLogs.length === 0 ? (
-                        <tr>
-                          <td colSpan={9} className="py-10 text-center text-xs font-mono text-slate-600">
-                            No direct LLMLingua activity recorded.
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedLogs.map((log) => {
-                          const item = log as LLMLinguaLog;
-                          return (
-                            <tr
-                              key={item.id}
-                              className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
-                              onClick={() => setSelectedLog(item)}
-                            >
-                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap" title={new Date(item.timestamp).toLocaleString()}>
-                                {formatRelativeTime(item.timestamp, now)}
-                              </td>
-                              <td className="py-3 px-3">
-                                {item.method === "local" ? (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">LOCAL</span>
-                                ) : (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan">API</span>
-                                )}
-                              </td>
-                              <td className="py-3 px-3 text-slate-400 max-w-[120px] truncate" title={item.model}>
-                                {item.model}
-                              </td>
-                              <td className="py-3 px-3 text-right text-slate-400">{item.originalTokens.toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right text-slate-400">
-                                {item.status === "error" ? (
-                                  <span className="text-red-400">—</span>
-                                ) : (
-                                  item.compressedTokens.toLocaleString()
-                                )}
-                              </td>
-                              <td className="py-3 px-3 text-right">
-                                {item.status === "error" ? (
-                                  <span className="text-red-400 text-[10px] font-bold">ERR</span>
-                                ) : (
-                                  <span
-                                    className="savings-badge"
-                                    style={{
-                                      color: savingsColor(item.savingsPercent),
-                                      background: savingsBg(item.savingsPercent),
-                                      border: `1px solid ${savingsColor(item.savingsPercent)}30`,
-                                    }}
-                                  >
-                                    {item.savingsPercent.toFixed(0)}%
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-3 px-3 text-right text-slate-500">{item.durationMs}ms</td>
-                              <td className="py-3 px-3 text-right">
-                                {item.status === "success" ? (
-                                  <span className="flex items-center justify-end gap-1 text-neon-green">
-                                    <CheckCircle className="w-3.5 h-3.5" />
-                                    <span className="text-[10px] font-bold">OK</span>
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center justify-end gap-1 text-red-400" title={item.errorMessage}>
-                                    <XCircle className="w-3.5 h-3.5" />
-                                    <span className="text-[10px] font-bold">ERR</span>
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-3 px-3 text-right">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedLog(item); }}
-                                  className="text-neon-cyan hover:text-neon-purple flex items-center gap-0.5 ml-auto transition-colors cursor-pointer"
-                                >
-                                  View <ChevronRight className="w-3 h-3" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </>
-                ) : (
-                  <>
-                    <thead>
-                      <tr className="border-b border-white/5 text-xxs font-mono text-slate-500 uppercase tracking-widest">
-                        <th className="py-3 px-3">Age</th>
-                        <th className="py-3 px-3">Status</th>
-                        <th className="py-3 px-3">Request ID</th>
-                        <th className="py-3 px-3">Model</th>
-                        <th className="py-3 px-3 text-right">Before Step</th>
-                        <th className="py-3 px-3 text-right">After Step</th>
-                        <th className="py-3 px-3 text-right">Savings</th>
-                        <th className="py-3 px-3 text-right">Latency</th>
-                        <th className="py-3 px-3 text-right">Detail</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayLogs.length === 0 ? (
-                        <tr>
-                          <td colSpan={9} className="py-10 text-center text-xs font-mono text-slate-600">
-                            No requests used this compression feature step yet.
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedLogs.map((log) => {
-                          const item = log as RequestLog;
-                          const stepNameMap: Record<string, string> = {
-                            rtk: "RTK",
-                            serena: "Serena",
-                            llmlingua: "LLMLingua",
-                            headroom: "Headroom",
-                            caveman: "Caveman",
-                          };
-                          const targetStepName = stepNameMap[activeLogTab];
-                          const stepObj = (item.pipelineSteps || []).find((s) => s.name === targetStepName);
-                          if (!stepObj) return null;
-                          const savings = stepObj.inputTokens > 0 ? ((stepObj.inputTokens - stepObj.outputTokens) / stepObj.inputTokens) * 100 : 0;
-                          return (
-                            <tr
-                              key={item.id}
-                              className="border-b border-white/[0.04] hover:bg-white/[0.02] text-xs font-mono transition-colors cursor-pointer"
-                              onClick={() => {
-                                setSelectedLog(item);
-                                setSelectedStep(targetStepName);
-                              }}
-                            >
-                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap" title={new Date(item.timestamp).toLocaleString()}>
-                                {formatRelativeTime(item.timestamp, now)}
-                              </td>
-                              <td className="py-3 px-3">
-                                {item.status === "success" ? (
-                                  <span className="flex items-center gap-1.5 text-neon-green">
-                                    <CheckCircle className="w-3.5 h-3.5" /> OK
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-1.5 text-neon-pink">
-                                    <XCircle className="w-3.5 h-3.5" /> ERR
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-3 px-3 font-bold text-slate-300">#{item.id}</td>
-                              <td className="py-3 px-3 text-slate-400 max-w-[130px] truncate" title={item.model}>{item.model}</td>
-                              <td className="py-3 px-3 text-right text-slate-400">{stepObj.inputTokens.toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right text-slate-300">{stepObj.outputTokens.toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right">
-                                <span
-                                  className="savings-badge"
-                                  style={{
-                                    color: savingsColor(savings),
-                                    background: savingsBg(savings),
-                                    border: `1px solid ${savingsColor(savings)}30`,
-                                  }}
-                                >
-                                  {savings.toFixed(0)}%
-                                </span>
-                              </td>
-                              <td className="py-3 px-3 text-right text-slate-500">{item.durationMs}ms</td>
-                              <td className="py-3 px-3 text-right">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedLog(item);
-                                    setSelectedStep(targetStepName);
-                                  }}
-                                  className="text-neon-cyan hover:text-neon-purple flex items-center gap-0.5 ml-auto transition-colors cursor-pointer"
-                                >
-                                  View <ChevronRight className="w-3 h-3" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </>
+            {/* Split Panel Body */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[550px]">
+              
+              {/* Left Column: Logs List (lg:col-span-5) */}
+              <div className="lg:col-span-5 flex flex-col justify-between border-r border-white/5 pr-0 lg:pr-6">
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {displayLogs.length === 0 ? (
+                    <div className="py-12 text-center text-xs font-mono text-slate-600">
+                      No activity recorded yet.
+                    </div>
+                  ) : (
+                    paginatedLogs.map((log) => {
+                      const isSelected = selectedLog?.id === log.id;
+                      const hasSteps = "pipelineSteps" in log;
+                      const ccrCount = hasSteps ? (log as RequestLog).ccrMappingsCount : 0;
+                      return (
+                        <div
+                          key={log.id}
+                          onClick={() => setSelectedLog(log)}
+                          className={`group p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                            isSelected
+                              ? "bg-neon-purple/10 border-neon-purple/30 shadow-[0_0_12px_rgba(168,85,247,0.08)]"
+                              : "bg-slate-950/40 border-white/5 hover:bg-white/[0.02] hover:border-white/10"
+                          }`}
+                        >
+                          <div className="flex flex-col gap-1 min-w-0 flex-1 mr-3">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-1.5 h-1.5 rounded-full ${log.status === "success" ? "bg-neon-green" : "bg-neon-pink"}`} />
+                              <span className="text-xxs font-mono font-bold text-slate-300">
+                                {hasSteps ? `REQ #${log.id}` : `DIRECT #${log.id}`}
+                              </span>
+                              <span className="text-[9px] font-mono text-slate-500" title={new Date(log.timestamp).toLocaleString()}>
+                                {formatRelativeTime(log.timestamp, now)}
+                              </span>
+                            </div>
+                            <div className="text-[10px] font-mono text-slate-400 truncate" title={log.model}>
+                              {log.model}
+                            </div>
+                            <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500 mt-0.5">
+                              {hasSteps ? (
+                                <>
+                                  <span>{log.provider === "openai" ? "OpenAI" : "Anthropic"}</span>
+                                  <span>•</span>
+                                  <span>{ccrCount} CCR</span>
+                                </>
+                              ) : (
+                                <span>LLMLingua ({(log as LLMLinguaLog).method.toUpperCase()})</span>
+                              )}
+                              <span>•</span>
+                              <span>{log.durationMs}ms</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {log.status === "error" ? (
+                              <span className="text-[10px] font-bold text-neon-pink bg-neon-pink/10 border border-neon-pink/20 px-1.5 py-0.5 rounded font-mono">ERR</span>
+                            ) : "cached" in log && log.cached ? (
+                              <span className="text-[9px] font-bold text-neon-cyan bg-neon-cyan/10 border border-neon-cyan/20 px-1.5 py-0.5 rounded font-mono">CACHED</span>
+                            ) : (
+                              <span
+                                className="savings-badge text-[10px] font-mono"
+                                style={{
+                                  color: savingsColor(log.savingsPercent),
+                                  background: savingsBg(log.savingsPercent),
+                                  border: `1px solid ${savingsColor(log.savingsPercent)}30`,
+                                }}
+                              >
+                                {log.savingsPercent.toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Left Side Pagination */}
+                {displayLogs.length > 0 && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5 text-[10px] font-mono text-slate-400">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, activePage - 1))}
+                        disabled={activePage === 1}
+                        className="p-1 rounded bg-slate-900/40 border border-white/5 text-slate-400 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <span>
+                        {activePage} / {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(Math.min(totalPages, activePage + 1))}
+                        disabled={activePage === totalPages}
+                        className="p-1 bg-slate-900/40 border border-white/5 text-slate-400 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div>
+                      {displayLogs.length} logs
+                    </div>
+                  </div>
                 )}
-              </table>
+              </div>
+
+              {/* Right Column: Pipeline Inspector (lg:col-span-7) */}
+              <div className="lg:col-span-7 flex flex-col">
+                {!selectedLog ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border border-dashed border-white/8 rounded-2xl min-h-[300px]">
+                    <Zap className="w-8 h-8 text-slate-700 mb-3 animate-pulse" />
+                    <p className="text-xs font-bold text-slate-400">No Request Selected</p>
+                    <p className="text-[10px] font-mono text-slate-500 mt-1 max-w-[240px]">
+                      Select an activity log from the list on the left to inspect its pipeline execution
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4 flex-1">
+                    
+                    {/* Selected Header Info */}
+                    <div className="bg-slate-950/60 border border-white/5 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold text-slate-200 font-mono">
+                            {"provider" in selectedLog ? "Request" : "LLMLingua Direct"} #{selectedLog.id}
+                          </h4>
+                          {selectedLog.status === "success" ? (
+                            <span className="flex items-center gap-1 text-[9px] font-bold text-neon-green bg-neon-green/10 border border-neon-green/20 px-1.5 py-0.5 rounded font-mono">
+                              <CheckCircle className="w-2.5 h-2.5" /> OK
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[9px] font-bold text-neon-pink bg-neon-pink/10 border border-neon-pink/20 px-1.5 py-0.5 rounded font-mono">
+                              <XCircle className="w-2.5 h-2.5" /> ERROR
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-500 mt-1">
+                          {selectedLog.model} • {selectedLog.durationMs}ms latency
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-right sm:border-l border-white/5 sm:pl-4">
+                        <div>
+                          <div className="text-[9px] font-mono text-slate-500">Savings</div>
+                          <div className="text-sm font-black font-mono mt-0.5" style={{ color: savingsColor(selectedLog.savingsPercent) }}>
+                            {selectedLog.savingsPercent.toFixed(1)}%
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[9px] font-mono text-slate-500">Tokens (Before/After)</div>
+                          <div className="text-xxs font-mono font-bold text-slate-300 mt-1">
+                            {selectedLog.originalTokens.toLocaleString()} ➔ {selectedLog.compressedTokens.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Error display if failed */}
+                    {selectedLog.status === "error" && selectedLog.errorMessage && (
+                      <div className="bg-neon-pink/5 border border-neon-pink/25 rounded-xl p-3 text-[10px] font-mono text-neon-pink whitespace-pre-wrap break-all">
+                        <strong>Error Message:</strong> {selectedLog.errorMessage}
+                      </div>
+                    )}
+
+                    {/* Pipeline Steps Horizontal Timeline (Only for Requests) */}
+                    {"pipelineSteps" in selectedLog && steps.length > 0 && (
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+                          Pipeline Steps Timeline
+                        </span>
+                        <div className="flex items-center bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-1 text-[9px] font-bold overflow-x-auto">
+                          <button
+                            onClick={() => setSelectedStep("all")}
+                            className={`px-2 py-1.5 rounded-lg whitespace-nowrap cursor-pointer transition-all ${
+                              selectedStep === "all"
+                                ? "bg-neon-purple/20 text-neon-purple border border-neon-purple/35"
+                                : "text-slate-400 hover:text-slate-300"
+                            }`}
+                          >
+                            All Steps
+                          </button>
+                          {steps.map((step) => {
+                            const isStepSelected = selectedStep === step.name;
+                            const stepSavings = step.inputTokens > 0 ? ((step.inputTokens - step.outputTokens) / step.inputTokens) * 100 : 0;
+                            return (
+                              <button
+                                key={step.name}
+                                disabled={!step.enabled}
+                                onClick={() => setSelectedStep(step.name)}
+                                className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
+                                  !step.enabled
+                                    ? "opacity-30 cursor-not-allowed"
+                                    : isStepSelected
+                                    ? "bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/35 shadow-[0_0_8px_rgba(6,182,212,0.15)]"
+                                    : "text-slate-400 hover:text-slate-300"
+                                }`}
+                              >
+                                {step.name === "RTK" && <Terminal className="w-3 h-3" />}
+                                {step.name === "Serena" && <FileCode className="w-3 h-3" />}
+                                {step.name === "LLMLingua" && <Brain className="w-3 h-3" />}
+                                {step.name === "Headroom" && <Database className="w-3 h-3" />}
+                                {step.name === "Caveman" && <Cpu className="w-3 h-3" />}
+                                <span>{step.name}</span>
+                                {step.enabled && <span className="text-[8px] font-mono text-slate-500">({stepSavings.toFixed(0)}%)</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Side-by-Side Prompt Diffs */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                      
+                      {/* Before / Left panel */}
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-[9px] font-mono">
+                          <span className="font-bold uppercase tracking-wider text-slate-400">
+                            {leftLabel}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-500 font-bold bg-white/5 px-1.5 py-0.5 rounded text-[8px]">
+                              {originalTokensToShow.toLocaleString()} tokens
+                            </span>
+                            <CopyButton text={originalTextToShow} />
+                          </div>
+                        </div>
+                        <pre className="flex-1 min-h-[160px] md:min-h-[220px] max-h-[300px] overflow-y-auto bg-slate-950 border border-white/5 p-3.5 rounded-xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-all focus:outline-none">
+                          {originalTextToShow || "[No content recorded]"}
+                        </pre>
+                      </div>
+
+                      {/* After / Right panel */}
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-[9px] font-mono">
+                          <span className="font-bold uppercase tracking-wider text-neon-cyan">
+                            {rightLabel}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="font-bold px-1.5 py-0.5 rounded text-[8px]"
+                              style={{ color: savingsColor(stepSavings), background: savingsBg(stepSavings) }}
+                            >
+                              {compressedTokensToShow.toLocaleString()} tokens ({stepSavings.toFixed(0)}%)
+                            </span>
+                            <CopyButton text={compressedTextToShow} />
+                          </div>
+                        </div>
+                        <pre
+                          className="flex-1 min-h-[160px] md:min-h-[220px] max-h-[300px] overflow-y-auto bg-slate-950 border p-3.5 rounded-xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-all focus:outline-none"
+                          style={{ borderColor: savingsColor(stepSavings) + "25" }}
+                        >
+                          {compressedTextToShow || "[No content recorded]"}
+                        </pre>
+                      </div>
+                    </div>
+
+                    {/* CCR variable mappings list if they exist */}
+                    {"ccrMappingsCount" in selectedLog && selectedLog.ccrMappingsCount > 0 && (
+                      <div className="bg-slate-950/40 border border-white/5 rounded-xl p-3 mt-1">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 font-mono block mb-1.5">
+                          CCR Tokens Variable Mappings ({selectedLog.ccrMappingsCount})
+                        </span>
+                        <div className="text-[9px] font-mono text-slate-500">
+                          Inspect mapped code compression variables using the CLI console output or detail debugger logs.
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+              </div>
+
             </div>
 
-            {/* Pagination Controls */}
-            {displayLogs.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-white/5 text-xxs font-mono text-slate-400">
-                <div>
-                  Showing <span className="text-slate-200">{displayLogs.length > 0 ? startIndex + 1 : 0}</span> to{" "}
-                  <span className="text-slate-200">{endIndex}</span> of{" "}
-                  <span className="text-slate-200">{displayLogs.length}</span> entries
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setCurrentPage(1)}
-                    disabled={activePage === 1}
-                    className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                    title="First Page"
-                  >
-                    <ChevronsLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(activePage - 1)}
-                    disabled={activePage === 1}
-                    className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                    title="Previous Page"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-
-                  {Array.from({ length: totalPages }).map((_, i) => {
-                    const pageNum = i + 1;
-                    const isFirstOrLast = pageNum === 1 || pageNum === totalPages;
-                    const isNearActive = Math.abs(pageNum - activePage) <= 1;
-
-                    if (!isFirstOrLast && !isNearActive) {
-                      if (pageNum === 2 && activePage > 3) {
-                        return <span key="ellipsis-start" className="px-1 text-slate-600 select-none">...</span>;
-                      }
-                      if (pageNum === totalPages - 1 && activePage < totalPages - 2) {
-                        return <span key="ellipsis-end" className="px-1 text-slate-600 select-none">...</span>;
-                      }
-                      return null;
-                    }
-
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`min-w-[24px] h-6 rounded-md border flex items-center justify-center font-bold transition-all cursor-pointer ${
-                          activePage === pageNum
-                            ? "border-neon-purple/30 bg-neon-purple/10 text-neon-purple shadow-[0_0_8px_rgba(168,85,247,0.15)]"
-                            : "border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5"
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-
-                  <button
-                    onClick={() => setCurrentPage(activePage + 1)}
-                    disabled={activePage === totalPages}
-                    className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                    title="Next Page"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={activePage === totalPages}
-                    className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                    title="Last Page"
-                  >
-                    <ChevronsRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-500">Show</span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="bg-slate-950 border border-white/10 text-slate-300 rounded-lg px-2 py-0.5 focus:outline-none focus:border-neon-purple/40 font-bold transition-all cursor-pointer text-xxs"
-                  >
-                    {[5, 10, 15, 25, 50].map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-slate-500">entries</span>
-                </div>
-              </div>
-            )}
           </div>
 
         </div>
@@ -1011,205 +905,6 @@ export default function DashboardTab({
         </div>
 
       </div>
-
-      {/* ── Log Detail Modal ──────────────────────────────────────── */}
-      {selectedLog && (
-        <div
-          className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-start justify-center p-4 z-50 animate-in overflow-y-auto"
-          onClick={() => setSelectedLog(null)}
-        >
-          <div
-            className="glass-panel w-full max-w-5xl rounded-3xl flex flex-col shadow-2xl my-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header — pinned, never scrolls */}
-            <div className="p-5 border-b border-white/5 flex justify-between items-start sticky top-0 z-10 rounded-t-3xl" style={{ background: "rgba(10,12,20,0.96)", backdropFilter: "blur(12px)" }}>
-              <div>
-                <h3 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-cyan">
-                  {"provider" in selectedLog ? "REQUEST" : "LLMLINGUA COMPRESSION"} #{selectedLog.id}
-                </h3>
-                <div className="flex flex-wrap gap-3 mt-1.5 text-xxs font-mono text-slate-500">
-                  <span>Model: <span className="text-slate-300">{selectedLog.model}</span></span>
-                  {"provider" in selectedLog && (
-                    <span>Provider: <span className="text-slate-300">{selectedLog.provider}</span></span>
-                  )}
-                  {"method" in selectedLog && (
-                    <span>Method: <span className="text-slate-300 uppercase">{selectedLog.method}</span></span>
-                  )}
-                  <span>
-                    Savings:{" "}
-                    <span className="font-bold" style={{ color: savingsColor(selectedLog.savingsPercent) }}>
-                      {selectedLog.savingsPercent.toFixed(1)}%
-                    </span>
-                  </span>
-                  <span>Duration: <span className="text-slate-300">{selectedLog.durationMs}ms</span></span>
-                  {"ccrMappingsCount" in selectedLog && (
-                    <span>CCR Mappings: <span className="text-slate-300">{selectedLog.ccrMappingsCount}</span></span>
-                  )}
-                  {"cached" in selectedLog && selectedLog.cached && (
-                    <span className="bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan px-1.5 py-0.5 rounded font-bold">CACHED</span>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 hover:text-white px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors shrink-0 ml-4"
-              >
-                ✕ Close
-              </button>
-            </div>
-
-            {/* Error Details — only shown for failed requests */}
-            {selectedLog.status === "error" && selectedLog.errorMessage && (
-              <div className="px-5 pt-5 pb-0">
-                <div className="flex flex-col gap-2 bg-neon-pink/5 border border-neon-pink/20 rounded-2xl p-4">
-                  <div className="flex items-center gap-2">
-                    <XCircle className="w-4 h-4 text-neon-pink shrink-0" />
-                    <h4 className="text-xxs font-bold uppercase tracking-wider text-neon-pink font-mono">
-                      Error Details
-                    </h4>
-                  </div>
-                  <pre className="text-xxs font-mono text-neon-pink/80 whitespace-pre-wrap break-words bg-neon-pink/5 p-3 rounded-xl border border-neon-pink/10">
-                    {selectedLog.errorMessage}
-                  </pre>
-                </div>
-              </div>
-            )}
-
-            {/* Pipeline Steps Progression Table */}
-            {selectedLog && "pipelineSteps" in selectedLog && steps.length > 0 && (
-              <div className="px-5 pt-5 pb-0">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">
-                    Pipeline Steps Progression
-                  </h4>
-                  <span className="text-[10px] text-slate-500 font-mono">
-                    Click a step below to inspect its specific input and output
-                  </span>
-                </div>
-                <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-950/40">
-                  <table className="w-full text-xxs font-mono text-left">
-                    <thead>
-                      <tr className="border-b border-white/5 text-slate-500 text-xxs font-bold uppercase tracking-wider">
-                        <th className="py-2.5 px-3 text-left">Step</th>
-                        <th className="py-2.5 px-3 text-center">Status</th>
-                        <th className="py-2.5 px-3 text-right">Input Tokens</th>
-                        <th className="py-2.5 px-3 text-right">Output Tokens</th>
-                        <th className="py-2.5 px-3 text-right">Savings</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/[0.03]">
-                      {/* Overall summary row */}
-                      <tr
-                        onClick={() => setSelectedStep("all")}
-                        className={`cursor-pointer transition-all hover:bg-white/[0.04] ${
-                          selectedStep === "all" ? "bg-neon-purple/10 text-neon-purple font-bold border-l-2 border-neon-purple" : ""
-                        }`}
-                      >
-                        <td className="py-2 px-3 font-sans font-bold">ALL (Original → Final)</td>
-                        <td className="py-2 px-3 text-center">
-                          <span className="bg-neon-green/10 text-neon-green border border-neon-green/20 px-1 py-0.5 rounded text-[9px] font-bold">ACTIVE</span>
-                        </td>
-                        <td className="py-2 px-3 text-right">{selectedLog.originalTokens.toLocaleString()}</td>
-                        <td className="py-2 px-3 text-right">{selectedLog.compressedTokens.toLocaleString()}</td>
-                        <td className="py-2 px-3 text-right">
-                          <span className="font-bold" style={{ color: savingsColor(selectedLog.savingsPercent) }}>
-                            {selectedLog.savingsPercent.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-
-                      {/* Individual steps */}
-                      {steps.map((step) => {
-                        const savings = step.inputTokens > 0 ? ((step.inputTokens - step.outputTokens) / step.inputTokens) * 100 : 0;
-                        return (
-                          <tr
-                            key={step.name}
-                            onClick={() => step.enabled && setSelectedStep(step.name)}
-                            className={`transition-all ${
-                              !step.enabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:bg-white/[0.04]"
-                            } ${
-                              selectedStep === step.name ? "bg-neon-cyan/10 text-neon-cyan font-bold border-l-2 border-neon-cyan" : ""
-                            }`}
-                          >
-                            <td className="py-2 px-3 font-sans font-bold flex items-center gap-1.5">
-                              {step.name === "RTK" && <Terminal className="w-3.5 h-3.5 text-neon-purple" />}
-                              {step.name === "Serena" && <FileCode className="w-3.5 h-3.5 text-neon-green" />}
-                              {step.name === "LLMLingua" && <Brain className="w-3.5 h-3.5 text-neon-cyan" />}
-                              {step.name === "Headroom" && <Database className="w-3.5 h-3.5 text-neon-cyan" />}
-                              {step.name === "Caveman" && <Cpu className="w-3.5 h-3.5 text-neon-pink" />}
-                              {step.name}
-                            </td>
-                            <td className="py-2 px-3 text-center">
-                              {step.enabled ? (
-                                <span className="bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20 px-1 py-0.5 rounded text-[9px] font-bold">ENABLED</span>
-                              ) : (
-                                <span className="bg-slate-800 text-slate-500 border border-white/5 px-1 py-0.5 rounded text-[9px] font-bold">DISABLED</span>
-                              )}
-                            </td>
-                            <td className="py-2 px-3 text-right">{step.inputTokens.toLocaleString()}</td>
-                            <td className="py-2 px-3 text-right">{step.outputTokens.toLocaleString()}</td>
-                            <td className="py-2 px-3 text-right">
-                              {step.enabled ? (
-                                <span style={{ color: savingsColor(savings) }}>
-                                  {savings.toFixed(1)}%
-                                </span>
-                              ) : (
-                                <span className="text-slate-600">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Prompt diff — no nested scroll; outer overlay scrolls */}
-            <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Original Prompt / Before text */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xxs font-bold uppercase tracking-wider text-slate-400 font-mono">{leftLabel}</h4>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xxs font-mono text-slate-500 bg-white/5 px-2 py-0.5 rounded">
-                      {originalTokensToShow.toLocaleString()} tok
-                    </span>
-                    <CopyButton text={originalTextToShow} />
-                  </div>
-                </div>
-                <pre className="bg-slate-950/90 border border-white/5 p-4 rounded-2xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-words min-h-[150px]">
-                  {originalTextToShow || "[No content recorded]"}
-                </pre>
-              </div>
-
-              {/* Compressed Prompt / After text */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xxs font-bold uppercase tracking-wider text-neon-cyan font-mono">{rightLabel}</h4>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-xxs font-mono font-bold px-2 py-0.5 rounded"
-                      style={{ color: savingsColor(stepSavings), background: savingsBg(stepSavings) }}
-                    >
-                      {compressedTokensToShow.toLocaleString()} tok
-                    </span>
-                    <CopyButton text={compressedTextToShow} />
-                  </div>
-                </div>
-                <pre
-                  className="bg-slate-950/90 border p-4 rounded-2xl text-xxs font-mono text-slate-300 whitespace-pre-wrap break-words min-h-[150px]"
-                  style={{ borderColor: savingsColor(stepSavings) + "30" }}
-                >
-                  {compressedTextToShow || "[No content recorded]"}
-                </pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
