@@ -358,9 +358,19 @@ export default function DashboardTab({
                               <CheckCircle className="w-3.5 h-3.5" /> OK
                             </span>
                           ) : (
-                            <span className="flex items-center gap-1.5 text-neon-pink">
-                              <XCircle className="w-3.5 h-3.5" /> ERR
-                            </span>
+                            <div className="flex flex-col gap-0.5">
+                              <span
+                                className="flex items-center gap-1.5 text-neon-pink"
+                                title={log.errorMessage || "Unknown error"}
+                              >
+                                <XCircle className="w-3.5 h-3.5" /> ERR
+                              </span>
+                              {log.errorMessage && (
+                                <span className="text-[9px] text-neon-pink/70 max-w-[140px] truncate" title={log.errorMessage}>
+                                  {log.errorMessage}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="py-3 px-3 font-bold text-slate-300">{log.provider === "openai" ? "OpenAI" : "Anthropic"}</td>
@@ -739,6 +749,23 @@ export default function DashboardTab({
                 ✕ Close
               </button>
             </div>
+
+            {/* Error Details — only shown for failed requests */}
+            {selectedLog.status === "error" && selectedLog.errorMessage && (
+              <div className="px-5 pt-5 pb-0">
+                <div className="flex flex-col gap-2 bg-neon-pink/5 border border-neon-pink/20 rounded-2xl p-4">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-neon-pink shrink-0" />
+                    <h4 className="text-xxs font-bold uppercase tracking-wider text-neon-pink font-mono">
+                      Error Details
+                    </h4>
+                  </div>
+                  <pre className="text-xxs font-mono text-neon-pink/80 whitespace-pre-wrap break-words bg-neon-pink/5 p-3 rounded-xl border border-neon-pink/10">
+                    {selectedLog.errorMessage}
+                  </pre>
+                </div>
+              </div>
+            )}
 
             {/* Prompt diff — no nested scroll; outer overlay scrolls */}
             <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.46] - 2026-07-03
+
+### Added
+- **Proxy Activity Log Error Details**: Added a dedicated `errorMessage` field to the `RequestLog` type (both frontend and server). Failed requests now display a human-readable error message directly in the log table (truncated, with full text on hover tooltip) and a prominent **"Error Details"** section in the request detail modal styled in red. Previously, error rows only showed a generic red `ERR` badge with no further information.
+
+### Changed
+- **Error Capture in proxy.ts**: All `addLog` calls with `status: "error"` now populate `errorMessage` with the actual failure reason — `HTTP <status>: <body>` for upstream HTTP errors, or the exception message for network/runtime failures. The old workaround of overwriting `compressedPrompt` with `err.message` has been removed.
+
+---
+
 ## [1.3.45] - 2026-07-03
 
 ### Added

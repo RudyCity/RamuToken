@@ -263,6 +263,7 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
         cached: false,
         durationMs,
         status: "error",
+        errorMessage: `HTTP ${response.status}: ${errText.slice(0, 300)}`,
         ccrMappingsCount: ccrCount,
         originalPrompt,
         compressedPrompt
@@ -337,9 +338,10 @@ export async function handleOpenAIProxy(req: Request): Promise<Response> {
       cached: false,
       durationMs: Date.now() - startTime,
       status: "error",
+      errorMessage: err.message,
       ccrMappingsCount: 0,
       originalPrompt,
-      compressedPrompt: err.message
+      compressedPrompt
     });
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
@@ -428,6 +430,7 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
         cached: false,
         durationMs,
         status: "error",
+        errorMessage: `HTTP ${response.status}: ${errText.slice(0, 300)}`,
         ccrMappingsCount: ccrCount,
         originalPrompt,
         compressedPrompt
@@ -507,9 +510,10 @@ export async function handleAnthropicProxy(req: Request): Promise<Response> {
       cached: false,
       durationMs: Date.now() - startTime,
       status: "error",
+      errorMessage: err.message,
       ccrMappingsCount: 0,
       originalPrompt,
-      compressedPrompt: err.message
+      compressedPrompt
     });
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
@@ -742,6 +746,7 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
         cached: false,
         durationMs,
         status: "error",
+        errorMessage: `HTTP ${response.status}: ${errText.slice(0, 300)}`,
         ccrMappingsCount: ccrCount,
         originalPrompt,
         compressedPrompt
@@ -818,9 +823,10 @@ export async function handleAnthropicTranspiledProxy(req: Request): Promise<Resp
       cached: false,
       durationMs: Date.now() - startTime,
       status: "error",
+      errorMessage: err.message,
       ccrMappingsCount: 0,
       originalPrompt,
-      compressedPrompt: err.message
+      compressedPrompt
     });
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }

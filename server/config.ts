@@ -91,6 +91,8 @@ export interface RequestLog {
   cached: boolean;
   durationMs: number;
   status: "success" | "error";
+  /** Human-readable error message. Only present when status === "error". */
+  errorMessage?: string;
   ccrMappingsCount: number;
   originalPrompt: string;
   compressedPrompt: string;
