@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Settings as SettingsIcon,
   Activity,
@@ -81,6 +82,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>(getTabFromHash);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isPipelineDropdownOpen, setIsPipelineDropdownOpen] = useState(false);
+  const pipelineBtnRef = useRef<HTMLDivElement>(null);
 
   const addToast = (message: string, type: "success" | "error" | "info" = "success") => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -447,7 +449,7 @@ export default function App() {
           {/* Status badge & Pipeline Dropdown — right */}
           <div className="flex items-center gap-4 shrink-0">
             {/* Pipeline Status Dropdown */}
-            <div className="relative" style={{ isolation: "isolate", zIndex: 9999 }}>
+            <div className="relative" ref={pipelineBtnRef}>
               <button
                 onClick={() => setIsPipelineDropdownOpen(!isPipelineDropdownOpen)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xxs font-bold transition-all bg-white/5 border hover:bg-white/10 text-slate-300 cursor-pointer ${
@@ -459,15 +461,23 @@ export default function App() {
                 <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-300 ${isPipelineDropdownOpen ? "rotate-180" : ""}`} />
               </button>
 
-              {isPipelineDropdownOpen && (
+              {isPipelineDropdownOpen && createPortal(
                 <>
                   <div
                     className="fixed inset-0 z-[9998]"
                     onClick={() => setIsPipelineDropdownOpen(false)}
                   />
                   <div
-                    className="fixed w-80 border border-slate-700 p-4 rounded-2xl shadow-2xl z-[9999] flex flex-col gap-3"
-                    style={{ background: "rgb(8,10,18)", boxShadow: "0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(168,85,247,0.12)", top: "56px", right: "24px" }}
+                    className="fixed w-80 border border-slate-700 p-4 rounded-2xl flex flex-col gap-3"
+                    style={{
+                      background: "rgb(8,10,18)",
+                      boxShadow: "0 25px 60px rgba(0,0,0,0.9), 0 0 0 1px rgba(168,85,247,0.15)",
+                      zIndex: 99999,
+                      top: pipelineBtnRef.current
+                        ? pipelineBtnRef.current.getBoundingClientRect().bottom + 8
+                        : 60,
+                      right: 24,
+                    }}
                   >
                     <div className="flex items-center justify-between pb-2 border-b border-white/5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Pipeline Status</span>
@@ -567,7 +577,7 @@ export default function App() {
                     </div>
                   </div>
                 </>
-              )}
+              , document.body)}
             </div>
 
             {/* Offline/Online WS Indicator */}
