@@ -536,56 +536,6 @@ export default function DashboardTab({
             </div>
           </div>
 
-          {/* Caveman Stats & Badge card */}
-          <div className="glass-panel p-6 rounded-2xl flex flex-col relative overflow-hidden border border-neon-pink/10">
-            <div className="absolute -right-6 -top-6 w-16 h-16 rounded-full bg-neon-pink/8 blur-2xl pointer-events-none" />
-            
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-4 text-slate-300 flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-neon-pink" />
-              Caveman Stats & Badge
-            </h3>
-            
-            <div className="space-y-4 flex-1">
-              {/* Visual badge mockup */}
-              <div className="bg-slate-950 border border-white/5 p-4 rounded-xl flex flex-col items-center justify-center gap-1.5 font-mono">
-                <span className="text-[10px] text-slate-500 uppercase tracking-widest">Claude Code Status Badge</span>
-                <div className="bg-slate-900 border border-neon-pink/35 px-4 py-1.5 rounded-lg text-xs flex items-center gap-2 text-neon-pink shadow-[0_0_15px_rgba(236,72,153,0.15)] font-bold">
-                  <span>[CAVEMAN]</span>
-                  <span>⛏</span>
-                  <span className="text-white">{metrics.totalSavedTokens >= 1000 ? `${(metrics.totalSavedTokens / 1000).toFixed(1)}k` : metrics.totalSavedTokens}</span>
-                </div>
-              </div>
-
-              {/* Token savings stats */}
-              <div className="grid grid-cols-2 gap-2 text-xxs font-mono">
-                <div className="bg-slate-900/40 p-2.5 rounded-lg border border-white/5">
-                  <span className="text-slate-500 block">Saved Tokens:</span>
-                  <span className="text-xs font-bold text-slate-300">{metrics.totalSavedTokens.toLocaleString()}</span>
-                </div>
-                <div className="bg-slate-900/40 p-2.5 rounded-lg border border-white/5">
-                  <span className="text-slate-500 block">USD Saved:</span>
-                  <span className="text-xs font-bold text-neon-green">${metrics.totalSavedCost.toFixed(3)}</span>
-                </div>
-              </div>
-
-              {/* Share action */}
-              <div className="pt-2 border-t border-white/5">
-                <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Share your savings</label>
-                <button
-                  onClick={() => {
-                    const shareText = `⚡ RamuToken saved me ${metrics.totalSavedTokens.toLocaleString()} tokens ($${metrics.totalSavedCost.toFixed(3)})! Speed up your AI coding agents with RamuToken. #AI #Coding`;
-                    navigator.clipboard.writeText(shareText);
-                    setTweetCopied(true);
-                    setTimeout(() => setTweetCopied(false), 2000);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-slate-300"
-                >
-                  {tweetCopied ? <Check className="w-3.5 h-3.5 text-neon-green" /> : <Copy className="w-3.5 h-3.5" />}
-                  {tweetCopied ? "Copied tweet draft!" : "Copy Shareable Tweet"}
-                </button>
-              </div>
-            </div>
-          </div>
 
         </div>
 
