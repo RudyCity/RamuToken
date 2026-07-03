@@ -465,7 +465,10 @@ export default function App() {
                     className="fixed inset-0 z-40"
                     onClick={() => setIsPipelineDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-72 glass-panel border border-white/10 p-4 rounded-2xl shadow-2xl z-50 animate-in flex flex-col gap-3" style={{ background: "rgba(10,12,20,0.96)", backdropFilter: "blur(12px)" }}>
+                  <div
+                    className="absolute right-0 mt-2 w-80 border border-slate-700 p-4 rounded-2xl shadow-2xl z-50 animate-in flex flex-col gap-3"
+                    style={{ background: "rgb(8,10,18)", boxShadow: "0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(168,85,247,0.12)" }}
+                  >
                     <div className="flex items-center justify-between pb-2 border-b border-white/5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Pipeline Status</span>
                       <span className="text-[9px] font-mono text-slate-500">Live Config</span>
@@ -527,7 +530,7 @@ export default function App() {
                     <div className="pt-2 border-t border-white/5">
                       <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 block mb-2 font-mono">Active Routing Path</span>
                       
-                      <div className="bg-slate-950/60 border border-white/5 p-2 rounded-xl flex items-center justify-between font-mono text-[8px] relative overflow-hidden">
+                      <div className="bg-slate-900 border border-slate-700 p-2 rounded-xl flex items-center justify-between font-mono text-[8px] relative overflow-hidden">
                         <div className="flex flex-col items-center">
                           <span className="text-slate-600 text-[7px] uppercase tracking-wider">Client</span>
                           <span className="text-slate-300 font-bold">Agent</span>
