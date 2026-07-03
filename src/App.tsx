@@ -49,6 +49,7 @@ export default function App() {
   });
   const [logs, setLogs] = useState<RequestLog[]>([]);
   const [backendPort, setBackendPort] = useState<number>(6875);
+  const [backendCwd, setBackendCwd] = useState<string>("");
   const [settings, setSettings] = useState<CompressorSettings>({
     rtk: { enabled: true, logs: true, paths: true, stacks: true },
     serena: { enabled: true, minLines: 8, referenceGraphPruning: true, projectRoot: "" },
@@ -125,6 +126,9 @@ export default function App() {
             setSettings(payload.data.settings);
             if (payload.data.port) {
               setBackendPort(payload.data.port);
+            }
+            if (payload.data.cwd) {
+              setBackendCwd(payload.data.cwd);
             }
           } else if (payload.type === "update") {
             setMetrics(payload.data.metrics);
@@ -384,6 +388,7 @@ export default function App() {
             setTestText={setTestText}
             testQuery={testQuery}
             setTestQuery={setTestQuery}
+            backendCwd={backendCwd}
           />
         )}
         {activeTab === "settings" && (
@@ -396,6 +401,7 @@ export default function App() {
             handleSaveSettings={handleSaveSettings}
             handleCavemanLevelChange={handleCavemanLevelChange}
             backendPort={backendPort}
+            backendCwd={backendCwd}
             handleServerPortChange={handleServerPortChange}
             handleServerTokenChange={handleServerTokenChange}
             handleSerenaProjectRootChange={handleSerenaProjectRootChange}

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.33] - 2026-07-03
+
+### Added
+- **Auto-Detection of Project Root Directory**: The backend now transmits its working directory (`process.cwd()`) to the frontend via the WebSocket `init` payload. The Settings tab and Playground tabs now display the auto-detected path as a transparent placeholder (e.g. `Auto-detected: D:/projects/my-app`) when the project root override field is left empty, so users can see exactly which directory is being used without configuring anything.
+
+### Changed
+- **Modular Component Refactoring**: Extracted LLMLingua pipeline configuration, Semantic Search tab, and Verification tab into dedicated components (`LLMLinguaSettings.tsx`, `PlaygroundSearchTab.tsx`, `PlaygroundVerifyTab.tsx`) to keep all source files under the 1000-line code limit and improve maintainability.
+- **Transparent Default Root in Playground**: The `Project Root Dir (Optional Override)` fields in the Search and Verify playground sub-tabs now show the active default directory — either the user-configured Serena root or the auto-detected backend CWD — as the placeholder text, making it clear which root is in use.
+
+---
+
 ## [1.3.32] - 2026-07-03
 
 ### Added
