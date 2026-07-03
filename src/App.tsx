@@ -4,16 +4,40 @@ import {
   Activity,
   Terminal,
   Zap,
+  CheckCircle,
+  AlertCircle,
+  Info,
+  X,
 } from "lucide-react";
 import { CompressorSettings, RequestLog, Metrics } from "./types";
 import DashboardTab from "./components/DashboardTab";
 import PlaygroundTab from "./components/PlaygroundTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.3.29";
+const APP_VERSION = "1.3.32";
+
+interface Toast {
+  id: string;
+  message: string;
+  type: "success" | "error" | "info";
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "testbench" | "settings">("dashboard");
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
   const [wsConnected, setWsConnected] = useState(false);
   const [metrics, setMetrics] = useState<Metrics>({
     totalRequests: 0,
@@ -139,9 +163,13 @@ export default function App() {
       if (res.ok) {
         const resJson = await res.json();
         setSettings(resJson.settings);
+        addToast("Settings saved successfully!", "success");
+      } else {
+        addToast("Failed to save settings.", "error");
       }
     } catch (err) {
       console.error("Error saving settings", err);
+      addToast("Error saving settings.", "error");
     }
   };
 
@@ -263,6 +291,24 @@ export default function App() {
     setSettings(updated);
   };
 
+  const handleSerenaProjectRootChange = (val: string) => {
+    const updated = { ...settings };
+    updated.serena.projectRoot = val;
+    setSettings(updated);
+  };
+
+  const handleVerificationTestCommandChange = (val: string) => {
+    const updated = { ...settings };
+    updated.verification.testCommand = val;
+    setSettings(updated);
+  };
+
+  const handleVerificationMaxRetriesChange = (val: number) => {
+    const updated = { ...settings };
+    updated.verification.maxRetries = val;
+    setSettings(updated);
+  };
+
   const navItems = [
     { id: "dashboard" as const, label: "Dashboard", icon: Activity, activeColor: "bg-neon-purple text-white shadow-[0_0_18px_rgba(168,85,247,0.35)]" },
     { id: "testbench" as const, label: "Playground", icon: Terminal, activeColor: "bg-neon-cyan text-slate-950 shadow-[0_0_18px_rgba(6,182,212,0.35)] font-extrabold" },
@@ -352,6 +398,9 @@ export default function App() {
             backendPort={backendPort}
             handleServerPortChange={handleServerPortChange}
             handleServerTokenChange={handleServerTokenChange}
+            handleSerenaProjectRootChange={handleSerenaProjectRootChange}
+            handleVerificationTestCommandChange={handleVerificationTestCommandChange}
+            handleVerificationMaxRetriesChange={handleVerificationMaxRetriesChange}
           />
         )}
       </main>
@@ -360,6 +409,39 @@ export default function App() {
       <footer className="py-3 border-t border-white/5 text-center text-xxs text-slate-600 font-mono shrink-0">
         RamuToken Proxy v{APP_VERSION} · Created by Rudy H. (Github: RudyCity &lt;https://github.com/RudyCity/RamuToken&gt;) · Built with Bun, React &amp; Tailwind CSS v4
       </footer>
+
+      {/* Toast Notification Container */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto flex items-center justify-between gap-3 px-4 py-3 rounded-xl border glass-panel shadow-lg transition-all duration-300 animate-in ${
+              toast.type === "success"
+                ? "border-neon-green/30 bg-neon-green/5 shadow-[0_0_24px_rgba(16,185,129,0.15)] text-slate-100"
+                : toast.type === "error"
+                ? "border-neon-pink/30 bg-neon-pink/5 shadow-[0_0_24px_rgba(236,72,153,0.15)] text-slate-100"
+                : "border-neon-cyan/30 bg-neon-cyan/5 shadow-[0_0_24px_rgba(6,182,212,0.15)] text-slate-100"
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              {toast.type === "success" ? (
+                <CheckCircle className="w-4 h-4 text-neon-green shrink-0" />
+              ) : toast.type === "error" ? (
+                <AlertCircle className="w-4 h-4 text-neon-pink shrink-0" />
+              ) : (
+                <Info className="w-4 h-4 text-neon-cyan shrink-0" />
+              )}
+              <span className="text-xs font-bold font-mono">{toast.message}</span>
+            </div>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="text-slate-400 hover:text-slate-200 p-0.5 rounded transition-colors cursor-pointer shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

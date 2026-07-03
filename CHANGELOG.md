@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.32] - 2026-07-03
+
+### Added
+- **Toast Notifications for Settings**: Added a custom, neon glassmorphic toast notification component that slides in and auto-dismisses, providing feedback when settings are successfully saved or fail to save.
+
+### Changed
+- **Optimized Settings Input Triggers**: Refactored `Default Project Root Dir`, `Test Execution Command`, and `Max Healing Retries` settings inputs to save on `onBlur` instead of saving on every single keystroke (`onChange`). This eliminates typing latency and unnecessary backend save requests.
+
+---
+
 ## [1.3.31] - 2026-07-03
 
 ### Added

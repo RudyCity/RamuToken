@@ -14,6 +14,9 @@ interface SettingsTabProps {
   backendPort: number;
   handleServerPortChange: (val: number) => void;
   handleServerTokenChange: (val: string) => void;
+  handleSerenaProjectRootChange: (val: string) => void;
+  handleVerificationTestCommandChange: (val: string) => void;
+  handleVerificationMaxRetriesChange: (val: number) => void;
 }
 
 // ── Bifrost status type ───────────────────────────────────────────────────────
@@ -31,6 +34,9 @@ export default function SettingsTab({
   backendPort,
   handleServerPortChange,
   handleServerTokenChange,
+  handleSerenaProjectRootChange,
+  handleVerificationTestCommandChange,
+  handleVerificationMaxRetriesChange,
 }: SettingsTabProps) {
   const [bifrostStatus, setBifrostStatus] = useState<BifrostStatus>("idle");
   const [bifrostLatency, setBifrostLatency] = useState<number | null>(null);
@@ -712,11 +718,8 @@ export default function SettingsTab({
                   type="text"
                   value={settings.serena.projectRoot || ""}
                   placeholder="e.g. D:/projects/my-app"
-                  onChange={(e) => {
-                    const updated = { ...settings };
-                    updated.serena.projectRoot = e.target.value;
-                    handleSaveSettings(updated);
-                  }}
+                  onChange={(e) => handleSerenaProjectRootChange(e.target.value)}
+                  onBlur={() => handleSaveSettings(settings)}
                   className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-cyan"
                 />
               </div>
@@ -986,11 +989,8 @@ export default function SettingsTab({
                   type="text"
                   value={settings.verification.testCommand || "npm test"}
                   placeholder="e.g. npm test or bun test"
-                  onChange={(e) => {
-                    const updated = { ...settings };
-                    updated.verification.testCommand = e.target.value;
-                    handleSaveSettings(updated);
-                  }}
+                  onChange={(e) => handleVerificationTestCommandChange(e.target.value)}
+                  onBlur={() => handleSaveSettings(settings)}
                   className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-green"
                 />
               </div>
@@ -1002,11 +1002,8 @@ export default function SettingsTab({
                   type="number"
                   min={1} max={5}
                   value={settings.verification.maxRetries || 3}
-                  onChange={(e) => {
-                    const updated = { ...settings };
-                    updated.verification.maxRetries = parseInt(e.target.value) || 3;
-                    handleSaveSettings(updated);
-                  }}
+                  onChange={(e) => handleVerificationMaxRetriesChange(parseInt(e.target.value) || 3)}
+                  onBlur={() => handleSaveSettings(settings)}
                   className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-neon-green"
                 />
               </div>
