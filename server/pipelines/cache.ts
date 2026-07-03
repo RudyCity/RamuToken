@@ -2,24 +2,37 @@
  * Cache & Prompt Optimizer
  * Manages local response caching, request hashing, and cache-control preservation.
  */
+import { Database } from "bun:sqlite";
+import { join } from "path";
+import { existsSync, mkdirSync } from "fs";
 import { Message } from "./caveman";
 
-interface CacheEntry {
-  response: any;
-  timestamp: number;
+const dbDir = join(import.meta.dirname, "../../data");
+if (!existsSync(dbDir)) {
+  mkdirSync(dbDir, { recursive: true });
 }
+const dbPath = join(dbDir, "cache.db");
+const db = new Database(dbPath);
 
-// In-memory cache for compressed requests
-const cacheStore = new Map<string, CacheEntry>();
+// Initialize table
+db.run(`
+  CREATE TABLE IF NOT EXISTS request_cache (
+    request_key TEXT PRIMARY KEY,
+    response_payload TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  )
+`);
+
 const CACHE_TTL = 1000 * 60 * 5; // 5 minutes TTL
 const MAX_CACHE_SIZE = 100;
 
 export function clearCache() {
-  cacheStore.clear();
+  db.run("DELETE FROM request_cache");
 }
 
-export function getCacheSize() {
-  return cacheStore.size;
+export function getCacheSize(): number {
+  const row = db.query("SELECT COUNT(*) as count FROM request_cache").get() as { count: number };
+  return row ? row.count : 0;
 }
 
 // Generate a SHA-256 hash or simple stable string key from the compressed request payload
@@ -50,30 +63,43 @@ export function generateRequestKey(payload: {
 
 // Attempt to get cached response for a request payload
 export function getCachedResponse(key: string): any | null {
-  const entry = cacheStore.get(key);
-  if (!entry) return null;
+  const row = db.query("SELECT response_payload, created_at FROM request_cache WHERE request_key = ?").get(key) as {
+    response_payload: string;
+    created_at: number;
+  } | null;
+
+  if (!row) return null;
 
   // Check TTL
-  if (Date.now() - entry.timestamp > CACHE_TTL) {
-    cacheStore.delete(key);
+  if (Date.now() - row.created_at > CACHE_TTL) {
+    db.run("DELETE FROM request_cache WHERE request_key = ?", [key]);
     return null;
   }
 
-  return entry.response;
+  try {
+    return JSON.parse(row.response_payload);
+  } catch {
+    return null;
+  }
 }
 
 // Set a cached response for a request payload
 export function setCachedResponse(key: string, response: any) {
-  // Enforce size limit (FIFO eviction)
-  if (cacheStore.size >= MAX_CACHE_SIZE) {
-    const firstKey = cacheStore.keys().next().value;
-    if (firstKey) cacheStore.delete(firstKey);
+  // Enforce size limit (FIFO eviction based on oldest created_at)
+  const currentSize = getCacheSize();
+  if (currentSize >= MAX_CACHE_SIZE) {
+    const toDelete = currentSize - MAX_CACHE_SIZE + 1;
+    db.run(
+      "DELETE FROM request_cache WHERE request_key IN (SELECT request_key FROM request_cache ORDER BY created_at ASC LIMIT ?)",
+      [toDelete]
+    );
   }
 
-  cacheStore.set(key, {
-    response,
-    timestamp: Date.now(),
-  });
+  db.run("INSERT OR REPLACE INTO request_cache (request_key, response_payload, created_at) VALUES (?, ?, ?)", [
+    key,
+    JSON.stringify(response),
+    Date.now()
+  ]);
 }
 
 // Preserves cache-control attributes during compression mapping

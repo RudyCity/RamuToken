@@ -3,7 +3,7 @@
  * Parses TS/JS and Python files to extract signatures and collapse function/method bodies.
  */
 
-import { writeFileSync, existsSync, mkdirSync, rmSync } from "fs";
+import { existsSync, mkdirSync, promises as fsPromises } from "fs";
 import { join } from "path";
 import { pythonDaemon } from "./python_daemon";
 import { settings } from "../config";
@@ -224,9 +224,9 @@ export async function compressSerena(text: string, userQuery: string, options: {
     for (const block of blocks) {
       const parentDir = join(block.tempFile, "..");
       if (!existsSync(parentDir)) {
-        mkdirSync(parentDir, { recursive: true });
+        await fsPromises.mkdir(parentDir, { recursive: true });
       }
-      writeFileSync(block.tempFile, block.code, "utf8");
+      await fsPromises.writeFile(block.tempFile, block.code, "utf8");
     }
 
     const tempPaths = blocks.map(b => b.tempFile);
@@ -286,7 +286,7 @@ export async function compressSerena(text: string, userQuery: string, options: {
   } finally {
     try {
       if (existsSync(sessionDir)) {
-        rmSync(sessionDir, { recursive: true, force: true });
+        await fsPromises.rm(sessionDir, { recursive: true, force: true });
       }
     } catch {}
   }

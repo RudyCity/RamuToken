@@ -10,6 +10,15 @@ export function getPythonCommand(): string {
   for (const cmd of cmds) {
     try {
       execSync(`${cmd} --version`, { stdio: "ignore" });
+      if (cmd === "py") {
+        try {
+          const realPath = execSync('py -c "import sys; print(sys.executable)"', { encoding: "utf8" }).trim();
+          if (realPath) {
+            cachedPythonCmd = realPath;
+            return realPath;
+          }
+        } catch {}
+      }
       cachedPythonCmd = cmd;
       return cmd;
     } catch {}

@@ -5,7 +5,7 @@
  */
 
 import { spawn, spawnSync } from "child_process";
-import { writeFileSync, unlinkSync, existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, promises as fsPromises } from "fs";
 import { join } from "path";
 
 // Stubs for functions previously implemented in TypeScript
@@ -166,10 +166,12 @@ async function ensureRtkAvailable(): Promise<string> {
 export async function compressRTK(text: string, _options: { logs?: boolean; paths?: boolean; stacks?: boolean } = {}): Promise<string> {
   const tempFile = join(tempDir, `temp_rtk_${Math.random().toString(36).substring(2, 9)}.txt`);
 
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     try {
-      if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true });
-      writeFileSync(tempFile, text, "utf8");
+      if (!existsSync(tempDir)) {
+        await fsPromises.mkdir(tempDir, { recursive: true });
+      }
+      await fsPromises.writeFile(tempFile, text, "utf8");
 
       // Choose log vs read subcommand based on content heuristics
       const isLog = text.includes("INFO:") || text.includes("ERROR:") || text.includes("WARN:") || text.includes("at ") || text.includes("Traceback");
@@ -184,8 +186,8 @@ export async function compressRTK(text: string, _options: { logs?: boolean; path
             stdout += data.toString("utf8");
           });
 
-          proc.on("close", () => {
-            try { if (existsSync(tempFile)) unlinkSync(tempFile); } catch {}
+          proc.on("close", async () => {
+            try { if (existsSync(tempFile)) await fsPromises.unlink(tempFile); } catch {}
 
             let output = stdout.trim();
             // Remove hook warning banner
@@ -193,20 +195,20 @@ export async function compressRTK(text: string, _options: { logs?: boolean; path
             resolve(output || text);
           });
 
-          proc.on("error", (err) => {
+          proc.on("error", async (err) => {
             console.error("[RTK] Execution failed:", err);
-            try { if (existsSync(tempFile)) unlinkSync(tempFile); } catch {}
+            try { if (existsSync(tempFile)) await fsPromises.unlink(tempFile); } catch {}
             resolve(text);
           });
         })
-        .catch((err) => {
+        .catch(async (err) => {
           console.error("[RTK] RTK command not available:", err);
-          try { if (existsSync(tempFile)) unlinkSync(tempFile); } catch {}
+          try { if (existsSync(tempFile)) await fsPromises.unlink(tempFile); } catch {}
           resolve(text);
         });
     } catch (err) {
       console.error("[RTK] Setup failed:", err);
-      try { if (existsSync(tempFile)) unlinkSync(tempFile); } catch {}
+      try { if (existsSync(tempFile)) await fsPromises.unlink(tempFile); } catch {}
       resolve(text);
     }
   });

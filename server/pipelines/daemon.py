@@ -2,10 +2,15 @@ import sys
 import json
 import os
 import traceback
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 SerenaConfig = None
 LanguageServerSymbolRetriever = None
 headroom_compress = None
+
+# Thread synchronization lock for stdout writes
+write_lock = threading.Lock()
 
 # Cache for project root -> (project, retriever)
 serena_projects = {}
@@ -252,89 +257,98 @@ def handle_serena_search(payload):
         return {"error": str(e)}
     return results
 
+def send_success(req_id, result):
+    if req_id is None:
+        return
+    resp = {"id": req_id, "status": "success", "result": result}
+    line = json.dumps(resp) + "\n"
+    with write_lock:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+
+def send_error(req_id, error, traceback_str=None):
+    if req_id is None:
+        return
+    resp = {"id": req_id, "status": "error", "error": error}
+    if traceback_str:
+        resp["traceback"] = traceback_str
+    line = json.dumps(resp) + "\n"
+    with write_lock:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+
+def process_request(req):
+    req_id = req.get("id")
+    action = req.get("action")
+    payload = req.get("payload")
+    try:
+        if action == "serena":
+            res = handle_serena(payload)
+            send_success(req_id, res)
+        elif action == "serena_references":
+            res = handle_serena_references(payload)
+            send_success(req_id, res)
+        elif action == "serena_diagnostics":
+            res = handle_serena_diagnostics(payload)
+            send_success(req_id, res)
+        elif action == "serena_search":
+            res = handle_serena_search(payload)
+            send_success(req_id, res)
+        elif action == "headroom":
+            res = handle_headroom(payload)
+            send_success(req_id, res)
+        elif action == "llmlingua":
+            res = handle_llmlingua(payload)
+            send_success(req_id, res)
+        elif action == "status":
+            projects = list(serena_projects.keys())
+            res = {
+                "pid": os.getpid(),
+                "projects": projects,
+                "platform": sys.platform,
+                "python_version": sys.version
+            }
+            send_success(req_id, res)
+        else:
+            send_error(req_id, f"Unknown action: {action}")
+    except Exception as e:
+        tb = traceback.format_exc()
+        send_error(req_id, str(e), tb)
+
 def main():
     # Make stdout unbuffered so responses are flushed immediately
     sys.stdout.reconfigure(line_buffering=True)
     
-    for line in sys.stdin:
-        if not line.strip():
-            continue
-        req_id = None
-        try:
-            req = json.loads(line)
-            req_id = req.get("id")
-            action = req.get("action")
-            payload = req.get("payload")
-            
-            if action == "serena":
-                res = handle_serena(payload)
-                try:
-                    print(json.dumps({"id": req_id, "status": "success", "result": res}))
-                except:
-                    pass
-            elif action == "serena_references":
-                res = handle_serena_references(payload)
-                try:
-                    print(json.dumps({"id": req_id, "status": "success", "result": res}))
-                except:
-                    pass
-            elif action == "serena_diagnostics":
-                res = handle_serena_diagnostics(payload)
-                try:
-                    print(json.dumps({"id": req_id, "status": "success", "result": res}))
-                except:
-                    pass
-            elif action == "serena_search":
-                res = handle_serena_search(payload)
-                try:
-                    print(json.dumps({"id": req_id, "status": "success", "result": res}))
-                except:
-                    pass
-            elif action == "headroom":
-                res = handle_headroom(payload)
-                try:
-                    print(json.dumps({"id": req_id, "status": "success", "result": res}))
-                except:
-                    pass
-            elif action == "llmlingua":
-                res = handle_llmlingua(payload)
-                try:
-                    print(json.dumps({"id": req_id, "status": "success", "result": res}))
-                except:
-                    pass
-            elif action == "status":
-                try:
-                    projects = list(serena_projects.keys())
-                    print(json.dumps({"id": req_id, "status": "success", "result": {
-                        "pid": os.getpid(),
-                        "projects": projects,
-                        "platform": sys.platform,
-                        "python_version": sys.version
-                    }}))
-                except:
-                    pass
-            elif action == "shutdown":
-                for project, _ in serena_projects.values():
-                    try:
-                        project.shutdown()
-                    except:
-                        pass
-                try:
-                    print(json.dumps({"id": req_id, "status": "success"}))
-                except:
-                    pass
-                break
-            else:
-                try:
-                    print(json.dumps({"id": req_id, "status": "error", "error": f"Unknown action: {action}"}))
-                except:
-                    pass
-        except Exception as e:
-            tb = traceback.format_exc()
+    executor = ThreadPoolExecutor(max_workers=8)
+    
+    try:
+        for line in sys.stdin:
+            if not line.strip():
+                continue
             try:
-                print(json.dumps({"id": req_id, "status": "error", "error": str(e), "traceback": tb}))
-            except:
-                pass
+                req = json.loads(line)
+                action = req.get("action")
+                req_id = req.get("id")
+                
+                if action == "shutdown":
+                    executor.shutdown(wait=False)
+                    for project, _ in list(serena_projects.values()):
+                        try:
+                            project.shutdown()
+                        except:
+                            pass
+                    send_success(req_id, {})
+                    break
+                elif action in ("serena", "serena_references", "serena_diagnostics", "serena_search"):
+                    # Process Serena LSP actions on the main thread to ensure proper asyncio and subprocess behavior
+                    process_request(req)
+                else:
+                    # Offload other actions (headroom, llmlingua, status) to the thread pool
+                    executor.submit(process_request, req)
+            except Exception as e:
+                send_error(None, f"Malformed line or submission error: {str(e)}")
+    finally:
+        executor.shutdown(wait=False)
 
 if __name__ == "__main__":
     main()

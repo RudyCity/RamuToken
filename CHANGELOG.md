@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.42] - 2026-07-03
+
+### Changed
+- **Asynchronous File I/O in RTK & Serena**: Converted synchronous file operations (`writeFileSync`, `unlinkSync`, `rmSync`) inside [rtk.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/RamuToken/server/pipelines/rtk.ts) and [serena.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/RamuToken/server/pipelines/serena.ts) to asynchronous operations (`promises.writeFile`, `promises.unlink`, `promises.rm`) to eliminate Node/Bun event loop blocking.
+- **Asynchronous Verification Loop**: Replaced blocking `execSync` inside `/api/verify` route in [index.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/RamuToken/server/index.ts) with Promise-wrapped `exec` from `child_process` to keep the proxy server fully responsive while running tests.
+- **Persistent SQLite Cache**: Upgraded the volatile in-memory request cache in [cache.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/RamuToken/server/pipelines/cache.ts) to a persistent SQLite-backed cache using Bun's native `bun:sqlite` Database, maintaining cached responses across restarts.
+- **Hybrid Concurrent Python Daemon**: Refactored [daemon.py](file:///d:/backup%20from%20pc%20asus/Documents%20Development/RamuToken/server/pipelines/daemon.py) to run Serena LSP actions on the main thread (securing thread safety and asyncio compatibility for language server operations) while offloading LLMLingua and Headroom requests to a `ThreadPoolExecutor` concurrent pool.
+- **Robust Python Command Resolution**: Modified `getPythonCommand` in [python_daemon.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/RamuToken/server/pipelines/python_daemon.ts) to resolve the absolute path of the Python executable using the `py` launcher, preventing stdout buffering and lockups under child process redirection.
+
+---
+
 ## [1.3.41] - 2026-07-03
 
 ### Fixed

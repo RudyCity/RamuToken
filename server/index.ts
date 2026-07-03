@@ -359,17 +359,26 @@ Bun.serve({
           let testExitCode = 0;
 
           if (!hasErrors && settings.verification.enabled && settings.verification.testCommand) {
-            const { execSync } = await import("child_process");
+            const { exec } = await import("child_process");
             try {
-              testOutput = execSync(settings.verification.testCommand, {
-                cwd: resolvedProjectRoot,
-                encoding: "utf8",
-                timeout: 30000
+              const execPromise = new Promise<{ stdout: string; stderr: string; code: number }>((resolve) => {
+                exec(settings.verification.testCommand, {
+                  cwd: resolvedProjectRoot,
+                  timeout: 30000
+                }, (error, stdout, stderr) => {
+                  resolve({
+                    stdout: stdout || "",
+                    stderr: stderr || "",
+                    code: error ? (error.code ?? 1) : 0
+                  });
+                });
               });
-              testExitCode = 0;
+              const result = await execPromise;
+              testOutput = result.stdout + (result.stderr ? "\n" + result.stderr : "");
+              testExitCode = result.code;
             } catch (execErr: any) {
-              testOutput = execErr.stdout || execErr.message;
-              testExitCode = execErr.status !== undefined ? execErr.status : 1;
+              testOutput = execErr.message;
+              testExitCode = 1;
             }
           }
 
