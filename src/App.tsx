@@ -447,7 +447,7 @@ export default function App() {
           {/* Status badge & Pipeline Dropdown — right */}
           <div className="flex items-center gap-4 shrink-0">
             {/* Pipeline Status Dropdown */}
-            <div className="relative">
+            <div className="relative" style={{ isolation: "isolate", zIndex: 9999 }}>
               <button
                 onClick={() => setIsPipelineDropdownOpen(!isPipelineDropdownOpen)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xxs font-bold transition-all bg-white/5 border hover:bg-white/10 text-slate-300 cursor-pointer ${
@@ -466,8 +466,8 @@ export default function App() {
                     onClick={() => setIsPipelineDropdownOpen(false)}
                   />
                   <div
-                    className="absolute right-0 mt-2 w-80 border border-slate-700 p-4 rounded-2xl shadow-2xl z-[9999] animate-in flex flex-col gap-3"
-                    style={{ background: "rgb(8,10,18)", boxShadow: "0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(168,85,247,0.12)" }}
+                    className="fixed w-80 border border-slate-700 p-4 rounded-2xl shadow-2xl z-[9999] flex flex-col gap-3"
+                    style={{ background: "rgb(8,10,18)", boxShadow: "0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(168,85,247,0.12)", top: "56px", right: "24px" }}
                   >
                     <div className="flex items-center justify-between pb-2 border-b border-white/5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Pipeline Status</span>
