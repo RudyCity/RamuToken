@@ -19,10 +19,6 @@ interface SettingsTabProps {
 // ── Bifrost status type ───────────────────────────────────────────────────────
 type BifrostStatus = "idle" | "checking" | "online" | "offline";
 
-    </label>
-  );
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 export default function SettingsTab({
   settings,
