@@ -1,7 +1,7 @@
 import { expect, test, describe, beforeEach, afterAll } from "bun:test";
-import { compressRTK, stripAnsi, collapseRepeatedLogs, shortenPaths, pruneStackTraces } from "../pipelines/rtk";
-import { compressSerena, extractKeywords, resolveDependencies } from "../pipelines/serena";
-import { compressHeadroom, restoreCCR, clearRegistry, getRegistry, minifyJSON, pruneJSONFields } from "../pipelines/headroom";
+import { compressRTK, stripAnsi, shortenPaths } from "../pipelines/rtk";
+import { compressSerena, extractKeywords } from "../pipelines/serena";
+import { compressHeadroom, clearRegistry, getRegistry } from "../pipelines/headroom";
 import { injectCavemanPrompt, deCavemanize } from "../pipelines/caveman";
 import { generateRequestKey, getCachedResponse, setCachedResponse, clearCache, getCacheSize, preserveCacheControl } from "../pipelines/cache";
 import { pythonDaemon } from "../pipelines/python_daemon";

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw, Plus, X } from "lucide-react";
+import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw, X } from "lucide-react";
 import { CompressorSettings, ProjectProfile } from "../types";
 import { Section, SectionTitle, PipelineSection, CheckOption, Toggle } from "./SettingsHelpers";
 import LLMLinguaSettings from "./LLMLinguaSettings";
@@ -711,7 +711,6 @@ export default function SettingsTab({
           desc="Strips ANSI codes, deduplicates repeated lines, shortens absolute paths."
           active={settings.rtk.enabled}
           color="#a855f7"
-          activeGradient="from-neon-purple to-neon-cyan"
           toggleSettingsField={toggleSettingsField}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -729,7 +728,6 @@ export default function SettingsTab({
           desc="Collapses functions longer than threshold if not in active query keywords."
           active={settings.serena.enabled}
           color="#06b6d4"
-          activeGradient="from-neon-cyan to-neon-green"
           toggleSettingsField={toggleSettingsField}
         >
           <div className="space-y-4 max-w-lg">
@@ -866,7 +864,6 @@ export default function SettingsTab({
           desc="Compresses prompts using local small LLMs (LLMLingua) or upstream API models."
           active={settings.llmlingua?.enabled || false}
           color="#a855f7"
-          activeGradient="from-neon-purple to-neon-cyan"
           toggleSettingsField={toggleSettingsField}
         >
           <LLMLinguaSettings
@@ -889,7 +886,6 @@ export default function SettingsTab({
           desc="Minifies JSON, drops empty attributes, and substitutes long strings with reversible tokens."
           active={settings.headroom.enabled}
           color="#10b981"
-          activeGradient="from-neon-green to-neon-cyan"
           toggleSettingsField={toggleSettingsField}
         >
           <div className="space-y-4">
@@ -926,7 +922,6 @@ export default function SettingsTab({
           desc="Forces model to omit filler words and respond in telegraphic keyword fragments."
           active={settings.caveman.enabled}
           color="#ec4899"
-          activeGradient="from-neon-pink to-neon-purple"
           toggleSettingsField={toggleSettingsField}
         >
           <div className="space-y-4 max-w-lg">
@@ -966,7 +961,6 @@ export default function SettingsTab({
           desc="Returns cached responses instantly with 0 token usage for identical compressed payloads."
           active={settings.cache.enabled}
           color="#06b6d4"
-          activeGradient="from-neon-cyan to-neon-green"
           toggleSettingsField={toggleSettingsField}
         />
 
@@ -978,7 +972,6 @@ export default function SettingsTab({
           desc="Performs compiler/LSP check & executes test suites to self-correct AI code."
           active={settings.verification.enabled}
           color="#10b981"
-          activeGradient="from-neon-green to-neon-cyan"
           toggleSettingsField={toggleSettingsField}
         >
           <div className="space-y-4 max-w-lg">

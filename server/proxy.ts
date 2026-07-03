@@ -4,7 +4,7 @@
  * relays requests to Bifrost or direct providers, and tracks token usage.
  */
 import { getEncoding } from "js-tiktoken";
-import { settings, addLog, RequestLog, CompressorSettings } from "./config";
+import { settings, addLog, CompressorSettings } from "./config";
 import { fetchUpstream } from "./pipelines/upstream";
 import { compressRTK } from "./pipelines/rtk";
 import { compressSerena } from "./pipelines/serena";

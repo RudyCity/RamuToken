@@ -1,4 +1,4 @@
-import { Play, RefreshCw, Copy, Terminal, CheckCheck, Sliders, ToggleLeft, ToggleRight, Search, ShieldCheck, AlertCircle, CheckCircle } from "lucide-react";
+import { Play, RefreshCw, Copy, Terminal, CheckCheck, Sliders, ToggleLeft, ToggleRight, AlertCircle, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { countTokens } from "../utils/token";
 import { CompressorSettings } from "../types";

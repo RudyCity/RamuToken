@@ -3,8 +3,7 @@
  * Parses TS/JS and Python files to extract signatures and collapse function/method bodies.
  */
 
-import { spawnSync, spawn } from "child_process";
-import { writeFileSync, unlinkSync, existsSync, mkdirSync, rmSync } from "fs";
+import { writeFileSync, existsSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { pythonDaemon } from "./python_daemon";
 import { settings } from "../config";
@@ -145,21 +144,6 @@ export function resolveDependencies(code: string, keywords: Set<string>, isPytho
   }
 
   return activeKeywords;
-}
-
-function serenaGetSymbols(filePath: string, projectDir: string): Array<{ name: string; start_line: number; end_line: number; kind: string }> | null {
-  try {
-    const scriptPath = join(import.meta.dirname, "get_symbols.py");
-    const proc = spawnSync("python", [scriptPath, projectDir, filePath], {
-      encoding: "utf-8",
-      timeout: 15_000
-    });
-
-    if (proc.status === 0 && proc.stdout) {
-      return JSON.parse(proc.stdout.trim());
-    }
-  } catch { /* serena not installed — return null */ }
-  return null;
 }
 
 /**

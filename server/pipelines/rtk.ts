@@ -11,7 +11,7 @@ import { join } from "path";
 // Stubs for functions previously implemented in TypeScript
 export function stripAnsi(text: string): string { return text; }
 export function shortenPaths(text: string): string { return text; }
-export function collapseRepeatedLogs(text: string, maxConsecutive = 3): string { return text; }
+export function collapseRepeatedLogs(text: string, _maxConsecutive = 3): string { return text; }
 export function pruneStackTraces(text: string): string { return text; }
 
 const tempDir = join(import.meta.dirname, "../../data");
@@ -163,7 +163,7 @@ async function ensureRtkAvailable(): Promise<string> {
 }
 
 // Main compression function
-export async function compressRTK(text: string, options: { logs?: boolean; paths?: boolean; stacks?: boolean } = {}): Promise<string> {
+export async function compressRTK(text: string, _options: { logs?: boolean; paths?: boolean; stacks?: boolean } = {}): Promise<string> {
   const tempFile = join(tempDir, `temp_rtk_${Math.random().toString(36).substring(2, 9)}.txt`);
 
   return new Promise((resolve) => {

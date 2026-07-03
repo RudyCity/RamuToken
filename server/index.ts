@@ -8,7 +8,7 @@ import { callUpstreamLLM } from "./pipelines/upstream";
 // @ts-ignore
 import { compress } from "caveman-shrink/compress";
 import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
-import { join, resolve } from "path";
+import { join } from "path";
 import { pythonDaemon } from "./pipelines/python_daemon";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { scanProjects } from "./utils/scanProjects";
@@ -18,7 +18,7 @@ const DIST_DIR = join(import.meta.dirname, "../dist");
 
 console.log(`[Server] Initializing Bun server on port ${PORT}...`);
 
-const server = Bun.serve({
+Bun.serve({
   port: PORT,
   async fetch(req, server) {
     const url = new URL(req.url);
@@ -603,7 +603,7 @@ const server = Bun.serve({
       console.log("[WebSocket] Client dashboard connected");
       registerSocket(ws);
     },
-    message(ws, message) {
+    message(_ws, message) {
       console.log(`[WebSocket] Message received: ${message}`);
     },
     close(ws) {

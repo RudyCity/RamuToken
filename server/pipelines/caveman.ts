@@ -52,7 +52,7 @@ export interface Message {
  * Attempts to invoke caveman-shrink (the MCP proxy from JuliusBrussee/caveman)
  * to compress a single system prompt text.
  */
-function cavemanShrink(text: string, level: string): string | null {
+function cavemanShrink(text: string): string | null {
   try {
     const result = compress(text);
     return result.compressed;
@@ -75,7 +75,7 @@ export function injectCavemanPrompt(messages: Message[], level: "low" | "medium"
     if (originalContent.includes("[CAVEMAN")) return result;
 
     // Deep integration: try to compress the entire existing system prompt via caveman-shrink
-    const shrunkContent = cavemanShrink(originalContent, level);
+    const shrunkContent = cavemanShrink(originalContent);
     const finalContent = shrunkContent ?? originalContent;
 
     result[systemMsgIdx] = {
@@ -94,8 +94,8 @@ export function injectCavemanPrompt(messages: Message[], level: "low" | "medium"
 }
 
 // Compresses any arbitrary prose string using caveman-shrink (useful for compressing assistant content)
-export function cavemanCompressProse(text: string, level: "low" | "medium" | "high" | "wenyan" = "medium"): string {
-  return cavemanShrink(text, level) ?? text;
+export function cavemanCompressProse(text: string, _level: "low" | "medium" | "high" | "wenyan" = "medium"): string {
+  return cavemanShrink(text) ?? text;
 }
 
 // Compresses tool descriptions in place

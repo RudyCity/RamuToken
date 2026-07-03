@@ -4,7 +4,7 @@ import { join } from "path";
 import { compressSerena } from "../server/pipelines/serena";
 import { compressHeadroom } from "../server/pipelines/headroom";
 import { compressRTK } from "../server/pipelines/rtk";
-import { pythonDaemon } from "../server/pipelines/python_daemon";
+import { pythonDaemon, getPythonCommand } from "../server/pipelines/python_daemon";
 
 const tsCode = `
 \`\`\`typescript
@@ -45,7 +45,8 @@ console.log("====================================================\n");
 // Unoptimized Serena: spawns python get_symbols.py synchronously
 function unoptimizedSerena(tempFile: string, tempDir: string): any {
   const scriptPath = join(import.meta.dirname, "../server/pipelines/get_symbols.py");
-  const proc = spawnSync("python", [scriptPath, tempDir, tempFile], {
+  const pythonCmd = getPythonCommand();
+  const proc = spawnSync(pythonCmd, [scriptPath, tempDir, tempFile], {
     encoding: "utf-8",
     timeout: 15000
   });
@@ -66,7 +67,8 @@ function unoptimizedHeadroom(text: string): string {
     "print(result.messages[0]['content'] if result and hasattr(result, 'messages') and result.messages else inp)"
   ].join("; ");
 
-  const proc = spawnSync("python", ["-c", pythonScript], {
+  const pythonCmd = getPythonCommand();
+  const proc = spawnSync(pythonCmd, ["-c", pythonScript], {
     input: text,
     encoding: "utf-8",
     timeout: 15000

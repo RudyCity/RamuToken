@@ -44,13 +44,12 @@ interface PipelineSectionProps {
   desc: string;
   active: boolean;
   color: string;
-  activeGradient: string;
   children?: React.ReactNode;
   toggleSettingsField: (pipeline: any, field: string) => void;
 }
 
 export function PipelineSection({
-  id, icon, name, desc, active, color, activeGradient, children, toggleSettingsField,
+  id, icon, name, desc, active, color, children, toggleSettingsField,
 }: PipelineSectionProps) {
   const parts = id.split(".");
   const pipeline = parts[0];

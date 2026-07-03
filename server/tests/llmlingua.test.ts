@@ -8,7 +8,7 @@ describe("LLMLingua & AI Prompt Compressor Pipeline", () => {
   beforeAll(() => {
     originalFetch = globalThis.fetch;
     // Mock global fetch to intercept upstream LLM calls
-    globalThis.fetch = (async (url: any, init: any) => {
+    globalThis.fetch = (async (_url: any, init: any) => {
       try {
         const body = JSON.parse(init.body);
         const messages = body.messages || [];
@@ -65,7 +65,7 @@ describe("LLMLingua & AI Prompt Compressor Pipeline", () => {
     settings.llmlingua.apiModel = "auto";
     
     let lastRequestedModel = "";
-    globalThis.fetch = (async (url: any, init: any) => {
+    globalThis.fetch = (async (_url: any, init: any) => {
       try {
         const body = JSON.parse(init.body);
         lastRequestedModel = body.model;

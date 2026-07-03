@@ -1,6 +1,23 @@
-import { spawn, ChildProcess } from "child_process";
+import { spawn, ChildProcess, execSync } from "child_process";
 import { join } from "path";
-import { existsSync } from "fs";
+
+let cachedPythonCmd: string | null = null;
+
+export function getPythonCommand(): string {
+  if (cachedPythonCmd) return cachedPythonCmd;
+  
+  const cmds = ["python", "py", "python3"];
+  for (const cmd of cmds) {
+    try {
+      execSync(`${cmd} --version`, { stdio: "ignore" });
+      cachedPythonCmd = cmd;
+      return cmd;
+    } catch {}
+  }
+  
+  cachedPythonCmd = "python";
+  return "python";
+}
 
 class PythonDaemonManager {
   private proc: ChildProcess | null = null;
@@ -13,7 +30,8 @@ class PythonDaemonManager {
     }
 
     const scriptPath = join(import.meta.dirname, "daemon.py");
-    const currentProc = spawn("python", [scriptPath], {
+    const pythonCmd = getPythonCommand();
+    const currentProc = spawn(pythonCmd, [scriptPath], {
       stdio: ["pipe", "pipe", "inherit"],
       env: { ...process.env, PYTHONUNBUFFERED: "1" }
     });

@@ -4,7 +4,7 @@
  * Shows a badge per profile type, supports auto-scan, and manual entry.
  */
 import { useState } from "react";
-import { FolderOpen, RefreshCw, Plus, X, ChevronDown } from "lucide-react";
+import { FolderOpen, RefreshCw, ChevronDown } from "lucide-react";
 import { ProjectProfile, CompressorSettings } from "../types";
 
 interface ProjectProfileSelectorProps {

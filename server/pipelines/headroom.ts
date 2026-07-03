@@ -4,7 +4,6 @@
  * Always calls the official headroom-ai package.
  */
 
-import { spawnSync } from "child_process";
 import { pythonDaemon } from "./python_daemon";
 
 const ccrRegistry = new Map<string, any>();
@@ -13,7 +12,7 @@ export function clearRegistry() { ccrRegistry.clear(); }
 export function restoreCCR(responseText: string): string { return responseText; }
 
 export function minifyJSON(text: string): string { return text; }
-export function pruneJSONFields(text: string, blacklist: string[] = []): string { return text; }
+export function pruneJSONFields(text: string, _blacklist: string[] = []): string { return text; }
 
 // Default Headroom proxy port (headroom proxy --port 8787)
 const HEADROOM_PROXY_PORT = 8787;
@@ -41,7 +40,7 @@ async function headroomViaProxy(text: string): Promise<string | null> {
 // Main Headroom compressor
 export async function compressHeadroom(
   text: string, 
-  options: { minify?: boolean; prune?: boolean; ccr?: boolean; blacklist?: string[]; minCcrLength?: number } = {}
+  _options: { minify?: boolean; prune?: boolean; ccr?: boolean; blacklist?: string[]; minCcrLength?: number } = {}
 ): Promise<{ text: string; mapping: Record<string, string> }> {
   // Deep integration approach 2: headroom proxy HTTP (if already running on port 8787)
   const proxyResult = await headroomViaProxy(text);

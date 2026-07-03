@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.39] - 2026-07-03
+
+### Fixed
+- **Dynamic Python Command Resolution**: Added `getPythonCommand()` utility in `python_daemon.ts` that tries `python`, `py`, then `python3` executables in order. This fixes test failures and daemon spawn errors on Windows systems where only `py` is available, and on Linux/Mac where only `python3` is the canonical alias.
+- **`serena.ts` and `benchmark.ts`**: Updated `serenaGetSymbols()` and benchmark helpers to use `getPythonCommand()` instead of hardcoded `"python"` strings.
+- **Unused Import Cleanup (all TypeScript errors resolved)**: Removed unused imports across multiple files: `RefreshCw` in `LLMLinguaSettings.tsx`, `Plus`/`X` in `ProjectProfileSelector.tsx`, `Plus`/`Search`/`ShieldCheck` in `PlaygroundTab.tsx` and `SettingsTab.tsx`, `spawnSync` in `headroom.ts`, `existsSync` in `python_daemon.ts`, `spawn`/`unlinkSync` in `serena.ts`, `RequestLog` in `proxy.ts`.
+- **Removed unused `activeGradient` prop**: Dropped `activeGradient` from the `PipelineSectionProps` interface and all `<PipelineSection>` call sites in `SettingsTab.tsx` and `SettingsHelpers.tsx` since the prop was never used in the component body.
+- **`cavemanShrink` unused `level` param**: Fixed unused parameter warning in `caveman.ts`.
+
+---
+
 ## [1.3.38] - 2026-07-03
 
 ### Fixed

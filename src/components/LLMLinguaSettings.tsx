@@ -1,4 +1,3 @@
-import { RefreshCw } from "lucide-react";
 import { CompressorSettings } from "../types";
 
 interface LLMLinguaSettingsProps {
