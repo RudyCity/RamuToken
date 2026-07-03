@@ -3,48 +3,73 @@ import json
 import os
 import traceback
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 SerenaConfig = None
 LanguageServerSymbolRetriever = None
 headroom_compress = None
 
-# Thread synchronization lock for stdout writes
+# Thread synchronization locks
 write_lock = threading.Lock()
+project_lock = threading.Lock()
 
-# Cache for project root -> (project, retriever)
+# Cache for project root -> {"project": project, "retriever": retriever, "last_used": timestamp}
 serena_projects = {}
+
+def serena_gc_worker():
+    while True:
+        time.sleep(60)
+        now = time.time()
+        to_delete = []
+        with project_lock:
+            for root, info in list(serena_projects.items()):
+                # Evict if inactive for more than 10 minutes (600 seconds)
+                if now - info["last_used"] > 600:
+                    to_delete.append(root)
+            for root in to_delete:
+                info = serena_projects.pop(root)
+                try:
+                    info["project"].shutdown()
+                except Exception as e:
+                    sys.stderr.write(f"[GC] Error shutting down project {root}: {e}\n")
 
 def get_serena_project(project_root):
     global SerenaConfig, LanguageServerSymbolRetriever
-    if SerenaConfig is None or LanguageServerSymbolRetriever is None:
-        try:
-            from serena.config.serena_config import SerenaConfig
-            from serena.symbol import LanguageServerSymbolRetriever
-        except ImportError:
+    with project_lock:
+        if SerenaConfig is None or LanguageServerSymbolRetriever is None:
             try:
-                import subprocess
-                import importlib
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "serena-agent"], stdout=sys.stderr)
-                importlib.invalidate_caches()
                 from serena.config.serena_config import SerenaConfig
                 from serena.symbol import LanguageServerSymbolRetriever
-            except Exception as e:
-                raise Exception(f"Serena package is not installed and auto-installation failed: {e}")
-    
-    if project_root in serena_projects:
-        return serena_projects[project_root]
+            except ImportError:
+                try:
+                    import subprocess
+                    import importlib
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "serena-agent"], stdout=sys.stderr)
+                    importlib.invalidate_caches()
+                    from serena.config.serena_config import SerenaConfig
+                    from serena.symbol import LanguageServerSymbolRetriever
+                except Exception as e:
+                    raise Exception(f"Serena package is not installed and auto-installation failed: {e}")
         
-    config = SerenaConfig.from_config_file()
-    project = config.get_project(project_root)
-    if project is None:
-        project = config.add_project_from_path(project_root)
-    
-    project.create_language_server_manager()
-    retriever = LanguageServerSymbolRetriever(project)
-    
-    serena_projects[project_root] = (project, retriever)
-    return project, retriever
+        if project_root in serena_projects:
+            serena_projects[project_root]["last_used"] = time.time()
+            return serena_projects[project_root]["project"], serena_projects[project_root]["retriever"]
+            
+        config = SerenaConfig.from_config_file()
+        project = config.get_project(project_root)
+        if project is None:
+            project = config.add_project_from_path(project_root)
+        
+        project.create_language_server_manager()
+        retriever = LanguageServerSymbolRetriever(project)
+        
+        serena_projects[project_root] = {
+            "project": project,
+            "retriever": retriever,
+            "last_used": time.time()
+        }
+        return project, retriever
 
 def handle_serena(payload):
     project_root = os.path.abspath(payload["project_root"])
@@ -301,7 +326,8 @@ def process_request(req):
             res = handle_llmlingua(payload)
             send_success(req_id, res)
         elif action == "status":
-            projects = list(serena_projects.keys())
+            with project_lock:
+                projects = list(serena_projects.keys())
             res = {
                 "pid": os.getpid(),
                 "projects": projects,
@@ -319,6 +345,10 @@ def main():
     # Make stdout unbuffered so responses are flushed immediately
     sys.stdout.reconfigure(line_buffering=True)
     
+    # Start GC worker daemon thread
+    gc_thread = threading.Thread(target=serena_gc_worker, daemon=True)
+    gc_thread.start()
+    
     executor = ThreadPoolExecutor(max_workers=8)
     
     try:
@@ -332,11 +362,12 @@ def main():
                 
                 if action == "shutdown":
                     executor.shutdown(wait=False)
-                    for project, _ in list(serena_projects.values()):
-                        try:
-                            project.shutdown()
-                        except:
-                            pass
+                    with project_lock:
+                        for info in list(serena_projects.values()):
+                            try:
+                                info["project"].shutdown()
+                            except:
+                                pass
                     send_success(req_id, {})
                     break
                 elif action in ("serena", "serena_references", "serena_diagnostics", "serena_search"):

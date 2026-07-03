@@ -55,8 +55,8 @@ export async function compressMessageList(
     originalAccumulated += content + "\n";
 
     if (msg.role !== "system") {
-      // 1. RTK Compression (logs, CLI output, paths)
-      if (activeSettings.rtk.enabled) {
+      // 1. RTK Compression (logs, CLI output, paths) - only run if content is long enough to warrant it (> 150 chars)
+      if (activeSettings.rtk.enabled && content.length > 150) {
         content = await compressRTK(content, {
           logs: activeSettings.rtk.logs,
           paths: activeSettings.rtk.paths,

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.44] - 2026-07-03
+
+### Added
+- **Serena LSP Inactive Eviction (GC)**: Added a background daemon thread (`serena_gc_worker`) in [daemon.py](file:///d:/backup%20from%20pc%20asus/Documents%20Development/RamuToken/server/pipelines/daemon.py) that periodically checks for loaded Language Server projects and shuts them down (`project.shutdown()`) if they have been inactive for more than 10 minutes (600 seconds). This completely prevents memory accumulation leaks.
+
+### Changed
+- **RTK Subprocess Spawning Optimization**: Updated [proxy.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/RamuToken/server/proxy.ts) to only run RTK compression on messages longer than 150 characters, skipping subprocess spawning overhead for all short query messages.
+
+---
+
 ## [1.3.43] - 2026-07-03
 
 ### Changed
