@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Zap,
   Sliders,
@@ -130,6 +130,27 @@ export default function DashboardTab({
   const [tweetCopied, setTweetCopied] = useState(false);
   const [llmLinguaPage, setLlmLinguaPage] = useState(1);
   const LLMLINGUA_PAGE_SIZE = 10;
+
+  const [activeLogTab, setActiveLogTab] = useState<"all" | "rtk" | "serena" | "llmlingua" | "headroom" | "caveman" | "llmlingua_direct">("all");
+
+  const displayLogs = useMemo(() => {
+    if (activeLogTab === "all") return logs;
+    if (activeLogTab === "llmlingua_direct") return llmLinguaLogs;
+    const stepNameMap: Record<string, string> = {
+      rtk: "RTK",
+      serena: "Serena",
+      llmlingua: "LLMLingua",
+      headroom: "Headroom",
+      caveman: "Caveman",
+    };
+    const targetStepName = stepNameMap[activeLogTab];
+    if (!targetStepName) return [];
+    return logs.filter((log) => {
+      const steps = log.pipelineSteps || [];
+      const foundStep = steps.find((s) => s.name === targetStepName);
+      return foundStep?.enabled === true;
+    });
+  }, [logs, llmLinguaLogs, activeLogTab]);
 
   const [selectedStep, setSelectedStep] = useState<string>("all");
 
