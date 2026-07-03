@@ -127,6 +127,36 @@ const server = Bun.serve({
     }
 
     // 4. API Endpoints for Dashboard UI
+    if (path === "/api/upstream-models" && req.method === "GET") {
+      const isAnthropic = !!settings.upstream.anthropicKey && !settings.upstream.preferCustom && !settings.upstream.preferBifrost;
+      const provider = isAnthropic ? "anthropic" : "openai";
+      try {
+        const dummyReq = new Request(req.url, { headers: req.headers });
+        const response = await handleModelsProxy(dummyReq, provider);
+        if (!response.ok) {
+          return new Response(JSON.stringify({ error: "Failed to fetch models from upstream" }), {
+            status: response.status,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
+        }
+        const data = await response.json();
+        let models: string[] = [];
+        if (data.data && Array.isArray(data.data)) {
+          models = data.data.map((m: any) => m.id).filter(Boolean);
+        } else if (Array.isArray(data)) {
+          models = data.map((m: any) => m.id).filter(Boolean);
+        }
+        return new Response(JSON.stringify({ success: true, models }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        });
+      }
+    }
+
     if (path === "/api/settings" && req.method === "GET") {
       return new Response(JSON.stringify(settings), {
         headers: { "Content-Type": "application/json", ...corsHeaders }

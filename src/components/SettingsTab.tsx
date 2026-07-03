@@ -144,18 +144,62 @@ export default function SettingsTab({
     }
   };
 
+  const [fetchedModels, setFetchedModels] = useState<string[]>([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
+
+  const fetchModels = async () => {
+    setFetchingModels(true);
+    try {
+      const res = await fetch("/api/upstream-models");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.models)) {
+          setFetchedModels(data.models);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch upstream models:", err);
+    } finally {
+      setFetchingModels(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchModels();
+  }, [
+    settings.upstream.preferCustom,
+    settings.upstream.preferBifrost,
+    settings.upstream.openaiKey,
+    settings.upstream.anthropicKey,
+    settings.upstream.customUrl,
+    settings.upstream.customKey
+  ]);
+
   const localModelPresets = [
     { value: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank", label: "LLMLingua-2 BERT Multilingual (Default - 500MB)" },
     { value: "microsoft/llmlingua-2-xlm-roberta-large-meetingbank", label: "LLMLingua-2 XLM-RoBERTa Large (2GB)" },
     { value: "gpt2", label: "GPT-2 (Classic - 124M params)" }
   ];
 
-  const apiModelPresets = [
-    { value: "auto", label: "Auto (cheaper dynamic detection)" },
-    { value: "gpt-4o-mini", label: "OpenAI GPT-4o-Mini" },
-    { value: "claude-3-5-haiku-20241022", label: "Anthropic Claude 3.5 Haiku" },
-    { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" }
-  ];
+  // Dynamically build API model presets
+  const apiModelPresets = (() => {
+    const raw = [
+      { value: "auto", label: "Auto (cheaper dynamic detection)" },
+      ...fetchedModels.map(m => ({ value: m, label: `${m} (Fetched)` })),
+      { value: "gpt-4o-mini", label: "OpenAI GPT-4o-Mini (Preset)" },
+      { value: "claude-3-5-haiku-20241022", label: "Anthropic Claude 3.5 Haiku (Preset)" },
+      { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Preset)" }
+    ];
+    const seen = new Set();
+    const unique = [];
+    for (const item of raw) {
+      if (!seen.has(item.value)) {
+        seen.add(item.value);
+        unique.push(item);
+      }
+    }
+    return unique;
+  })();
 
   // Nested components moved outside SettingsTab to prevent unmounting & scroll resets
 
@@ -821,9 +865,19 @@ export default function SettingsTab({
             {(settings.llmlingua?.method || "api") === "api" && (
               <div className="space-y-4 pt-2 border-t border-white/5">
                 <div>
-                  <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Compression Target Model
-                  </label>
+                  <div className="flex justify-between items-center mb-1.5 font-mono">
+                    <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400">
+                      Compression Target Model
+                    </label>
+                    <button
+                      type="button"
+                      onClick={fetchModels}
+                      disabled={fetchingModels}
+                      className="text-[10px] text-neon-purple hover:underline focus:outline-none flex items-center gap-1 cursor-pointer disabled:opacity-50 font-mono"
+                    >
+                      {fetchingModels ? "Fetching..." : "Refresh list"}
+                    </button>
+                  </div>
                   <select
                     value={apiModelPresets.some(p => p.value === settings.llmlingua?.apiModel) ? settings.llmlingua?.apiModel : "custom"}
                     onChange={(e) => {
