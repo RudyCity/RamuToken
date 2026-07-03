@@ -9,12 +9,12 @@ import {
   Info,
   X,
 } from "lucide-react";
-import { CompressorSettings, RequestLog, Metrics } from "./types";
+import { CompressorSettings, RequestLog, Metrics, LLMLinguaLog } from "./types";
 import DashboardTab from "./components/DashboardTab";
 import PlaygroundTab from "./components/PlaygroundTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.3.34";
+const APP_VERSION = "1.3.47";
 
 interface Toast {
   id: string;
@@ -56,6 +56,7 @@ export default function App() {
     totalSavedCost: 0,
   });
   const [logs, setLogs] = useState<RequestLog[]>([]);
+  const [llmLinguaLogs, setLlmLinguaLogs] = useState<LLMLinguaLog[]>([]);
   const [backendPort, setBackendPort] = useState<number>(6875);
   const [backendCwd, setBackendCwd] = useState<string>("");
   const [settings, setSettings] = useState<CompressorSettings>({
@@ -142,6 +143,9 @@ export default function App() {
           if (payload.type === "init") {
             setMetrics(payload.data.metrics);
             setLogs(payload.data.logs);
+            if (payload.data.llmLinguaLogs) {
+              setLlmLinguaLogs(payload.data.llmLinguaLogs);
+            }
             setSettings(payload.data.settings);
             if (payload.data.port) {
               setBackendPort(payload.data.port);
@@ -153,6 +157,10 @@ export default function App() {
             setMetrics(payload.data.metrics);
             if (payload.data.latestLog) {
               setLogs((prev) => [payload.data.latestLog, ...prev.slice(0, 199)]);
+            }
+          } else if (payload.type === "llmlingua_log") {
+            if (payload.data.latestLog) {
+              setLlmLinguaLogs((prev) => [payload.data.latestLog, ...prev.slice(0, 199)]);
             }
           } else if (payload.type === "settings") {
             setSettings(payload.data);
@@ -408,6 +416,7 @@ export default function App() {
           <DashboardTab
             metrics={metrics}
             logs={logs}
+            llmLinguaLogs={llmLinguaLogs}
             settings={settings}
             selectedLog={selectedLog}
             setSelectedLog={setSelectedLog}

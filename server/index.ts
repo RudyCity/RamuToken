@@ -7,7 +7,7 @@ import { handleOpenAIProxy, handleAnthropicProxy, compressMessageList, countToke
 import { callUpstreamLLM } from "./pipelines/upstream";
 // @ts-ignore
 import { compress } from "caveman-shrink/compress";
-import { settings, updateSettings, metrics, logsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
+import { settings, updateSettings, metrics, logsHistory, llmLinguaLogsHistory, registerSocket, unregisterSocket, broadcastSettingsUpdate } from "./config";
 import { join } from "path";
 import { pythonDaemon } from "./pipelines/python_daemon";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
@@ -189,6 +189,12 @@ Bun.serve({
 
     if (path === "/api/logs" && req.method === "GET") {
       return new Response(JSON.stringify(logsHistory), {
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
+
+    if (path === "/api/llmlingua-logs" && req.method === "GET") {
+      return new Response(JSON.stringify(llmLinguaLogsHistory), {
         headers: { "Content-Type": "application/json", ...corsHeaders }
       });
     }

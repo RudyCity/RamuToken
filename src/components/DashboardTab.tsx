@@ -19,11 +19,12 @@ import {
   HardDrive,
   ShieldCheck,
 } from "lucide-react";
-import { Metrics, RequestLog, CompressorSettings } from "../types";
+import { Metrics, RequestLog, CompressorSettings, LLMLinguaLog } from "../types";
 
 interface DashboardTabProps {
   metrics: Metrics;
   logs: RequestLog[];
+  llmLinguaLogs: LLMLinguaLog[];
   settings: CompressorSettings;
   selectedLog: RequestLog | null;
   setSelectedLog: (log: RequestLog | null) => void;
@@ -118,6 +119,7 @@ function CopyButton({ text }: { text: string }) {
 export default function DashboardTab({
   metrics,
   logs,
+  llmLinguaLogs,
   settings,
   selectedLog,
   setSelectedLog,
@@ -126,6 +128,8 @@ export default function DashboardTab({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [tweetCopied, setTweetCopied] = useState(false);
+  const [llmLinguaPage, setLlmLinguaPage] = useState(1);
+  const LLMLINGUA_PAGE_SIZE = 10;
 
   const totalPages = Math.ceil(logs.length / itemsPerPage);
   const activePage = Math.min(currentPage, Math.max(1, totalPages));
@@ -506,6 +510,135 @@ export default function DashboardTab({
                   <span className="text-slate-500">entries</span>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* ── LLMLingua Activity Log ─────────────────────────────── */}
+          <div className="glass-panel p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                <Brain className="w-4 h-4 text-neon-cyan" />
+                LLMLingua Activity
+              </h3>
+              <span className="text-xxs font-mono text-slate-500">
+                {llmLinguaLogs.length} record{llmLinguaLogs.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {llmLinguaLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <Brain className="w-8 h-8 text-slate-700 mb-3" />
+                <p className="text-sm font-bold text-slate-500">No LLMLingua activity yet</p>
+                <p className="text-xxs text-slate-600 font-mono mt-1">Enable LLMLingua in Settings and send a request</p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto rounded-xl border border-white/5">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-white/5 text-slate-500 text-xxs font-bold uppercase tracking-wider">
+                        <th className="py-2.5 px-3 text-left">Time</th>
+                        <th className="py-2.5 px-3 text-left">Method</th>
+                        <th className="py-2.5 px-3 text-left">Model</th>
+                        <th className="py-2.5 px-3 text-right">Orig</th>
+                        <th className="py-2.5 px-3 text-right">Comp</th>
+                        <th className="py-2.5 px-3 text-right">Savings</th>
+                        <th className="py-2.5 px-3 text-right">Duration</th>
+                        <th className="py-2.5 px-3 text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.04]">
+                      {llmLinguaLogs
+                        .slice((llmLinguaPage - 1) * LLMLINGUA_PAGE_SIZE, llmLinguaPage * LLMLINGUA_PAGE_SIZE)
+                        .map((entry) => (
+                          <tr
+                            key={entry.id}
+                            className="hover:bg-white/[0.025] transition-colors"
+                          >
+                            <td className="py-2.5 px-3 font-mono text-slate-500 whitespace-nowrap">
+                              {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              {entry.method === "local" ? (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">LOCAL</span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan">API</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-slate-400 max-w-[120px] truncate" title={entry.model}>
+                              {entry.model}
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-slate-400">{entry.originalTokens.toLocaleString()}</td>
+                            <td className="py-2.5 px-3 text-right text-slate-400">
+                              {entry.status === "error" ? (
+                                <span className="text-red-400">—</span>
+                              ) : (
+                                entry.compressedTokens.toLocaleString()
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              {entry.status === "error" ? (
+                                <span className="text-red-400 text-[10px] font-bold">ERR</span>
+                              ) : (
+                                <span
+                                  className="savings-badge"
+                                  style={{
+                                    color: savingsColor(entry.savingsPercent),
+                                    background: savingsBg(entry.savingsPercent),
+                                    border: `1px solid ${savingsColor(entry.savingsPercent)}30`,
+                                  }}
+                                >
+                                  {entry.savingsPercent.toFixed(0)}%
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-slate-500">{entry.durationMs}ms</td>
+                            <td className="py-2.5 px-3 text-right">
+                              {entry.status === "success" ? (
+                                <span className="flex items-center justify-end gap-1 text-neon-green">
+                                  <CheckCircle className="w-3 h-3" />
+                                  <span className="text-[10px] font-bold">OK</span>
+                                </span>
+                              ) : (
+                                <span className="flex items-center justify-end gap-1 text-red-400" title={entry.errorMessage}>
+                                  <XCircle className="w-3 h-3" />
+                                  <span className="text-[10px] font-bold">ERR</span>
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* LLMLingua pagination */}
+                {llmLinguaLogs.length > LLMLINGUA_PAGE_SIZE && (
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5 text-xxs font-mono text-slate-400">
+                    <span>
+                      Showing <span className="text-slate-200">{(llmLinguaPage - 1) * LLMLINGUA_PAGE_SIZE + 1}</span> –{" "}
+                      <span className="text-slate-200">{Math.min(llmLinguaPage * LLMLINGUA_PAGE_SIZE, llmLinguaLogs.length)}</span>{" "}
+                      of <span className="text-slate-200">{llmLinguaLogs.length}</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setLlmLinguaPage((p) => Math.max(1, p - 1))}
+                        disabled={llmLinguaPage === 1}
+                        className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setLlmLinguaPage((p) => Math.min(Math.ceil(llmLinguaLogs.length / LLMLINGUA_PAGE_SIZE), p + 1))}
+                        disabled={llmLinguaPage === Math.ceil(llmLinguaLogs.length / LLMLINGUA_PAGE_SIZE)}
+                        className="p-1.5 rounded-lg border border-white/5 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

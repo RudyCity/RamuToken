@@ -95,6 +95,21 @@ export interface RequestLog {
   compressedPrompt: string;
 }
 
+/** A single LLMLingua compression activity entry. */
+export interface LLMLinguaLog {
+  id: string;
+  timestamp: number;
+  method: "local" | "api";
+  model: string;
+  originalTokens: number;
+  compressedTokens: number;
+  savingsPercent: number;
+  durationMs: number;
+  status: "success" | "error";
+  /** Human-readable error message. Only present when status === "error". */
+  errorMessage?: string;
+}
+
 export interface Metrics {
   totalRequests: number;
   originalTokensSum: number;

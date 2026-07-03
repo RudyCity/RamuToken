@@ -98,6 +98,21 @@ export interface RequestLog {
   compressedPrompt: string;
 }
 
+/** A single LLMLingua compression activity entry. */
+export interface LLMLinguaLog {
+  id: string;
+  timestamp: number;
+  method: "local" | "api";
+  model: string;
+  originalTokens: number;
+  compressedTokens: number;
+  savingsPercent: number;
+  durationMs: number;
+  status: "success" | "error";
+  /** Human-readable error message. Only present when status === "error". */
+  errorMessage?: string;
+}
+
 // Default settings
 export let settings: CompressorSettings = {
   rtk: {
@@ -162,6 +177,10 @@ export let settings: CompressorSettings = {
 export const logsHistory: RequestLog[] = [];
 export const maxLogs = 200;
 
+// In-memory LLMLingua activity log (keep last 200 entries)
+export const llmLinguaLogsHistory: LLMLinguaLog[] = [];
+export const maxLLMLinguaLogs = 200;
+
 // Aggregate metrics
 export const metrics = {
   totalRequests: 0,
@@ -222,6 +241,25 @@ export function addLog(log: Omit<RequestLog, "id" | "timestamp">) {
   return fullLog;
 }
 
+/** Record a single LLMLingua compression activity. */
+export function addLLMLinguaLog(log: Omit<LLMLinguaLog, "id" | "timestamp">) {
+  const fullLog: LLMLinguaLog = {
+    ...log,
+    id: Math.random().toString(36).substring(2, 9),
+    timestamp: Date.now(),
+  };
+
+  llmLinguaLogsHistory.unshift(fullLog);
+  if (llmLinguaLogsHistory.length > maxLLMLinguaLogs) {
+    llmLinguaLogsHistory.pop();
+  }
+
+  saveToDisk();
+  broadcastLLMLinguaLogUpdate(fullLog);
+
+  return fullLog;
+}
+
 // WebSocket broadcast mechanism
 export const activeSockets = new Set<any>();
 
@@ -234,6 +272,7 @@ export function registerSocket(ws: any) {
       settings,
       metrics,
       logs: logsHistory,
+      llmLinguaLogs: llmLinguaLogsHistory,
       port: Number(process.env.PORT || 6875),
       cwd: process.cwd()
     }
@@ -251,6 +290,22 @@ export function broadcastMetricsUpdate() {
       metrics,
       latestLog: logsHistory[0],
     }
+  });
+
+  for (const ws of activeSockets) {
+    try {
+      ws.send(message);
+    } catch {
+      activeSockets.delete(ws);
+    }
+  }
+}
+
+/** Broadcast a new LLMLingua log entry to all connected WebSocket clients. */
+export function broadcastLLMLinguaLogUpdate(latestLog: LLMLinguaLog) {
+  const message = JSON.stringify({
+    type: "llmlingua_log",
+    data: { latestLog }
   });
 
   for (const ws of activeSockets) {
@@ -290,7 +345,8 @@ export function saveToDisk() {
     const payload = JSON.stringify({
       settings,
       metrics,
-      logsHistory
+      logsHistory,
+      llmLinguaLogsHistory
     }, null, 2);
     Bun.write(DB_PATH, payload);
   } catch (err) {
@@ -314,7 +370,11 @@ export function loadFromDisk() {
         logsHistory.length = 0;
         logsHistory.push(...db.logsHistory);
       }
-      console.log(`[Persistence] Loaded settings, metrics, and ${logsHistory.length} logs from disk.`);
+      if (db.llmLinguaLogsHistory && Array.isArray(db.llmLinguaLogsHistory)) {
+        llmLinguaLogsHistory.length = 0;
+        llmLinguaLogsHistory.push(...db.llmLinguaLogsHistory);
+      }
+      console.log(`[Persistence] Loaded settings, metrics, ${logsHistory.length} proxy logs, and ${llmLinguaLogsHistory.length} LLMLingua logs from disk.`);
       if (db.settings?.server?.port) {
         console.log(`[Persistence] Restored server port: ${db.settings.server.port}`);
       }
