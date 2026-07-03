@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw } from "lucide-react";
 import { CompressorSettings } from "../types";
-import { Section, SectionTitle, PipelineSection, CheckOption } from "./SettingsHelpers";
+import { Section, SectionTitle, PipelineSection, CheckOption, Toggle } from "./SettingsHelpers";
 
 interface SettingsTabProps {
   settings: CompressorSettings;
