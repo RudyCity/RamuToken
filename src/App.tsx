@@ -123,7 +123,7 @@ export default function App() {
 
 
   // Selected log detail state
-  const [selectedLog, setSelectedLog] = useState<RequestLog | null>(null);
+  const [selectedLog, setSelectedLog] = useState<RequestLog | LLMLinguaLog | null>(null);
 
   // Setup WebSocket connection with auto-reconnect
   useEffect(() => {

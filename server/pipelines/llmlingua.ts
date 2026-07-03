@@ -56,6 +56,8 @@ export async function compressLLMLingua(
           savingsPercent,
           durationMs,
           status: "success",
+          originalPrompt: text,
+          compressedPrompt: compressed,
         });
 
         return compressed;
@@ -71,6 +73,8 @@ export async function compressLLMLingua(
         durationMs: Date.now() - start,
         status: "error",
         errorMessage: "Daemon returned unexpected response type",
+        originalPrompt: text,
+        compressedPrompt: text,
       });
 
       return text;
@@ -84,6 +88,8 @@ export async function compressLLMLingua(
         durationMs: Date.now() - start,
         status: "error",
         errorMessage: err?.message || String(err),
+        originalPrompt: text,
+        compressedPrompt: text,
       });
       console.error("[LLMLingua] Local python compression error, returning original text:", err);
       return text;
@@ -134,6 +140,8 @@ export async function compressLLMLingua(
           savingsPercent,
           durationMs,
           status: "success",
+          originalPrompt: text,
+          compressedPrompt: compressed.trim(),
         });
 
         return compressed.trim();
@@ -149,6 +157,8 @@ export async function compressLLMLingua(
         durationMs: Date.now() - start,
         status: "error",
         errorMessage: "API returned empty compressed result",
+        originalPrompt: text,
+        compressedPrompt: text,
       });
 
       return text;
@@ -162,6 +172,8 @@ export async function compressLLMLingua(
         durationMs: Date.now() - start,
         status: "error",
         errorMessage: err?.message || String(err),
+        originalPrompt: text,
+        compressedPrompt: text,
       });
       console.error("[LLMLingua] API-based compression error, returning original text:", err);
       return text;

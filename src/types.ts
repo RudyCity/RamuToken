@@ -108,6 +108,8 @@ export interface LLMLinguaLog {
   status: "success" | "error";
   /** Human-readable error message. Only present when status === "error". */
   errorMessage?: string;
+  originalPrompt: string;
+  compressedPrompt: string;
 }
 
 export interface Metrics {

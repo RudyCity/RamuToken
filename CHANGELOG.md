@@ -8,15 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.47] - 2026-07-03
 
 ### Added
-- **LLMLingua Activity Log**: Added a dedicated, separate activity log table for the LLMLingua compression pipeline in the Dashboard. Every compression attempt (success and error) is now recorded with: timestamp, method (`LOCAL` / `API`), model used, original & compressed token counts (estimated), savings percentage, duration in ms, and status. The log persists to `data/db.json` and streams in real-time via a new `llmlingua_log` WebSocket event.
-- **`LLMLinguaLog` interface**: Added to both `server/config.ts` and `src/types.ts`.
+- **LLMLingua Activity Log**: Added a dedicated, separate activity log table for the LLMLingua compression pipeline in the Dashboard. Every compression attempt (success and error) is now recorded with: timestamp, method (`LOCAL` / `API`), model used, original & compressed token counts (estimated), savings percentage, duration in ms, status, and the **original & compressed text content** (`originalPrompt` and `compressedPrompt`). The log persists to `data/db.json` and streams in real-time via a new `llmlingua_log` WebSocket event.
+- **Log Detail Dialog Integration**: Added a **"View"** action button to the LLMLingua Activity table. Clicking it opens the same interactive side modal used by the main proxy logs, displaying the side-by-side comparison of the prompt text before and after LLMLingua compression.
+- **`LLMLinguaLog` interface**: Added to both `server/config.ts` and `src/types.ts` with original & compressed prompt string fields.
 - **`GET /api/llmlingua-logs` endpoint**: New REST endpoint that returns the full in-memory LLMLingua log history.
 - **`addLLMLinguaLog()` function**: Handles log storage, disk persistence, and WebSocket broadcast.
 - **`broadcastLLMLinguaLogUpdate()` function**: Sends a `llmlingua_log` WebSocket event in real-time.
 
 ### Changed
-- **`server/pipelines/llmlingua.ts`**: Instrumented with timing (`Date.now()`) and token estimation (`text.length / 4`) around every compression path to produce structured logs.
+- **`server/pipelines/llmlingua.ts`**: Instrumented with timing (`Date.now()`), token estimation (`text.length / 4`), and captures the text inputs and outputs around every compression path to produce structured logs.
 - **`server/config.ts`**: Included `llmLinguaLogs` in initial WebSocket payloads and disk persistence (`saveToDisk`/`loadFromDisk`).
+- **`src/App.tsx` & `DashboardTab.tsx`**: Updated states and component parameters to support both `RequestLog` and `LLMLinguaLog` types inside the shared detail view modal.
 
 ## [1.3.46] - 2026-07-03
 

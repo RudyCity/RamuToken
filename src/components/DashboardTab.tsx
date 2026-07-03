@@ -26,8 +26,8 @@ interface DashboardTabProps {
   logs: RequestLog[];
   llmLinguaLogs: LLMLinguaLog[];
   settings: CompressorSettings;
-  selectedLog: RequestLog | null;
-  setSelectedLog: (log: RequestLog | null) => void;
+  selectedLog: RequestLog | LLMLinguaLog | null;
+  setSelectedLog: (log: RequestLog | LLMLinguaLog | null) => void;
   backendPort: number;
 }
 
@@ -545,6 +545,7 @@ export default function DashboardTab({
                         <th className="py-2.5 px-3 text-right">Savings</th>
                         <th className="py-2.5 px-3 text-right">Duration</th>
                         <th className="py-2.5 px-3 text-right">Status</th>
+                        <th className="py-2.5 px-3 text-right"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.04]">
@@ -605,6 +606,14 @@ export default function DashboardTab({
                                   <span className="text-[10px] font-bold">ERR</span>
                                 </span>
                               )}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSelectedLog(entry); }}
+                                className="text-neon-cyan hover:text-neon-purple flex items-center gap-0.5 ml-auto transition-colors cursor-pointer"
+                              >
+                                View <ChevronRight className="w-3 h-3" />
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -857,11 +866,16 @@ export default function DashboardTab({
             <div className="p-5 border-b border-white/5 flex justify-between items-start sticky top-0 z-10 rounded-t-3xl" style={{ background: "rgba(10,12,20,0.96)", backdropFilter: "blur(12px)" }}>
               <div>
                 <h3 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-cyan">
-                  REQUEST #{selectedLog.id}
+                  {"provider" in selectedLog ? "REQUEST" : "LLMLINGUA COMPRESSION"} #{selectedLog.id}
                 </h3>
                 <div className="flex flex-wrap gap-3 mt-1.5 text-xxs font-mono text-slate-500">
                   <span>Model: <span className="text-slate-300">{selectedLog.model}</span></span>
-                  <span>Provider: <span className="text-slate-300">{selectedLog.provider}</span></span>
+                  {"provider" in selectedLog && (
+                    <span>Provider: <span className="text-slate-300">{selectedLog.provider}</span></span>
+                  )}
+                  {"method" in selectedLog && (
+                    <span>Method: <span className="text-slate-300 uppercase">{selectedLog.method}</span></span>
+                  )}
                   <span>
                     Savings:{" "}
                     <span className="font-bold" style={{ color: savingsColor(selectedLog.savingsPercent) }}>
@@ -869,8 +883,10 @@ export default function DashboardTab({
                     </span>
                   </span>
                   <span>Duration: <span className="text-slate-300">{selectedLog.durationMs}ms</span></span>
-                  <span>CCR Mappings: <span className="text-slate-300">{selectedLog.ccrMappingsCount}</span></span>
-                  {selectedLog.cached && (
+                  {"ccrMappingsCount" in selectedLog && (
+                    <span>CCR Mappings: <span className="text-slate-300">{selectedLog.ccrMappingsCount}</span></span>
+                  )}
+                  {"cached" in selectedLog && selectedLog.cached && (
                     <span className="bg-neon-cyan/10 border border-neon-cyan/25 text-neon-cyan px-1.5 py-0.5 rounded font-bold">CACHED</span>
                   )}
                 </div>
