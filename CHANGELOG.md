@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.13] - 2026-07-06
+
+### Added
+- **`src/components/DashboardTab.tsx`**: Added a manual **Refresh** button to reload pipeline activities and metrics from the API. Extracted `ImageGallery` to its own file to maintain clean file size limits.
+- **`src/components/ImageGallery.tsx`**: Newly created file to hold the image gallery viewer and lightbox modal.
+- **`src/App.tsx`**: Wired up the `onRefresh` prop of `DashboardTab` to trigger `fetchDashboardData()`.
+
 ## [1.4.12] - 2026-07-06
 
 ### Fixed

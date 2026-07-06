@@ -738,6 +738,7 @@ export default function App() {
             setSelectedLog={setSelectedLog}
             backendPort={backendPort}
             onClearHistory={handleClearHistory}
+            onRefresh={fetchDashboardData}
           />
         )}
         {activeTab === "testbench" && (
