@@ -75,10 +75,20 @@ export interface CompressorSettings {
     apiModel: string;
     apiPrompt: string;
   };
+  image?: {
+    enabled: boolean;
+    triggerModels: string[];
+    minCharLength: number;
+    maxWidth: number;
+    fontSize: number;
+    format: "png" | "jpeg";
+    quality: number;
+    linesPerPage: number;
+  };
 }
 
 export interface PipelineStep {
-  name: string; // "RTK" | "Serena" | "LLMLingua" | "Headroom" | "Caveman"
+  name: string; // "RTK" | "Serena" | "LLMLingua" | "Headroom" | "Caveman" | "Image"
   enabled: boolean;
   inputTokens: number;
   outputTokens: number;

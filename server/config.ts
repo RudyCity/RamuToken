@@ -78,10 +78,20 @@ export interface CompressorSettings {
     apiModel: string;
     apiPrompt: string;
   };
+  image: {
+    enabled: boolean;
+    triggerModels: string[];
+    minCharLength: number;
+    maxWidth: number;
+    fontSize: number;
+    format: "png" | "jpeg";
+    quality: number;
+    linesPerPage: number;
+  };
 }
 
 export interface PipelineStep {
-  name: string; // "RTK" | "Serena" | "LLMLingua" | "Headroom" | "Caveman"
+  name: string; // "RTK" | "Serena" | "LLMLingua" | "Headroom" | "Caveman" | "Image"
   enabled: boolean;
   inputTokens: number;
   outputTokens: number;
@@ -183,6 +193,16 @@ export let settings: CompressorSettings = {
     apiModel: "auto",
     apiPrompt: "You are an expert context compressor. Your task is to compress the provided text, code, or context to reduce token count while preserving all critical code blocks, semantics, file paths, variables, instructions, and query context. Strip redundant log lines, repetitive details, and conversational fluff. Keep all JSON structures intact. Output ONLY the compressed content, with absolutely no preamble, explanation, or markdown backticks wrapper.",
   },
+  image: {
+    enabled: false,
+    triggerModels: ["gpt-4o", "claude-3-5", "gemini-1.5"],
+    minCharLength: 2000,
+    maxWidth: 1024,
+    fontSize: 13,
+    format: "jpeg",
+    quality: 80,
+    linesPerPage: 50,
+  },
 };
 
 // In-memory logs history (keep last 200 logs)
@@ -216,6 +236,7 @@ export function updateSettings(newSettings: Partial<CompressorSettings>) {
     server: { ...settings.server, ...newSettings.server },
     verification: { ...settings.verification, ...newSettings.verification },
     llmlingua: { ...settings.llmlingua, ...newSettings.llmlingua },
+    image: { ...settings.image, ...newSettings.image },
   };
   saveToDisk();
   return settings;

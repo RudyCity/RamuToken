@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw, X, Plus, Pencil, Trash2, Check, ChevronUp } from "lucide-react";
+import { Info, Terminal, FileCode, Database, Cpu, Wifi, WifiOff, Loader, RefreshCw, X, Plus, Pencil, Trash2, Check, ChevronUp, Image } from "lucide-react";
 import { CompressorSettings, ProjectProfile, CustomProvider } from "../types";
 import { Section, SectionTitle, PipelineSection, CheckOption, Toggle } from "./SettingsHelpers";
 import LLMLinguaSettings from "./LLMLinguaSettings";
 import ProjectProfileSelector from "./ProjectProfileSelector";
+import ImageSettings from "./ImageSettings";
 
 interface SettingsTabProps {
   settings: CompressorSettings;
-  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification" | "llmlingua", field: string) => void;
+  toggleSettingsField: (pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification" | "llmlingua" | "image", field: string) => void;
   handleSliderChange: (pipeline: "serena" | "headroom" | "llmlingua", field: string, val: number) => void;
   handleInputChange: (field: string, val: string) => void;
   handleLlmlinguaInputChange: (field: string, val: string) => void;
@@ -1234,7 +1235,26 @@ export default function SettingsTab({
           </div>
         </PipelineSection>
 
-        {/* 5. Cache */}
+        {/* 5. Image Compression */}
+        <PipelineSection
+          id="image.enabled"
+          icon={<Image className="w-4 h-4 text-violet-400 shrink-0" />}
+          name="Image Compressor — Visual Context Method"
+          desc="Converts long prompt files/data into high-contrast images to bypass standard text token pricing."
+          active={settings.image?.enabled || false}
+          color="#a78bfa"
+          toggleSettingsField={toggleSettingsField}
+        >
+          <ImageSettings
+            settings={settings}
+            handleSaveSettings={handleSaveSettings}
+            fetchedModels={fetchedModels}
+            fetchingModels={fetchingModels}
+            fetchModels={fetchModels}
+          />
+        </PipelineSection>
+
+        {/* 6. Cache */}
         <PipelineSection
           id="cache.enabled"
           icon={<Database className="w-4 h-4 text-neon-cyan shrink-0" />}
@@ -1245,7 +1265,7 @@ export default function SettingsTab({
           toggleSettingsField={toggleSettingsField}
         />
 
-        {/* 6. Verification Loop */}
+        {/* 7. Verification Loop */}
         <PipelineSection
           id="verification.enabled"
           icon={<Terminal className="w-4 h-4 text-neon-green shrink-0" />}

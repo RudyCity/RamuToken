@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-07-06
+
+### Added
+- **`server/pipelines/image.ts`**: Created a new Image Compression pipeline utilizing `@napi-rs/canvas` to render long text messages to high-contrast images, split them into pages, and format them as base64 data URI parts to bypass text token costs.
+- **`src/components/ImageSettings.tsx`**: Created a dedicated settings card component for configuring target models, dimensions, font size, lines per page, format, and JPEG quality.
+- **Image Compression settings**: Exposed `image` configurations in settings schemas on both frontend (`types.ts`) and backend (`config.ts`).
+
+### Changed
+- **`server/proxy.ts`**: Integrated the new `"Image"` step into `compressMessageList`. Updated `countPayloadTokens`, `messagesToText`, and `translateOpenAIToAnthropic` to handle array-based content parts (including base64 images) and preserve strict user/assistant role alternating sequence via role merging.
+- **`src/components/SettingsTab.tsx`**: Rendered the new `ImageSettings` component as Section 5 in the configuration list.
+- **`src/App.tsx`**: Added the new `Image Compressor` to the Pipeline status indicator, and updated state toggling logic to support the new `image` settings block.
+
 ## [1.3.57] - 2026-07-06
 
 ### Added

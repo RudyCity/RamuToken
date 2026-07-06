@@ -12,6 +12,7 @@ import { compressHeadroom, restoreCCR } from "./pipelines/headroom";
 import { injectCavemanPrompt, Message, compressToolDescriptions } from "./pipelines/caveman";
 import { generateRequestKey, getCachedResponse, setCachedResponse, preserveCacheControl } from "./pipelines/cache";
 import { compressLLMLingua } from "./pipelines/llmlingua";
+import { compressToImage } from "./pipelines/image";
 
 // Initialize local tokenizer for token calculations (GPT-4 / Claude compatible base)
 const tokenizer = getEncoding("cl100k_base");
@@ -31,14 +32,39 @@ export function countPayloadTokens(messages: Message[], system?: string): number
     count += countTokens(system);
   }
   for (const msg of messages) {
-    count += countTokens(msg.content || "");
+    if (typeof msg.content === "string") {
+      count += countTokens(msg.content || "");
+    } else if (Array.isArray(msg.content)) {
+      for (const part of msg.content) {
+        if (part.type === "text") {
+          count += countTokens(part.text || "");
+        } else if (part.type === "image_url") {
+          count += 765; // OpenAI high detail estimate
+        } else if (part.type === "image") {
+          count += 1400; // Anthropic estimate
+        }
+      }
+    }
   }
   return count;
 }
 
 // Core compression orchestrator for a set of messages
 function messagesToText(messages: Message[]): string {
-  return messages.map(m => `[${m.role}]: ${m.content || ""}`).join("\n\n");
+  return messages.map(m => {
+    if (typeof m.content === "string") {
+      return `[${m.role}]: ${m.content || ""}`;
+    } else if (Array.isArray(m.content)) {
+      const partsText = m.content.map(p => {
+        if (p.type === "text") return p.text || "";
+        if (p.type === "image_url") return `[Image URL: ${p.image_url?.url ? p.image_url.url.slice(0, 30) + "..." : "base64"}]`;
+        if (p.type === "image") return `[Image: base64]`;
+        return `[Part: ${p.type}]`;
+      }).join(" ");
+      return `[${m.role}]: ${partsText}`;
+    }
+    return `[${m.role}]: ${m.content || ""}`;
+  }).join("\n\n");
 }
 
 // Core compression orchestrator for a set of messages
@@ -61,7 +87,7 @@ export async function compressMessageList(
   let currentMessages = messages.map(m => ({ ...m }));
 
   const runStep = async (
-    name: "RTK" | "Serena" | "LLMLingua" | "Headroom" | "Caveman",
+    name: "RTK" | "Serena" | "LLMLingua" | "Headroom" | "Caveman" | "Image",
     enabled: boolean,
     transformFn: (msgs: Message[]) => Promise<Message[]>
   ) => {
@@ -162,11 +188,23 @@ export async function compressMessageList(
     return injectCavemanPrompt(msgs, activeSettings.caveman.level);
   });
 
+  // 6. Image Compression (convert long text messages to images)
+  const isImageTriggered = !!(
+    requestedModel &&
+    activeSettings.image?.enabled &&
+    activeSettings.image?.triggerModels.some((keyword) =>
+      requestedModel.toLowerCase().includes(keyword.toLowerCase().trim())
+    )
+  );
+  await runStep("Image", isImageTriggered, async (msgs) => {
+    return compressToImage(msgs, activeSettings.image!);
+  });
+
   // Form original and compressed accumulated prompts.
   // compressedPrompt reflects the full post-pipeline output (including Caveman injection)
   // so that token savings logs and UI are accurate.
   const originalPrompt = messages.map(m => m.content || "").join("\n");
-  const compressedPrompt = currentMessages.map(m => (typeof m.content === "string" ? m.content : "")).join("\n");
+  const compressedPrompt = currentMessages.map(m => (typeof m.content === "string" ? m.content : "[Image Content]")).join("\n");
 
   return {
     compressedMessages: currentMessages,
@@ -609,16 +647,62 @@ export function translateOpenAIToAnthropic(openAiBody: any): any {
   
   for (const msg of originalMessages) {
     if (msg.role === "system") {
-      system += (system ? "\n" : "") + (msg.content || "");
+      let sysText = "";
+      if (typeof msg.content === "string") {
+        sysText = msg.content;
+      } else if (Array.isArray(msg.content)) {
+        sysText = msg.content.map(p => p.type === "text" ? p.text || "" : "").join("\n");
+      }
+      system += (system ? "\n" : "") + sysText;
     } else {
       const role = msg.role === "assistant" ? "assistant" : "user";
-      const content = msg.content || "";
+      let contentParts: any[];
+      
+      if (typeof msg.content === "string") {
+        contentParts = [{ type: "text", text: msg.content }];
+      } else if (Array.isArray(msg.content)) {
+        contentParts = msg.content.map(part => {
+          if (part.type === "text") {
+            return { type: "text", text: part.text || "" };
+          } else if (part.type === "image_url") {
+            const url = part.image_url?.url || "";
+            const match = url.match(/^data:(image\/[a-zA-Z+-]+);base64,(.+)$/);
+            if (match) {
+              return {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: match[1],
+                  data: match[2]
+                }
+              };
+            }
+          }
+          return part;
+        });
+      } else {
+        contentParts = [{ type: "text", text: "" }];
+      }
       
       const lastMsg = anthropicMessages[anthropicMessages.length - 1];
       if (lastMsg && lastMsg.role === role) {
-        lastMsg.content += "\n" + content;
+        if (Array.isArray(lastMsg.content)) {
+          lastMsg.content.push(...contentParts);
+        } else {
+          lastMsg.content = [{ type: "text", text: lastMsg.content }, ...contentParts];
+        }
       } else {
-        anthropicMessages.push({ role, content });
+        anthropicMessages.push({ role, content: contentParts });
+      }
+    }
+  }
+  
+  // Simplify messages: if a message only contains text parts (no images), flatten it to a string.
+  for (const msg of anthropicMessages) {
+    if (Array.isArray(msg.content)) {
+      const hasImage = msg.content.some((p: any) => p.type === "image");
+      if (!hasImage) {
+        msg.content = msg.content.map((p: any) => p.text || "").join("\n");
       }
     }
   }

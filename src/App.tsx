@@ -17,6 +17,7 @@ import {
   HardDrive,
   ShieldCheck,
   ChevronDown,
+  Image,
 } from "lucide-react";
 import { CompressorSettings, RequestLog, Metrics, LLMLinguaLog } from "./types";
 import DashboardTab from "./components/DashboardTab";
@@ -314,7 +315,16 @@ export default function App() {
   };
 
   const toggleSettingsField = (
-    pipeline: "rtk" | "serena" | "headroom" | "caveman" | "cache" | "upstream" | "verification" | "llmlingua",
+    pipeline:
+      | "rtk"
+      | "serena"
+      | "headroom"
+      | "caveman"
+      | "cache"
+      | "upstream"
+      | "verification"
+      | "llmlingua"
+      | "image",
     field: string
   ) => {
     const updated = { ...settings };
@@ -346,6 +356,25 @@ export default function App() {
         updated.caveman.compressMcpDescriptions = !updated.caveman.compressMcpDescriptions;
       } else {
         updated.caveman.enabled = !updated.caveman.enabled;
+      }
+    }
+    else if (pipeline === "image") {
+      if (!updated.image) {
+        updated.image = {
+          enabled: false,
+          triggerModels: ["gpt-4o", "claude-3-5", "gemini-1.5"],
+          minCharLength: 2000,
+          maxWidth: 1024,
+          fontSize: 13,
+          format: "jpeg",
+          quality: 80,
+          linesPerPage: 50
+        };
+      }
+      if (field === "enabled") {
+        updated.image.enabled = !updated.image.enabled;
+      } else {
+        (updated.image as any)[field] = !(updated.image as any)[field];
       }
     }
     else if (pipeline === "cache") updated.cache.enabled = !updated.cache.enabled;
@@ -577,6 +606,13 @@ export default function App() {
                         name="LLMLingua"
                         sub="AI prompt compressor"
                         active={settings.llmlingua?.enabled ?? false}
+                        dotColor="#a78bfa"
+                      />
+                      <PipelineRow
+                        icon={<Image className="w-3.5 h-3.5 text-violet-400 shrink-0" />}
+                        name="Image Compressor"
+                        sub="Text-to-image visual context"
+                        active={settings.image?.enabled ?? false}
                         dotColor="#a78bfa"
                       />
                       <PipelineRow
