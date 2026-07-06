@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.9] - 2026-07-06
+
+### Added
+- **`src/components/DashboardTab.tsx`**: Enhanced the image lightbox modal to support interactive zoom and panning. Added mouse wheel zooming, click-and-drag panning, double-click to toggle zoom, and touch event support. Also added a zoom toolbar (Zoom In, Zoom Out, current percentage, and Reset Zoom button) to the lightbox header.
+
 ## [1.4.8] - 2026-07-06
 
 ### Fixed

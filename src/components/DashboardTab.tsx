@@ -19,6 +19,8 @@ import {
   X,
   Download,
   ZoomIn,
+  ZoomOut,
+  Maximize2,
 } from "lucide-react";
 import { Metrics, RequestLog, CompressorSettings, LLMLinguaLog, PipelineStep } from "../types";
 
@@ -99,16 +101,36 @@ function ImageGallery({ step }: ImageGalleryProps) {
   const format = step.imageFormat || "png";
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const openLightbox = useCallback((idx: number) => setLightboxIndex(idx), []);
-  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+  // Zoom and Pan state
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const resetZoom = useCallback(() => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  }, []);
+
+  const openLightbox = useCallback((idx: number) => {
+    setLightboxIndex(idx);
+    resetZoom();
+  }, [resetZoom]);
+
+  const closeLightbox = useCallback(() => {
+    setLightboxIndex(null);
+    resetZoom();
+  }, [resetZoom]);
 
   const prevImage = useCallback(() => {
     setLightboxIndex(prev => (prev !== null && prev > 0 ? prev - 1 : prev));
-  }, []);
+    resetZoom();
+  }, [resetZoom]);
 
   const nextImage = useCallback(() => {
     setLightboxIndex(prev => (prev !== null && prev < images.length - 1 ? prev + 1 : prev));
-  }, [images.length]);
+    resetZoom();
+  }, [images.length, resetZoom]);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -128,6 +150,78 @@ function ImageGallery({ step }: ImageGalleryProps) {
     link.download = `image-step-page-${idx + 1}.${format}`;
     link.click();
   }, [images, format]);
+
+  // Zoom control handlers
+  const handleZoomIn = useCallback(() => {
+    setScale(prev => Math.min(prev + 0.5, 4));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setScale(prev => {
+      const next = Math.max(prev - 0.5, 1);
+      if (next === 1) setPosition({ x: 0, y: 0 });
+      return next;
+    });
+  }, []);
+
+  const handleDoubleClick = useCallback(() => {
+    if (scale > 1) {
+      resetZoom();
+    } else {
+      setScale(2.5);
+    }
+  }, [scale, resetZoom]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (lightboxIndex === null) return;
+    // Zoom in/out based on scroll direction
+    if (e.deltaY < 0) {
+      setScale(prev => Math.min(prev + 0.25, 4));
+    } else {
+      setScale(prev => {
+        const next = Math.max(prev - 0.25, 1);
+        if (next === 1) setPosition({ x: 0, y: 0 });
+        return next;
+      });
+    }
+  }, [lightboxIndex]);
+
+  // Drag (panning) handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (scale <= 1) return;
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  }, [scale, position]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging || scale <= 1) return;
+    e.preventDefault();
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
+  }, [isDragging, dragStart, scale]);
+
+  const handleMouseUpOrLeave = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (scale <= 1 || e.touches.length !== 1) return;
+    setIsDragging(true);
+    const touch = e.touches[0];
+    setDragStart({ x: touch.clientX - position.x, y: touch.clientY - position.y });
+  }, [scale, position]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging || scale <= 1 || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setPosition({
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y
+    });
+  }, [isDragging, dragStart, scale]);
 
   if (images.length === 0) return null;
 
@@ -189,6 +283,38 @@ function ImageGallery({ step }: ImageGalleryProps) {
               <span className="text-[10px] text-slate-400 font-mono">{format.toUpperCase()}</span>
             </div>
             <div className="flex items-center gap-2">
+              {/* Zoom Controls */}
+              <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-0.5 mr-2">
+                <button
+                  onClick={handleZoomOut}
+                  disabled={scale <= 1}
+                  title="Zoom Out"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <span className="text-[10px] font-mono text-slate-300 px-2 min-w-[45px] text-center select-none">
+                  {Math.round(scale * 100)}%
+                </span>
+                <button
+                  onClick={handleZoomIn}
+                  disabled={scale >= 4}
+                  title="Zoom In"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                {scale > 1 && (
+                  <button
+                    onClick={resetZoom}
+                    title="Reset Zoom"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 border-l border-white/10 transition-all cursor-pointer"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
               <button
                 onClick={() => downloadImage(lightboxIndex)}
                 title="Download image"
@@ -207,15 +333,32 @@ function ImageGallery({ step }: ImageGalleryProps) {
             </div>
           </div>
 
-          {/* Main image */}
+          {/* Main image container */}
           <div
-            className="relative max-w-5xl max-h-[80vh] w-full mx-6"
+            className="relative max-w-5xl max-h-[80vh] w-full mx-6 overflow-hidden flex items-center justify-center rounded-2xl select-none"
             onClick={e => e.stopPropagation()}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUpOrLeave}
+            onMouseLeave={handleMouseUpOrLeave}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleMouseUpOrLeave}
+            onWheel={handleWheel}
+            onDoubleClick={handleDoubleClick}
+            style={{
+              cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "default"
+            }}
           >
             <img
               src={`data:image/${format};base64,${images[lightboxIndex]}`}
               alt={`Image page ${lightboxIndex + 1}`}
-              className="w-full h-full object-contain rounded-2xl shadow-[0_0_60px_rgba(139,92,246,0.15)] border border-white/10"
+              className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-[0_0_60px_rgba(139,92,246,0.15)] border border-white/10 select-none pointer-events-none"
+              style={{
+                transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                transformOrigin: "center center",
+                transition: isDragging ? "none" : "transform 0.15s ease-out"
+              }}
             />
           </div>
 
