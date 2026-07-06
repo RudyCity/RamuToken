@@ -1,5 +1,5 @@
 import { join } from "path";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from "fs";
 
 /** A saved project root entry — can be user-created or auto-detected. */
 export interface ProjectProfile {
@@ -253,22 +253,75 @@ function truncateString(str: any, maxLength: number = 20000): string {
 }
 
 export function addLog(log: Omit<RequestLog, "id" | "timestamp">) {
-  const fullLog: RequestLog = {
-    ...log,
-    id: Math.random().toString(36).substring(2, 9),
-    timestamp: Date.now(),
-    originalPrompt: truncateString(log.originalPrompt, 20000),
-    compressedPrompt: truncateString(log.compressedPrompt, 20000),
-    pipelineSteps: log.pipelineSteps?.map(step => ({
+  const logId = Math.random().toString(36).substring(2, 9);
+  const imagesDir = join(import.meta.dirname, "../data/images");
+
+  const processedSteps = log.pipelineSteps?.map(step => {
+    let stepImages = step.images;
+    if (stepImages && stepImages.length > 0) {
+      if (!existsSync(imagesDir)) {
+        mkdirSync(imagesDir, { recursive: true });
+      }
+      const format = step.imageFormat || "png";
+      stepImages = stepImages.map((b64, idx) => {
+        if (b64.startsWith("/api/") || b64.startsWith("http")) {
+          return b64;
+        }
+        let rawBase64 = b64;
+        if (b64.startsWith("data:")) {
+          const match = b64.match(/^data:image\/[a-zA-Z+-]+;base64,(.+)$/);
+          if (match) {
+            rawBase64 = match[1];
+          }
+        }
+        const filename = `${logId}_${step.name}_${idx}.${format}`;
+        const filePath = join(imagesDir, filename);
+        try {
+          writeFileSync(filePath, Buffer.from(rawBase64, "base64"));
+          return `/api/images/${logId}/${step.name}/${idx}.${format}`;
+        } catch (err) {
+          console.error("[Persistence] Error writing image file:", err);
+          return b64;
+        }
+      });
+    }
+    return {
       ...step,
       inputText: truncateString(step.inputText, 10000),
       outputText: truncateString(step.outputText, 10000),
-    }))
+      images: stepImages
+    };
+  });
+
+  const fullLog: RequestLog = {
+    ...log,
+    id: logId,
+    timestamp: Date.now(),
+    originalPrompt: truncateString(log.originalPrompt, 20000),
+    compressedPrompt: truncateString(log.compressedPrompt, 20000),
+    pipelineSteps: processedSteps
   };
 
   logsHistory.unshift(fullLog);
   if (logsHistory.length > maxLogs) {
-    logsHistory.pop();
+    const evicted = logsHistory.pop();
+    if (evicted && evicted.pipelineSteps) {
+      for (const step of evicted.pipelineSteps) {
+        if (step.images) {
+          const format = step.imageFormat || "png";
+          step.images.forEach((_, idx) => {
+            const filePath = join(imagesDir, `${evicted.id}_${step.name}_${idx}.${format}`);
+            if (existsSync(filePath)) {
+              try {
+                unlinkSync(filePath);
+              } catch (err) {
+                console.error("[Persistence] Error deleting evicted image file:", err);
+              }
+            }
+          });
+        }
+      }
+    }
   }
 
   // Update cumulative metrics
@@ -322,6 +375,19 @@ export function clearHistory() {
   metrics.cacheHits = 0;
   metrics.totalSavedTokens = 0;
   metrics.totalSavedCost = 0;
+
+  // Clear images directory as well
+  const imagesDir = join(import.meta.dirname, "../data/images");
+  if (existsSync(imagesDir)) {
+    try {
+      const files = readdirSync(imagesDir);
+      for (const file of files) {
+        unlinkSync(join(imagesDir, file));
+      }
+    } catch (err) {
+      console.error("[Persistence] Error clearing images directory:", err);
+    }
+  }
 
   saveToDisk();
 

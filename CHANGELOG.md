@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.14] - 2026-07-06
+
+### Fixed
+- **Memory & Database Optimization**: Resolved RAM leak and database bloat caused by Image Compression output images. Instead of storing full-length base64 image strings directly inside the `logsHistory` database (which bloated `db.json` to 1.16 GB), image pages are now saved to separate files under `data/images/` and replaced with lightweight URL references (`/api/images/...`).
+- **Disk Pruning & Eviction Cleanup**: Integrated automatic deletion of stored image files from disk when a history log is evicted (exceeding the 200-log history limit) or when history is cleared.
+- **`server/index.ts`**: Added a new GET endpoint at `/api/images/:logId/:stepName/:filename` with aggressive browser caching to serve stored images.
+- **`src/components/ImageGallery.tsx`**: Updated to support rendering images from both relative URL paths and direct base64 data URIs for backward-compatible rendering.
+
 ## [1.4.13] - 2026-07-06
 
 ### Added

@@ -193,6 +193,39 @@ Bun.serve({
       });
     }
 
+    if (path.startsWith("/api/images/") && req.method === "GET") {
+      const parts = path.substring("/api/images/".length).split("/");
+      if (parts.length === 3) {
+        const logId = parts[0];
+        const stepName = parts[1];
+        const filePart = parts[2];
+        const imagesDir = join(import.meta.dirname, "../data/images");
+        const filePath = join(imagesDir, `${logId}_${stepName}_${filePart}`);
+        if (existsSync(filePath)) {
+          try {
+            const fileData = readFileSync(filePath);
+            const format = filePart.endsWith(".png") ? "png" : "jpeg";
+            return new Response(fileData, {
+              headers: {
+                "Content-Type": `image/${format}`,
+                "Cache-Control": "public, max-age=31536000, immutable",
+                ...corsHeaders
+              }
+            });
+          } catch (err: any) {
+            return new Response(JSON.stringify({ error: err.message }), {
+              status: 500,
+              headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
+          }
+        }
+      }
+      return new Response(JSON.stringify({ error: "Image not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
+
     if (path === "/api/llmlingua-logs" && req.method === "GET") {
       return new Response(JSON.stringify(llmLinguaLogsHistory), {
         headers: { "Content-Type": "application/json", ...corsHeaders }

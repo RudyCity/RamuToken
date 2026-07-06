@@ -98,7 +98,10 @@ export default function ImageGallery({ step }: ImageGalleryProps) {
 
   const downloadImage = useCallback((idx: number) => {
     const link = document.createElement("a");
-    link.href = `data:image/${format};base64,${images[idx]}`;
+    const src = images[idx];
+    link.href = src.startsWith("data:") || src.startsWith("http") || src.startsWith("/api/")
+      ? src
+      : `data:image/${format};base64,${src}`;
     link.download = `image-step-page-${idx + 1}.${format}`;
     link.click();
   }, [images, format]);
@@ -185,7 +188,7 @@ export default function ImageGallery({ step }: ImageGalleryProps) {
             className="group relative aspect-video bg-slate-950 border border-white/8 rounded-xl overflow-hidden cursor-pointer hover:border-violet-500/50 hover:shadow-[0_0_16px_rgba(139,92,246,0.2)] transition-all"
           >
             <img
-              src={`data:image/${format};base64,${b64}`}
+              src={b64.startsWith("data:") || b64.startsWith("http") || b64.startsWith("/api/") ? b64 : `data:image/${format};base64,${b64}`}
               alt={`Image page ${idx + 1}`}
               className="w-full h-full object-cover"
             />
@@ -289,7 +292,9 @@ export default function ImageGallery({ step }: ImageGalleryProps) {
             }}
           >
             <img
-              src={`data:image/${format};base64,${images[lightboxIndex]}`}
+              src={images[lightboxIndex].startsWith("data:") || images[lightboxIndex].startsWith("http") || images[lightboxIndex].startsWith("/api/")
+                ? images[lightboxIndex]
+                : `data:image/${format};base64,${images[lightboxIndex]}`}
               alt={`Image page ${lightboxIndex + 1}`}
               className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-[0_0_60px_rgba(139,92,246,0.15)] border border-white/10 select-none pointer-events-none"
               style={{
@@ -337,7 +342,7 @@ export default function ImageGallery({ step }: ImageGalleryProps) {
                   }`}
                 >
                   <img
-                    src={`data:image/${format};base64,${b64}`}
+                    src={b64.startsWith("data:") || b64.startsWith("http") || b64.startsWith("/api/") ? b64 : `data:image/${format};base64,${b64}`}
                     alt={`thumb ${idx + 1}`}
                     className="w-full h-full object-cover"
                   />
