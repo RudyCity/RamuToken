@@ -63,11 +63,14 @@ export default function ImageSettings({
     }
   };
 
-  // Filter fetched models by search query, excluding already selected models
-  const filteredModels = fetchedModels.filter(
-    (m) =>
-      m.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !image.triggerModels.includes(m)
+  const handleSyncModels = async () => {
+    await fetchModels();
+    setIsDropdownOpen(true);
+  };
+
+  // Filter fetched models by search query
+  const filteredModels = fetchedModels.filter((m) =>
+    m.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -101,7 +104,8 @@ export default function ImageSettings({
                 Trigger Models (Vision Enabled)
               </label>
               <button
-                onClick={fetchModels}
+                type="button"
+                onClick={handleSyncModels}
                 disabled={fetchingModels}
                 className="text-[9px] flex items-center gap-1 text-neon-cyan hover:text-neon-cyan/80 transition-colors bg-transparent border-0 cursor-pointer disabled:opacity-50"
               >
@@ -142,14 +146,18 @@ export default function ImageSettings({
                   type="text"
                   placeholder="Search fetched models or type custom and hit Enter..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setIsDropdownOpen(true);
+                  }}
                   onKeyDown={addCustomModel}
                   onFocus={() => setIsDropdownOpen(true)}
+                  onClick={() => setIsDropdownOpen(true)}
                   className="w-full bg-transparent text-xs text-slate-200 focus:outline-none font-mono"
                 />
               </div>
 
-              {isDropdownOpen && searchQuery && (
+              {isDropdownOpen && (
                 <>
                   <div
                     className="fixed inset-0 z-40"
@@ -161,23 +169,33 @@ export default function ImageSettings({
                   <div className="absolute z-50 left-0 right-0 mt-1 max-h-[160px] overflow-y-auto bg-slate-950 border border-white/15 rounded-xl shadow-xl flex flex-col font-mono">
                     {filteredModels.length === 0 ? (
                       <span className="text-[10px] text-slate-500 p-3 italic">
-                        No matches found. Press Enter to add "{searchQuery}"
+                        {searchQuery.trim()
+                          ? `No matches found. Press Enter to add "${searchQuery}"`
+                          : 'No models available. Click "Sync Provider Models" above.'}
                       </span>
                     ) : (
-                      filteredModels.slice(0, 10).map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => {
-                            toggleModel(m);
-                            setSearchQuery("");
-                            setIsDropdownOpen(false);
-                          }}
-                          className="flex items-center justify-between px-3.5 py-2 text-xxs text-slate-300 hover:bg-white/5 hover:text-white border-0 bg-transparent text-left cursor-pointer transition-colors"
-                        >
-                          <span>{m}</span>
-                          <Check className="w-3 h-3 text-neon-green opacity-0 hover:opacity-100" />
-                        </button>
-                      ))
+                      filteredModels.map((m) => {
+                        const isSelected = image.triggerModels.includes(m);
+                        return (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => toggleModel(m)}
+                            className={`flex items-center justify-between px-3.5 py-2 text-xxs border-0 bg-transparent text-left cursor-pointer transition-colors ${
+                              isSelected
+                                ? "text-neon-purple hover:bg-white/5 font-bold"
+                                : "text-slate-300 hover:bg-white/5 hover:text-white"
+                            }`}
+                          >
+                            <span>{m}</span>
+                            <Check
+                              className={`w-3 h-3 text-neon-green transition-opacity ${
+                                isSelected ? "opacity-100" : "opacity-0 hover:opacity-100"
+                              }`}
+                            />
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 </>
