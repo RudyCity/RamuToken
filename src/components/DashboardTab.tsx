@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   Zap,
   Sliders,
@@ -282,8 +283,8 @@ function ImageGallery({ step }: ImageGalleryProps) {
         ))}
       </div>
 
-      {/* Lightbox */}
-      {lightboxIndex !== null && (
+      {/* Lightbox rendered via Portal to escape parent container CSS transform boundary */}
+      {lightboxIndex !== null && createPortal(
         <div
           ref={lightboxRef}
           className="fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center"
@@ -425,7 +426,8 @@ function ImageGallery({ step }: ImageGalleryProps) {
               ))}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
