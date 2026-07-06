@@ -86,6 +86,12 @@ function extractImagesFromMessages(messages: Message[]): { base64: string; forma
               base64: match[2],
             });
           }
+        } else if (part.type === "image" && part.source?.type === "base64") {
+          const mediaType = part.source.media_type || "image/png";
+          result.push({
+            format: mediaType.replace("image/", ""),
+            base64: part.source.data || "",
+          });
         }
       }
     }
@@ -153,14 +159,18 @@ export async function compressMessageList(
     const outputText = messagesToText(nextMessages);
     const outputTokens = countPayloadTokens(nextMessages);
 
-    // For the Image step, capture the generated base64 images for gallery rendering in the UI
+    // Capture the base64 images if present in input or output of this step
     let stepImages: string[] | undefined;
     let stepImageFormat: "png" | "jpeg" | undefined;
-    if (name === "Image" && enabled) {
-      const extracted = extractImagesFromMessages(nextMessages);
-      if (extracted.length > 0) {
-        stepImages = extracted.map(e => e.base64);
-        stepImageFormat = extracted[0].format as "png" | "jpeg";
+    const outputImages = extractImagesFromMessages(nextMessages);
+    if (outputImages.length > 0) {
+      stepImages = outputImages.map(e => e.base64);
+      stepImageFormat = outputImages[0].format as "png" | "jpeg";
+    } else {
+      const inputImages = extractImagesFromMessages(currentMessages);
+      if (inputImages.length > 0) {
+        stepImages = inputImages.map(e => e.base64);
+        stepImageFormat = inputImages[0].format as "png" | "jpeg";
       }
     }
 

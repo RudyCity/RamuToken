@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.7] - 2026-07-06
+
+### Changed
+- **`server/proxy.ts`**: Upgraded `extractImagesFromMessages()` to support Anthropic-style base64 image structures in addition to OpenAI's `image_url` data URIs. Made `runStep` capture base64 images generically for *any* pipeline step that processes or contains them (not just the Image Compression step).
+- **`src/components/DashboardTab.tsx`**: Updated the UI rendering logic so that if the user selects "All Steps", the gallery automatically scans and displays images from the first step that contains them (e.g. initial request images or system instructions rendered as images).
+
 ## [1.4.6] - 2026-07-06
 
 ### Fixed

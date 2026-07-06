@@ -853,16 +853,14 @@ export default function DashboardTab({
                   </div>
                 )}
 
-                {/* Image Gallery — rendered when Image step is selected (or active) and has images */}
+                {/* Image Gallery — rendered when selected step (or any step, if All is selected) has images */}
                 {(() => {
                   const allSteps = ("pipelineSteps" in selectedLog ? selectedLog.pipelineSteps : []) || [];
-                  // If a specific Image step is selected, show its gallery; otherwise find any enabled Image step with images
+                  // If a specific step is selected and it has images, show it; otherwise find the first step with images
                   const imageStep: PipelineStep | undefined =
-                    activeStepObj?.name === "Image" && (activeStepObj.images?.length ?? 0) > 0
+                    activeStepObj && (activeStepObj.images?.length ?? 0) > 0
                       ? activeStepObj
-                      : allSteps.find(
-                          s => s.name === "Image" && s.enabled && (s.images?.length ?? 0) > 0
-                        );
+                      : allSteps.find(s => (s.images?.length ?? 0) > 0);
                   if (!imageStep) return null;
                   return (
                     <div className="bg-slate-950/40 border border-violet-500/15 rounded-xl p-4 mt-1">
