@@ -100,6 +100,7 @@ function ImageGallery({ step }: ImageGalleryProps) {
   const images = step.images || [];
   const format = step.imageFormat || "png";
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const lightboxRef = useRef<HTMLDivElement | null>(null);
 
   // Zoom and Pan state
   const [scale, setScale] = useState(1);
@@ -132,16 +133,47 @@ function ImageGallery({ step }: ImageGalleryProps) {
     resetZoom();
   }, [images.length, resetZoom]);
 
-  // Keyboard navigation for lightbox
+  // Keyboard navigation, body scroll lock, and native non-passive wheel zoom
   useEffect(() => {
     if (lightboxIndex === null) return;
+
+    // Lock body scrollbar
+    document.body.style.overflow = "hidden";
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") prevImage();
       else if (e.key === "ArrowRight") nextImage();
       else if (e.key === "Escape") closeLightbox();
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+
+    // Native non-passive wheel event listener to override page scrolling
+    const element = lightboxRef.current;
+    const nativeWheelHandler = (e: WheelEvent) => {
+      e.preventDefault(); // Lock browser scrolling bubble
+      if (e.deltaY < 0) {
+        setScale(prev => Math.min(prev + 0.25, 4));
+      } else {
+        setScale(prev => {
+          const next = Math.max(prev - 0.25, 1);
+          if (next === 1) setPosition({ x: 0, y: 0 });
+          return next;
+        });
+      }
+    };
+
+    if (element) {
+      element.addEventListener("wheel", nativeWheelHandler, { passive: false });
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handler);
+      if (element) {
+        element.removeEventListener("wheel", nativeWheelHandler);
+      }
+      // Restore body scrollbar
+      document.body.style.overflow = "";
+    };
   }, [lightboxIndex, prevImage, nextImage, closeLightbox]);
 
   const downloadImage = useCallback((idx: number) => {
@@ -171,20 +203,6 @@ function ImageGallery({ step }: ImageGalleryProps) {
       setScale(2.5);
     }
   }, [scale, resetZoom]);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (lightboxIndex === null) return;
-    // Zoom in/out based on scroll direction
-    if (e.deltaY < 0) {
-      setScale(prev => Math.min(prev + 0.25, 4));
-    } else {
-      setScale(prev => {
-        const next = Math.max(prev - 0.25, 1);
-        if (next === 1) setPosition({ x: 0, y: 0 });
-        return next;
-      });
-    }
-  }, [lightboxIndex]);
 
   // Drag (panning) handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -267,6 +285,7 @@ function ImageGallery({ step }: ImageGalleryProps) {
       {/* Lightbox */}
       {lightboxIndex !== null && (
         <div
+          ref={lightboxRef}
           className="fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center"
           onClick={closeLightbox}
         >
@@ -344,7 +363,6 @@ function ImageGallery({ step }: ImageGalleryProps) {
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleMouseUpOrLeave}
-            onWheel={handleWheel}
             onDoubleClick={handleDoubleClick}
             style={{
               cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "default"
