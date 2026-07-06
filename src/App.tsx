@@ -23,7 +23,7 @@ import DashboardTab from "./components/DashboardTab";
 import PlaygroundTab from "./components/PlaygroundTab";
 import SettingsTab from "./components/SettingsTab";
 
-const APP_VERSION = "1.3.54";
+const APP_VERSION = "1.3.57";
 
 interface PipelineRowProps {
   icon: React.ReactNode;
@@ -175,6 +175,62 @@ export default function App() {
   // Selected log detail state
   const [selectedLog, setSelectedLog] = useState<RequestLog | LLMLinguaLog | null>(null);
 
+  // Helper to fetch metrics and logs via HTTP
+  const fetchDashboardData = async () => {
+    try {
+      const [metricsRes, logsRes, llmLinguaLogsRes] = await Promise.all([
+        fetch("/api/metrics"),
+        fetch("/api/logs"),
+        fetch("/api/llmlingua-logs"),
+      ]);
+
+      if (metricsRes.ok) {
+        const metricsData = await metricsRes.json();
+        setMetrics(metricsData);
+      }
+      if (logsRes.ok) {
+        const logsData = await logsRes.json();
+        setLogs(logsData);
+      }
+      if (llmLinguaLogsRes.ok) {
+        const llmLinguaLogsData = await llmLinguaLogsRes.json();
+        setLlmLinguaLogs(llmLinguaLogsData);
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard data via HTTP", err);
+    }
+  };
+
+  // Helper to fetch settings via HTTP
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      if (res.ok) {
+        const settingsData = await res.json();
+        setSettings(settingsData);
+      }
+    } catch (err) {
+      console.error("Failed to fetch settings via HTTP", err);
+    }
+  };
+
+  // Load initial settings and dashboard data on component mount
+  useEffect(() => {
+    fetchSettings();
+    fetchDashboardData();
+  }, []);
+
+  // Fallback polling when WebSocket is disconnected
+  useEffect(() => {
+    if (wsConnected) return;
+
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [wsConnected]);
+
   // Setup WebSocket connection with auto-reconnect
   useEffect(() => {
     let ws: WebSocket;
@@ -186,6 +242,9 @@ export default function App() {
       ws = new WebSocket(`${protocol}//${host}/ws`);
 
       ws.onopen = () => setWsConnected(true);
+      ws.onerror = (err) => {
+        console.warn("WebSocket connection error:", err);
+      };
 
       ws.onmessage = (event) => {
         try {
