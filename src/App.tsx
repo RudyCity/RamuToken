@@ -272,6 +272,11 @@ export default function App() {
             if (payload.data.latestLog) {
               setLlmLinguaLogs((prev) => [payload.data.latestLog, ...prev.slice(0, 199)]);
             }
+          } else if (payload.type === "clear_history") {
+            setMetrics(payload.data.metrics);
+            setLogs([]);
+            setLlmLinguaLogs([]);
+            setSelectedLog(null);
           } else if (payload.type === "settings") {
             setSettings(payload.data);
           }
@@ -311,6 +316,37 @@ export default function App() {
     } catch (err) {
       console.error("Error saving settings", err);
       addToast("Error saving settings.", "error");
+    }
+  };
+
+  // Clear all pipeline activities and metrics
+  const handleClearHistory = async () => {
+    if (!window.confirm("Are you sure you want to clear all pipeline activity history and reset metrics?")) {
+      return;
+    }
+    try {
+      const res = await fetch("/api/clear-history", {
+        method: "POST",
+      });
+      if (res.ok) {
+        setLogs([]);
+        setLlmLinguaLogs([]);
+        setSelectedLog(null);
+        setMetrics({
+          totalRequests: 0,
+          originalTokensSum: 0,
+          compressedTokensSum: 0,
+          cacheHits: 0,
+          totalSavedTokens: 0,
+          totalSavedCost: 0,
+        });
+        addToast("History cleared successfully!", "success");
+      } else {
+        addToast("Failed to clear history on the server.", "error");
+      }
+    } catch (err) {
+      console.error("Failed to clear history", err);
+      addToast("Error clearing history.", "error");
     }
   };
 
@@ -701,6 +737,7 @@ export default function App() {
             selectedLog={selectedLog}
             setSelectedLog={setSelectedLog}
             backendPort={backendPort}
+            onClearHistory={handleClearHistory}
           />
         )}
         {activeTab === "testbench" && (

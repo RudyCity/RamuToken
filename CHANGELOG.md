@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-07-06
+
+### Added
+- **`server/config.ts`**: Implemented `clearHistory()` to clear the proxy and direct LLMLingua logs arrays, reset all cumulative metrics back to zero, save the reset state to disk, and broadcast a `clear_history` message over WebSockets.
+- **`server/index.ts`**: Registered a new POST `/api/clear-history` endpoint that triggers history deletion.
+- **`src/App.tsx`**: Added support for WebSocket `clear_history` events to reset dashboard UI state and created a confirmation flow before clearing history.
+- **`src/components/DashboardTab.tsx`**: Added a stylish "Clear History" button next to the tab headers with confirmation tooltips and a soft red hover styling.
+
 ## [1.4.3] - 2026-07-06
 
 ### Changed

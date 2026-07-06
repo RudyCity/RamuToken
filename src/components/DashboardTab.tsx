@@ -14,6 +14,7 @@ import {
   Copy,
   Check,
   Brain,
+  Trash2,
 } from "lucide-react";
 import { Metrics, RequestLog, CompressorSettings, LLMLinguaLog } from "../types";
 
@@ -25,6 +26,7 @@ interface DashboardTabProps {
   selectedLog: RequestLog | LLMLinguaLog | null;
   setSelectedLog: (log: RequestLog | LLMLinguaLog | null) => void;
   backendPort: number;
+  onClearHistory: () => void;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -91,6 +93,7 @@ export default function DashboardTab({
   selectedLog,
   setSelectedLog,
   backendPort: _backendPort,
+  onClearHistory,
 }: DashboardTabProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10; // fixed page size — no setter needed
@@ -362,26 +365,37 @@ export default function DashboardTab({
             </p>
           </div>
           
-          <div className="flex flex-wrap items-center bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-0.5 text-[10px] font-bold">
-            {[
-              { id: "all", label: "📋 Proxy Requests" },
-              { id: "llmlingua_direct", label: "🔌 LLMLingua Direct" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveLogTab(tab.id as any);
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  activeLogTab === tab.id
-                    ? "bg-neon-purple/20 text-neon-purple border border-neon-purple/35 shadow-[0_0_8px_rgba(168,85,247,0.15)]"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center bg-slate-950/70 border border-white/5 p-1 rounded-xl gap-0.5 text-[10px] font-bold">
+              {[
+                { id: "all", label: "📋 Proxy Requests" },
+                { id: "llmlingua_direct", label: "🔌 LLMLingua Direct" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveLogTab(tab.id as any);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    activeLogTab === tab.id
+                      ? "bg-neon-purple/20 text-neon-purple border border-neon-purple/35 shadow-[0_0_8px_rgba(168,85,247,0.15)]"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={onClearHistory}
+              title="Clear all activity history and metrics"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 transition-all cursor-pointer text-[10px] font-bold bg-slate-950/40"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear History
+            </button>
           </div>
         </div>
 

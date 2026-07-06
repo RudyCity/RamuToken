@@ -293,6 +293,38 @@ export function addLLMLinguaLog(log: Omit<LLMLinguaLog, "id" | "timestamp">) {
   return fullLog;
 }
 
+/** Clear all logs history and reset cumulative metrics. */
+export function clearHistory() {
+  logsHistory.length = 0;
+  llmLinguaLogsHistory.length = 0;
+  metrics.totalRequests = 0;
+  metrics.originalTokensSum = 0;
+  metrics.compressedTokensSum = 0;
+  metrics.cacheHits = 0;
+  metrics.totalSavedTokens = 0;
+  metrics.totalSavedCost = 0;
+
+  saveToDisk();
+
+  // Broadcast to all active sockets
+  const message = JSON.stringify({
+    type: "clear_history",
+    data: {
+      metrics,
+      logs: [],
+      llmLinguaLogs: [],
+    }
+  });
+
+  for (const ws of activeSockets) {
+    try {
+      ws.send(message);
+    } catch {
+      activeSockets.delete(ws);
+    }
+  }
+}
+
 // WebSocket broadcast mechanism
 export const activeSockets = new Set<any>();
 
