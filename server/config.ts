@@ -1,5 +1,5 @@
 import { join } from "path";
-import { existsSync, mkdirSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 
 /** A saved project root entry — can be user-created or auto-detected. */
 export interface ProjectProfile {
@@ -381,7 +381,7 @@ export function saveToDisk() {
       logsHistory,
       llmLinguaLogsHistory
     }, null, 2);
-    Bun.write(DB_PATH, payload);
+    writeFileSync(DB_PATH, payload);
   } catch (err) {
     console.error("[Persistence] Error saving database to disk:", err);
   }
