@@ -93,6 +93,31 @@ function extractImagesFromMessages(messages: Message[]): { base64: string; forma
   return result;
 }
 
+/**
+ * Helper to convert a message's content (which can be a string or array of parts)
+ * to a clean, readable text representation without [object Object] serialization.
+ */
+function contentToText(content: string | any[] | undefined): string {
+  if (!content) return "";
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content.map(p => {
+      if (typeof p === "string") return p;
+      if (p.type === "text") return p.text || "";
+      if (p.type === "image_url") {
+        if (typeof p.image_url?.url === "string" && p.image_url.url.startsWith("data:")) {
+          const mime = p.image_url.url.match(/^data:(image\/[a-zA-Z+-]+);base64,/)?.[1] || "image";
+          return `[${mime.toUpperCase()} Image]`;
+        }
+        return `[Image URL: ${p.image_url?.url || ""}]`;
+      }
+      if (p.type === "image") return "[Image]";
+      return `[Part: ${p.type}]`;
+    }).join("\n");
+  }
+  return String(content);
+}
+
 // Core compression orchestrator for a set of messages
 export async function compressMessageList(
   messages: Message[],
@@ -242,8 +267,8 @@ export async function compressMessageList(
   // Form original and compressed accumulated prompts.
   // compressedPrompt reflects the full post-pipeline output (including Caveman injection)
   // so that token savings logs and UI are accurate.
-  const originalPrompt = messages.map(m => m.content || "").join("\n");
-  const compressedPrompt = currentMessages.map(m => (typeof m.content === "string" ? m.content : "[Image Content]")).join("\n");
+  const originalPrompt = messages.map(m => contentToText(m.content)).join("\n\n");
+  const compressedPrompt = currentMessages.map(m => contentToText(m.content)).join("\n\n");
 
   return {
     compressedMessages: currentMessages,

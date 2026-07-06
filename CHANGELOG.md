@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.6] - 2026-07-06
+
+### Fixed
+- **`server/proxy.ts`**: Added `contentToText()` helper to safely serialize complex message content (which can be a string or an array of message/image parts) to a clean human-readable string. Fixed a bug where message arrays containing structured parts or image objects were serialized as `[object Object]` in the Activity Explorer's prompt view.
+
 ## [1.4.5] - 2026-07-06
 
 ### Added
