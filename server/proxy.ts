@@ -52,18 +52,7 @@ export function countPayloadTokens(messages: Message[], system?: string): number
 // Core compression orchestrator for a set of messages
 function messagesToText(messages: Message[]): string {
   return messages.map(m => {
-    if (typeof m.content === "string") {
-      return `[${m.role}]: ${m.content || ""}`;
-    } else if (Array.isArray(m.content)) {
-      const partsText = m.content.map(p => {
-        if (p.type === "text") return p.text || "";
-        if (p.type === "image_url") return `[Image URL: ${p.image_url?.url ? p.image_url.url.slice(0, 30) + "..." : "base64"}]`;
-        if (p.type === "image") return `[Image: base64]`;
-        return `[Part: ${p.type}]`;
-      }).join(" ");
-      return `[${m.role}]: ${partsText}`;
-    }
-    return `[${m.role}]: ${m.content || ""}`;
+    return `[${m.role}]: ${contentToText(m.content)}`;
   }).join("\n\n");
 }
 
