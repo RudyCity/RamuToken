@@ -11,8 +11,61 @@ const BIFROST_READY_TIMEOUT_MS = 30_000;
 // ---------------------------------------------------------------------------
 // Determine backend port from saved settings (fallback to 6875)
 // ---------------------------------------------------------------------------
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, readdirSync, statSync, copyFileSync, chmodSync } from "fs";
 import { join } from "path";
+
+/** Find highest cached Bifrost version and ensure executable format */
+function findAndPrepareLocalBifrost(): string | null {
+  try {
+    const isWin = process.platform === "win32";
+    const baseDir = isWin
+      ? (process.env.LOCALAPPDATA || join(process.env.USERPROFILE || "", "AppData", "Local"))
+      : process.platform === "darwin"
+        ? join(process.env.HOME || "", "Library", "Caches")
+        : (process.env.XDG_CACHE_HOME || join(process.env.HOME || "", ".cache"));
+
+    const bifrostDir = join(baseDir, "bifrost");
+    if (!existsSync(bifrostDir)) return null;
+
+    const versions = readdirSync(bifrostDir)
+      .filter(name => name.startsWith("v") && statSync(join(bifrostDir, name)).isDirectory())
+      .sort((a, b) => {
+        const partsA = a.substring(1).split(".").map(Number);
+        const partsB = b.substring(1).split(".").map(Number);
+        for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+          const numA = partsA[i] || 0;
+          const numB = partsB[i] || 0;
+          if (numA !== numB) return numB - numA;
+        }
+        return 0;
+      });
+
+    const targetBinName = isWin ? "bifrost-http.exe" : "bifrost-http";
+    const sourceBinName = isWin ? "bifrost-http.exe-0" : "bifrost-http-0";
+
+    for (const ver of versions) {
+      const binDir = join(bifrostDir, ver, "bin");
+      const targetPath = join(binDir, targetBinName);
+      const sourcePath = join(binDir, sourceBinName);
+
+      if (existsSync(targetPath)) {
+        return targetPath;
+      }
+
+      if (existsSync(sourcePath)) {
+        console.log(`⚡ [Bifrost] Local cached source binary found. Copying to executable format...`);
+        copyFileSync(sourcePath, targetPath);
+        if (!isWin) {
+          chmodSync(targetPath, 0o755);
+        }
+        return targetPath;
+      }
+    }
+  } catch (err) {
+    console.warn("⚠️ [Bifrost] Error searching for local binary:", err);
+  }
+  return null;
+}
 
 function resolveBackendPort(): number {
   try {
@@ -76,16 +129,29 @@ const alreadyRunning = await isBifrostReady();
 if (alreadyRunning) {
   console.log(`✅ [Bifrost] Already running on port ${BIFROST_PORT} — skipping spawn.`);
 } else {
-  console.log(`⚡ [Bifrost] Not detected — launching via bun x @maximhq/bifrost...`);
+  const localBin = findAndPrepareLocalBifrost();
 
-  bifrostProcess = Bun.spawn(["bun", "x", "@maximhq/bifrost"], {
-    stdout: "pipe",
-    stderr: "pipe",
-    env: {
-      ...process.env,
-      PORT: String(BIFROST_PORT),
-    },
-  });
+  if (localBin) {
+    console.log(`⚡ [Bifrost] Cached binary found at ${localBin} — launching directly...`);
+    bifrostProcess = Bun.spawn([localBin, "--port", String(BIFROST_PORT)], {
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...process.env,
+        PORT: String(BIFROST_PORT),
+      },
+    });
+  } else {
+    console.log(`⚡ [Bifrost] Local binary not detected — launching via bun x @maximhq/bifrost...`);
+    bifrostProcess = Bun.spawn(["bun", "x", "@maximhq/bifrost"], {
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...process.env,
+        PORT: String(BIFROST_PORT),
+      },
+    });
+  }
 
   // Pipe Bifrost stdout/stderr with prefix so it's distinguishable in console
   (async () => {
