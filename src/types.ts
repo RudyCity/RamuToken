@@ -94,6 +94,10 @@ export interface PipelineStep {
   outputTokens: number;
   inputText: string;
   outputText: string;
+  /** Base64-encoded images produced by the Image Compression step (raw, no data URI prefix). */
+  images?: string[];
+  /** MIME sub-type of images (e.g. "png" or "jpeg"). Used to build data URIs in the UI. */
+  imageFormat?: "png" | "jpeg";
 }
 
 export interface RequestLog {

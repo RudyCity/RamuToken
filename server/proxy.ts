@@ -67,6 +67,32 @@ function messagesToText(messages: Message[]): string {
   }).join("\n\n");
 }
 
+/**
+ * Extracts all base64 image data from messages produced by the Image Compression step.
+ * Returns an array of { base64, format } objects (format = "png" | "jpeg").
+ */
+function extractImagesFromMessages(messages: Message[]): { base64: string; format: string }[] {
+  const result: { base64: string; format: string }[] = [];
+  for (const msg of messages) {
+    if (Array.isArray(msg.content)) {
+      for (const part of msg.content) {
+        if (part.type === "image_url" && part.image_url?.url) {
+          const match = (part.image_url.url as string).match(
+            /^data:(image\/[a-zA-Z+-]+);base64,(.+)$/
+          );
+          if (match) {
+            result.push({
+              format: match[1].replace("image/", ""),
+              base64: match[2],
+            });
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
 // Core compression orchestrator for a set of messages
 export async function compressMessageList(
   messages: Message[],
@@ -102,13 +128,26 @@ export async function compressMessageList(
     const outputText = messagesToText(nextMessages);
     const outputTokens = countPayloadTokens(nextMessages);
 
+    // For the Image step, capture the generated base64 images for gallery rendering in the UI
+    let stepImages: string[] | undefined;
+    let stepImageFormat: "png" | "jpeg" | undefined;
+    if (name === "Image" && enabled) {
+      const extracted = extractImagesFromMessages(nextMessages);
+      if (extracted.length > 0) {
+        stepImages = extracted.map(e => e.base64);
+        stepImageFormat = extracted[0].format as "png" | "jpeg";
+      }
+    }
+
     pipelineSteps.push({
       name,
       enabled,
       inputTokens,
       outputTokens,
       inputText,
-      outputText
+      outputText,
+      images: stepImages,
+      imageFormat: stepImageFormat,
     });
 
     currentMessages = nextMessages;

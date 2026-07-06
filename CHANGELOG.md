@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] - 2026-07-06
+
+### Added
+- **`src/types.ts`**: Added optional `images?: string[]` and `imageFormat?: "png" | "jpeg"` fields to `PipelineStep` interface so the Image Compression step can carry generated image data to the UI.
+- **`server/config.ts`**: Synced `PipelineStep` interface with the updated frontend type — added `images?` and `imageFormat?` fields.
+- **`server/proxy.ts`**: Added `extractImagesFromMessages()` helper that extracts base64 image data from messages produced by the Image Compression step. Modified `runStep` to automatically capture and attach generated images to the pipeline step entry when the `Image` step is enabled.
+- **`src/components/DashboardTab.tsx`**: Added `ImageGallery` component with thumbnail grid, full-screen lightbox (keyboard navigation with ← / → / Esc), individual image download, and thumbnail strip for multi-page navigation. The gallery renders automatically in the Activity Explorer right panel whenever the selected log contains Image Compression output.
+
 ## [1.4.4] - 2026-07-06
 
 ### Added
