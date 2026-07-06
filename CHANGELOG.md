@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.12] - 2026-07-06
+
+### Fixed
+- **Memory Optimization**: Resolved a major memory bug where storing full-length request prompts and pipeline step details in history logs could consume up to 4GB of RAM and bloat the database. Implemented automatic string truncation to limit logged prompt previews to 20,000 characters and step details to 10,000 characters.
+- **Database Pruning**: Pruned the bloated 1.85 GB `db.json` database down to ~10 KB by discarding massive historical log payloads while fully retaining settings and cumulative metrics, allowing the server to boot instantly.
+- **`server/proxy.ts`**: Moved the OpenAI-to-Anthropic transpilation/translation functions into [server/translator.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/RamuToken/server/translator.ts) to keep the proxy core below the strict 1,000-line code constraint.
+
 ## [1.4.11] - 2026-07-06
 
 ### Fixed

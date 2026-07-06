@@ -246,11 +246,24 @@ export function updateSettings(newSettings: Partial<CompressorSettings>) {
   return settings;
 }
 
+function truncateString(str: any, maxLength: number = 20000): string {
+  if (typeof str !== "string") return String(str || "");
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength) + `\n\n... [Truncated ${str.length - maxLength} characters for memory efficiency]`;
+}
+
 export function addLog(log: Omit<RequestLog, "id" | "timestamp">) {
   const fullLog: RequestLog = {
     ...log,
     id: Math.random().toString(36).substring(2, 9),
     timestamp: Date.now(),
+    originalPrompt: truncateString(log.originalPrompt, 20000),
+    compressedPrompt: truncateString(log.compressedPrompt, 20000),
+    pipelineSteps: log.pipelineSteps?.map(step => ({
+      ...step,
+      inputText: truncateString(step.inputText, 10000),
+      outputText: truncateString(step.outputText, 10000),
+    }))
   };
 
   logsHistory.unshift(fullLog);
@@ -284,6 +297,8 @@ export function addLLMLinguaLog(log: Omit<LLMLinguaLog, "id" | "timestamp">) {
     ...log,
     id: Math.random().toString(36).substring(2, 9),
     timestamp: Date.now(),
+    originalPrompt: truncateString(log.originalPrompt, 20000),
+    compressedPrompt: truncateString(log.compressedPrompt, 20000),
   };
 
   llmLinguaLogsHistory.unshift(fullLog);
